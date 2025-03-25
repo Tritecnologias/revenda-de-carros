@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Venda Direta - Revenda de Carros</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+    <!-- Header -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="../index.html">Revenda de Carros</a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0 d-lg-none">
+                    <li class="nav-item admin-only" style="display: none;">
+                        <a class="nav-link" href="/admin/users.html">USUÁRIOS</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="../index.html">CONFIGURADOR</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">ISENÇÕES</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">COTAÇÕES</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">CLIENTES</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle active" href="#" id="mobileVeiculosDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            VEÍCULOS
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="mobileVeiculosDropdown">
+                            <li><a class="dropdown-item" href="marca.html">MARCA</a></li>
+                            <li><a class="dropdown-item" href="modelo.html">MODELO</a></li>
+                            <li><a class="dropdown-item" href="veiculo.html">VEÍCULO</a></li>
+                            <li><a class="dropdown-item" href="opcional.html">OPCIONAIS</a></li>
+                            <li><a class="dropdown-item" href="../pinturas.html">PINTURAS</a></li>
+                            <li><a class="dropdown-item active" href="venda-direta.html">VENDA DIRETA</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">SUPORTE</a>
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="d-flex align-items-center">
+                <span class="navbar-text me-3" id="userInfo"></span>
+                <div class="dropdown">
+                    <button class="btn btn-outline-light dropdown-toggle" type="button" id="userMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                        Conta
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuButton">
+                        <li><a class="dropdown-item" href="../meus-dados.html">MEUS DADOS</a></li>
+                        <li><a class="dropdown-item" href="../alterar-senha.html">ALTERAR SENHA</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><button class="dropdown-item" id="logoutButton">SAIR</button></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Navigation - Visible only on larger screens -->
+    <div class="bg-primary d-none d-lg-block">
+        <div class="container">
+            <ul class="nav nav-pills">
+                <li class="nav-item admin-only" style="display: none;">
+                    <a class="nav-link text-white" href="/admin/users.html">USUÁRIOS</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-white" href="../index.html">CONFIGURADOR</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-white" href="#">ISENÇÕES</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-white" href="#">COTAÇÕES</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-white" href="#">CLIENTES</a>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link text-white dropdown-toggle active" href="#" id="veiculosDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        VEÍCULOS
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="veiculosDropdown">
+                        <li><a class="dropdown-item" href="marca.html">MARCA</a></li>
+                        <li><a class="dropdown-item" href="modelo.html">MODELO</a></li>
+                        <li><a class="dropdown-item" href="veiculo.html">VEÍCULO</a></li>
+                        <li><a class="dropdown-item" href="opcional.html">OPCIONAIS</a></li>
+                        <li><a class="dropdown-item" href="../pinturas.html">PINTURAS</a></li>
+                        <li><a class="dropdown-item active" href="venda-direta.html">VENDA DIRETA</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-white" href="#">SUPORTE</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-12">
+                <h2>Gerenciamento de Vendas Diretas</h2>
+                <p>Cadastre e gerencie as vendas diretas com seus respectivos percentuais de desconto por marca.</p>
+            </div>
+        </div>
+
+        <!-- Form Section -->
+        <div class="row mt-3">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title" id="formTitle">Cadastrar Venda Direta</h5>
+                        <form id="vendaDiretaForm">
+                            <input type="hidden" id="vendaDiretaId">
+                            <div class="mb-3">
+                                <label for="nome" class="form-label">Nome da Venda Direta</label>
+                                <input type="text" class="form-control" id="nome" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="percentual" class="form-label">Percentual de Desconto (%)</label>
+                                <input type="number" class="form-control" id="percentual" min="0" max="100" step="0.01" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="marcaId" class="form-label">Marca</label>
+                                <select class="form-select" id="marcaId" required>
+                                    <option value="">Selecione uma marca</option>
+                                </select>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <button type="submit" class="btn btn-primary">Salvar</button>
+                                <button type="button" class="btn btn-secondary" id="cancelButton">Cancelar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table Section -->
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Vendas Diretas Cadastradas</h5>
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Nome</th>
+                                        <th>Percentual</th>
+                                        <th>Marca</th>
+                                        <th>Status</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="vendaDiretaTableBody">
+                                    <!-- Dados serão carregados via JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <div>
+                                <span>Mostrando <span id="currentItems">0</span> de <span id="totalItems">0</span> itens</span>
+                            </div>
+                            <div>
+                                <button class="btn btn-sm btn-outline-primary me-2" id="prevPage" disabled>Anterior</button>
+                                <span id="currentPage">1</span>
+                                <button class="btn btn-sm btn-outline-primary ms-2" id="nextPage" disabled>Próximo</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/veiculos/venda-direta.js"></script>
+</body>
+</html>

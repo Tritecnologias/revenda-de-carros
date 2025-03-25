@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Revenda de Carros</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Header -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Revenda de Carros</a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0 d-lg-none">
+                    <li class="nav-item admin-only" style="display: none;">
+                        <a class="nav-link" href="/admin/users.html">USUÁRIOS</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#">CONFIGURADOR</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">ISENÇÕES</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">COTAÇÕES</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">CLIENTES</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="mobileVeiculosDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            VEÍCULOS
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="mobileVeiculosDropdown">
+                            <li><a class="dropdown-item" href="/veiculos/marca.html">MARCA</a></li>
+                            <li><a class="dropdown-item" href="/veiculos/modelo.html">MODELO</a></li>
+                            <li><a class="dropdown-item" href="/veiculos/veiculo.html">VEÍCULO</a></li>
+                            <li><a class="dropdown-item" href="/veiculos/opcional.html">OPCIONAIS</a></li>
+                            <li><a class="dropdown-item" href="/pinturas.html">PINTURAS</a></li>
+                            <li><a class="dropdown-item" href="/veiculos/venda-direta.html">VENDA DIRETA</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">SUPORTE</a>
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="d-flex align-items-center">
+                <span class="navbar-text me-3" id="userInfo"></span>
+                <div class="dropdown">
+                    <button class="btn btn-outline-light dropdown-toggle" type="button" id="userMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                        Conta
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuButton">
+                        <li><a class="dropdown-item" href="/meus-dados.html">MEUS DADOS</a></li>
+                        <li><a class="dropdown-item" href="/alterar-senha.html">ALTERAR SENHA</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><button class="dropdown-item" id="logoutButton">SAIR</button></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Navigation - Visible only on larger screens -->
+    <div class="bg-primary d-none d-lg-block">
+        <div class="container">
+            <ul class="nav nav-pills">
+                <li class="nav-item admin-only" style="display: none;">
+                    <a class="nav-link text-white" href="/admin/users.html">USUÁRIOS</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-white active" href="#">CONFIGURADOR</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-white" href="#">ISENÇÕES</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-white" href="#">COTAÇÕES</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-white" href="#">CLIENTES</a>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link text-white dropdown-toggle" href="#" id="veiculosDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        VEÍCULOS
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="veiculosDropdown">
+                        <li><a class="dropdown-item" href="/veiculos/marca.html">MARCA</a></li>
+                        <li><a class="dropdown-item" href="/veiculos/modelo.html">MODELO</a></li>
+                        <li><a class="dropdown-item" href="/veiculos/veiculo.html">VEÍCULO</a></li>
+                        <li><a class="dropdown-item" href="/veiculos/opcional.html">OPCIONAIS</a></li>
+                        <li><a class="dropdown-item" href="/pinturas.html">PINTURAS</a></li>
+                        <li><a class="dropdown-item" href="/veiculos/venda-direta.html">VENDA DIRETA</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-white" href="#">SUPORTE</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Configurator Section -->
+    <div class="container mt-4">
+        <div class="bg-light p-3 rounded">
+            <div class="row align-items-center">
+                <div class="col-md-2 col-12 mb-2 mb-md-0">
+                    <label class="form-label">Configurador</label>
+                </div>
+                <div class="col-md-3 col-12 mb-2 mb-md-0">
+                    <div class="input-group">
+                        <select class="form-select" id="configuradorMarca">
+                            <option value="">Selecione uma marca</option>
+                        </select>
+                        <button class="btn btn-outline-secondary" type="button" id="recarregarMarcas" title="Recarregar marcas">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-3 col-12 mb-2 mb-md-0">
+                    <select class="form-select" id="configuradorModelo" disabled>
+                        <option value="">Selecione um modelo</option>
+                    </select>
+                </div>
+                <div class="col-md-4 col-12">
+                    <select class="form-select" id="configuradorVersao" disabled>
+                        <option value="">Selecione uma versão</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Vehicle Details -->
+        <div class="mt-4">
+            <h4 id="veiculoTitulo">Selecione um veículo para configurar</h4>
+            <ul class="nav nav-tabs">
+                <li class="nav-item">
+                    <a class="nav-link active" href="#">Equipamentos</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">Diagrama</a>
+                </li>
+            </ul>
+
+            <!-- Price Information -->
+            <div class="row mt-3">
+                <div class="col-md col-6 mb-2">
+                    <div class="border p-2">
+                        <small>PREÇO PÚBLICO</small><br>
+                        <strong id="precoPublicoCard">R$ 0,00</strong>
+                    </div>
+                </div>
+                <div class="col-md col-6 mb-2">
+                    <div class="bg-success bg-opacity-25 p-2">
+                        <small>PCD IPI/ICMS</small><br>
+                        <strong id="pcdIpiIcmsCard">R$ 0,00</strong>
+                    </div>
+                </div>
+                <div class="col-md col-6 mb-2">
+                    <div class="bg-info bg-opacity-25 p-2">
+                        <small>PCD IPI</small><br>
+                        <strong id="pcdIpiCard">R$ 0,00</strong>
+                    </div>
+                </div>
+                <div class="col-md col-6 mb-2">
+                    <div class="bg-warning p-2">
+                        <small>TAXI IPI/ICMS</small><br>
+                        <strong id="taxiIpiIcmsCard">R$ 0,00</strong>
+                    </div>
+                </div>
+                <div class="col-md col-6 mb-2">
+                    <div class="bg-warning p-2">
+                        <small>TAXI IPI</small><br>
+                        <strong id="taxiIpiCard">R$ 0,00</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configuration Options -->
+            <div class="row mt-3">
+                <div class="col-md-6 col-12 mb-2">
+                    <select class="form-select" id="vendasDiretasSelect">
+                        <option value="">DESCONTOS VENDA DIRETA</option>
+                    </select>
+                </div>
+                <div class="col-md-6 col-12 mb-2">
+                    <div class="input-group">
+                        <span class="input-group-text">DESC.%</span>
+                        <input type="text" id="descontoInput" class="form-control" value="0">
+                    </div>
+                </div>
+                <div class="col-md-6 col-12 mb-2">
+                    <div class="input-group">
+                        <span class="input-group-text">DESC.R$</span>
+                        <input type="text" class="form-control" id="descontoReaisInput" value="0">
+                    </div>
+                </div>
+                <div class="col-md-6 col-12 mb-2">
+                    <div class="input-group">
+                        <span class="input-group-text">AGIO R$</span>
+                        <input type="text" class="form-control" id="agioReaisInput" value="0">
+                    </div>
+                </div>
+                <div class="col-md-6 col-12 mb-2">
+                    <div class="input-group">
+                        <span class="input-group-text">QT:</span>
+                        <input type="text" class="form-control" id="quantidadeInput" value="1">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Paint Options and Car Image -->
+            <div class="row mt-4">
+                <!-- Left Column - Paint Options -->
+                <div class="col-lg-5 col-md-6 col-12 mb-4 mb-md-0">
+                    <h5 class="mb-3">Opções de Pintura</h5>
+                    <div class="row" id="opcoesPin">
+                        <!-- Os cards de pinturas serão carregados dinamicamente via JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Right Column - Car Image -->
+                <div class="col-lg-7 col-md-6 col-12">
+                    <div class="card h-100" style="background-color: #fff;">
+                        <div class="card-body text-center car-image-container">
+                            <img id="carImage" src="assets/virtus-sense-tsi.png" alt="Volkswagen Virtus" class="img-fluid mb-4" style="width: 400px; height: 220px; object-fit: contain;">
+                            <div class="car-info">
+                                <h4 class="car-name">VIRTUS SENSE TSI 116CV</h4>
+                                <p class="car-color">Cor: <span id="selectedColor">Preto Ninja</span></p>
+                                <p class="car-price mt-3">
+                                    <small class="text-muted">A partir de</small><br>
+                                    <strong class="h3">R$ 104.290,00</strong>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Optional Items -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <h5>Opcionais</h5>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Descrição</th>
+                                    <th>Preço</th>
+                                    <th>Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>W23</td>
+                                    <td>Rodas de liga leve 16" com pneus 205/60 R16</td>
+                                    <td>R$ 2.990,00</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-primary">Adicionar</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>PF1</td>
+                                    <td>Pacote Tech (Central Multimídia, Sensor de Estacionamento)</td>
+                                    <td>R$ 3.590,00</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-primary">Adicionar</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Resumo e Valores Finais -->
+            <div class="row mt-4 pb-4">
+                <div class="col-12">
+                    <h5>RESUMO E VALORES FINAIS</h5>
+                    <div class="row g-2 pb-4" style="padding-bottom: 30px;">
+                        <div class="col">
+                            <div class="border p-2">
+                                <small>Preço Público</small><br>
+                                <strong id="resumoPrecoPublico">R$ 0,00</strong>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="border p-2">
+                                <small>Pintura + Opcionais</small><br>
+                                <strong id="resumoPinturaOpcionais">R$ 0,00</strong>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="border p-2">
+                                <small>Total</small><br>
+                                <strong id="resumoTotal">R$ 0,00</strong>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="border p-2">
+                                <small id="descontoLabel">Desc. 0%</small><br>
+                                <strong id="resumoDesconto">R$ 0,00</strong>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="border p-2">
+                                <small>Desc. R$</small><br>
+                                <strong id="resumoDescontoReais">R$ 0,00</strong>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="border p-2">
+                                <small>Ágio R$</small><br>
+                                <strong id="resumoAgio">R$ 0,00</strong>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="border p-2">
+                                <small>Quantidade</small><br>
+                                <strong id="resumoQuantidade">1</strong>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="border p-2">
+                                <small>Preço Final x1</small><br>
+                                <strong id="resumoPrecoFinal">R$ 0,00</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        console.log('Script inline executado');
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log('DOMContentLoaded no script inline');
+            console.log('Elementos do configurador:');
+            console.log('configuradorMarca:', document.getElementById('configuradorMarca'));
+            console.log('configuradorModelo:', document.getElementById('configuradorModelo'));
+            console.log('configuradorVersao:', document.getElementById('configuradorVersao'));
+        });
+    </script>
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/index.js"></script>
+    <script src="js/configurador-pinturas.js"></script>
+    <script>
+        // Chamar loadMarcas diretamente após o carregamento dos scripts
+        console.log('Chamando loadMarcas diretamente do script inline');
+        setTimeout(function() {
+            if (typeof loadMarcas === 'function') {
+                console.log('Função loadMarcas encontrada, chamando...');
+                loadMarcas();
+            } else {
+                console.error('Função loadMarcas não encontrada!');
+            }
+        }, 1000); // Aguardar 1 segundo para garantir que todos os scripts foram carregados
+    </script>
+</body>
+</html>

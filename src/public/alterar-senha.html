@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alterar Senha - Revenda de Carros</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/index.html">Revenda de Carros</a>
+            
+            <div class="d-flex align-items-center">
+                <span class="navbar-text me-3" id="userInfo"></span>
+                <div class="dropdown">
+                    <button class="btn btn-outline-light dropdown-toggle" type="button" id="userMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                        Conta
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuButton">
+                        <li><a class="dropdown-item" href="/meus-dados.html">MEUS DADOS</a></li>
+                        <li><a class="dropdown-item" href="/alterar-senha.html">ALTERAR SENHA</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><button class="dropdown-item" id="logoutButton">SAIR</button></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="mb-0">Alterar Senha</h4>
+                    </div>
+                    <div class="card-body">
+                        <form id="changePasswordForm" class="needs-validation" novalidate>
+                            <div class="mb-3">
+                                <label for="currentPassword" class="form-label">Senha Atual</label>
+                                <input type="password" class="form-control" id="currentPassword" required>
+                                <div class="invalid-feedback">
+                                    Por favor, informe sua senha atual
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="newPassword" class="form-label">Nova Senha</label>
+                                <input type="password" class="form-control" id="newPassword" required>
+                                <div class="invalid-feedback">
+                                    Por favor, informe a nova senha
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="confirmPassword" class="form-label">Confirmar Nova Senha</label>
+                                <input type="password" class="form-control" id="confirmPassword" required>
+                                <div class="invalid-feedback">
+                                    Por favor, confirme a nova senha
+                                </div>
+                            </div>
+
+                            <div class="alert alert-success d-none" id="successMessage">
+                                Senha alterada com sucesso!
+                            </div>
+
+                            <div class="alert alert-danger d-none" id="errorMessage">
+                                Erro ao alterar senha
+                            </div>
+
+                            <div class="d-flex justify-content-between">
+                                <a href="/index.html" class="btn btn-secondary">Voltar</a>
+                                <button type="submit" class="btn btn-primary" id="saveButton">
+                                    <span class="spinner-border spinner-border-sm d-none" id="saveSpinner"></span>
+                                    Salvar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/alterar-senha.js"></script>
+</body>
+</html>
