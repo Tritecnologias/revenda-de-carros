@@ -208,7 +208,7 @@ function loadMarcas() {
     
     // Usar XMLHttpRequest em vez de fetch
     const xhr = new XMLHttpRequest();
-    xhr.open('GET', 'http://localhost:3000/api/veiculos/marcas/public', true);
+    xhr.open('GET', `${config.apiBaseUrl}/api/veiculos/marcas/public`, true);
     xhr.setRequestHeader('Content-Type', 'application/json');
     
     xhr.onload = function() {
@@ -283,7 +283,7 @@ async function loadModelos(marcaId) {
         }
         
         // Usar o endpoint público para teste
-        const response = await fetch(`http://localhost:3000/api/veiculos/modelos/public/by-marca/${marcaId}`, {
+        const response = await fetch(`${config.apiBaseUrl}/api/veiculos/modelos/public/by-marca/${marcaId}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
@@ -348,7 +348,7 @@ async function loadVersoes(modeloId) {
     }
     
     try {
-        const response = await fetch(`/api/veiculos/public?modeloId=${modeloId}`, {
+        const response = await fetch(`${config.apiBaseUrl}/api/veiculos/public?modeloId=${modeloId}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
@@ -402,7 +402,7 @@ async function loadVendasDiretas(marcaId) {
     }
     
     try {
-        const response = await fetch(`/api/venda-direta/public?marcaId=${marcaId}`, {
+        const response = await fetch(`${config.apiBaseUrl}/api/venda-direta/public?marcaId=${marcaId}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
@@ -522,7 +522,7 @@ async function loadVeiculoDetails(veiculoId) {
         console.log(`Carregando detalhes do veículo ID: ${veiculoId}`);
         
         // Usar o endpoint público
-        const response = await fetch(`/api/veiculos/public/${veiculoId}`, {
+        const response = await fetch(`${config.apiBaseUrl}/api/veiculos/public/${veiculoId}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
@@ -598,7 +598,7 @@ async function loadOpcionaisModelo(modeloId) {
     try {
         console.log(`Carregando opcionais para o modelo ID: ${modeloId}`);
         
-        const response = await fetch(`http://localhost:3000/api/modelo-opcional/by-modelo/${modeloId}/public`, {
+        const response = await fetch(`${config.apiBaseUrl}/api/modelo-opcional/by-modelo/${modeloId}/public`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
