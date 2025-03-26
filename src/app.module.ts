@@ -23,9 +23,9 @@ import { VendaDireta } from './veiculos/entities/venda-direta.entity';
     }),
     TypeOrmModule.forRoot({
       type: 'mysql',
-      host: 'localhost',
+      host: '127.0.0.1',
       port: 3306,
-      username: 'root',
+      username: 'wanderson',
       password: 'Flavinha@2022',
       database: 'revenda_carros',
       entities: [ConfiguradorVeiculo, Pintura, ModeloPintura, User, Marca, Modelo, Veiculo, Opcional, ModeloOpcional, VendaDireta],

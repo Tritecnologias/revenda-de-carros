@@ -6,7 +6,6 @@ yarn-error.log
 .pnpm-debug.log
 
 # Arquivos de build
-/dist
 /build
 /.nest
 
@@ -87,3 +86,6 @@ tsconfig.tsbuildinfo
 .fusebox/
 .dynamodb/
 .tern-port
+
+# Pasta que está causando conflito
+/revenda-de-carros/

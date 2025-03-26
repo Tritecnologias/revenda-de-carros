@@ -1,0 +1,209 @@
+# Documentação de Deploy - Sistema de Revenda de Carros
+
+Data: 26 de março de 2025
+
+## 1. Configuração do Repositório Git
+
+### Modificação do .gitignore
+- Removida a linha `/dist` do arquivo .gitignore para permitir que os arquivos compilados sejam incluídos no repositório
+- Isso facilita o deploy, pois não é necessário compilar o código no servidor
+
+### Comandos executados:
+```bash
+git add dist/
+git commit -m "Adiciona arquivos compilados para deploy"
+git push
+```
+
+## 2. Configuração do Servidor (Ubuntu 24)
+
+### Preparação do Ambiente
+```bash
+# Atualizar o sistema
+sudo apt update && sudo apt upgrade -y
+
+# Instalar Node.js e npm
+sudo apt install -y nodejs npm
+
+# Instalar o gerenciador de versões do Node (opcional)
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+source ~/.bashrc
+nvm install 18  # ou a versão que você usa no desenvolvimento
+
+# Instalar o PM2 (gerenciador de processos para Node.js)
+npm install -g pm2
+```
+
+### Estrutura de Diretórios
+- A aplicação não precisa ser colocada em `/var/www`
+- Recomendação: criar um diretório em `/opt/revenda-carros`
+
+```bash
+sudo mkdir -p /opt/revenda-carros
+sudo chown $USER:$USER /opt/revenda-carros
+cd /opt/revenda-carros
+git clone https://github.com/Tritecnologias/revenda-de-carros.git .
+npm install --production
+```
+
+## 3. Configuração do Banco de Dados
+
+### Instalação do MySQL
+```bash
+sudo apt install -y mysql-server
+```
+
+### Criação do Banco de Dados
+```bash
+sudo mysql
+CREATE DATABASE revenda_carros;
+CREATE USER 'usuario'@'localhost' IDENTIFIED BY 'senha';
+GRANT ALL PRIVILEGES ON revenda_carros.* TO 'usuario'@'localhost';
+FLUSH PRIVILEGES;
+EXIT;
+```
+
+### Configuração do MySQL
+- O MySQL deve estar configurado para aceitar conexões no endereço correto
+- Verificar a configuração em `/etc/mysql/mysql.conf.d/mysqld.cnf`
+- Modificar a linha `bind-address` para `0.0.0.0` se necessário
+- Reiniciar o MySQL: `sudo systemctl restart mysql`
+
+### Execução das Migrações
+- Criar um arquivo de configuração temporário (migration-config.ts) com as configurações corretas
+- Executar as migrações: `npm run typeorm -- migration:run -d migration-config.ts`
+- Alternativa: usar a sincronização automática do TypeORM (`synchronize: true`)
+
+## 4. Configuração do Ambiente (.env)
+
+Criar um arquivo `.env` na raiz do projeto:
+
+```
+# Configurações do Servidor
+PORT=3000
+NODE_ENV=production
+
+# Configurações do Banco de Dados
+DB_TYPE=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_USERNAME=root
+DB_PASSWORD=sua_senha_segura
+DB_DATABASE=revenda_carros
+
+# Configurações de JWT
+# Gerar com: openssl rand -base64 64
+JWT_SECRET=chave_secreta_gerada_pelo_comando_acima
+JWT_EXPIRATION=8h
+
+# Configurações de Upload de Arquivos
+UPLOAD_DEST=./uploads
+
+# Configurações de Segurança
+# Para ambiente inicial sem domínio:
+CORS_ORIGIN=*
+```
+
+### Geração de Chave JWT Segura
+```bash
+openssl rand -base64 64
+```
+
+## 5. Configuração do Servidor Web
+
+### Iniciar a Aplicação com PM2
+```bash
+pm2 start dist/main.js --name "revenda-carros"
+pm2 startup
+pm2 save
+```
+
+### Configuração do Nginx como Proxy Reverso
+```bash
+sudo apt install -y nginx
+sudo nano /etc/nginx/sites-available/revenda-carros
+```
+
+Conteúdo do arquivo de configuração:
+```nginx
+server {
+    listen 80;
+    server_name _;  # Aceita qualquer nome de host
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+
+Ativar o site:
+```bash
+sudo ln -s /etc/nginx/sites-available/revenda-carros /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
+```
+
+## 6. Configuração do Firewall
+
+### Abrir Portas Necessárias
+```bash
+# Usando iptables
+sudo iptables -A INPUT -p tcp --dport 80 -j ACCEPT
+sudo iptables -A INPUT -p tcp --dport 443 -j ACCEPT
+
+# Ou usando UFW
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw reload
+```
+
+### Salvar Regras do Firewall
+```bash
+sudo apt install -y iptables-persistent
+sudo netfilter-persistent save
+```
+
+## 7. Configuração de HTTPS (Quando tiver um domínio)
+
+```bash
+sudo apt install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d seu-dominio.com
+```
+
+## 8. Monitoramento e Manutenção
+
+### Monitorar a Aplicação
+```bash
+pm2 monit
+pm2 logs revenda-carros
+```
+
+### Reiniciar a Aplicação (após atualizações)
+```bash
+cd /opt/revenda-carros
+git pull
+npm install --production
+pm2 restart revenda-carros
+```
+
+## 9. Solução de Problemas Comuns
+
+### Erro de Conexão com o Banco de Dados
+- Verificar se o MySQL está em execução: `sudo systemctl status mysql`
+- Verificar a configuração de bind-address no MySQL
+- Verificar as permissões do usuário do banco de dados
+
+### Erro nas Migrações
+- Verificar se o banco de dados existe
+- Usar a sincronização automática como alternativa
+- Verificar logs de erro para problemas específicos
+
+### Aplicação Não Acessível
+- Verificar se o PM2 está executando a aplicação: `pm2 status`
+- Verificar configuração do Nginx: `sudo nginx -t`
+- Verificar regras de firewall: `sudo iptables -L -n`
