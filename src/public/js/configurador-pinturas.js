@@ -46,28 +46,15 @@ async function carregarCardsPinturas(modeloId) {
     // Limpar o container
     containerPinturas.innerHTML = '';
     
-    // Criar duas colunas para os cards
-    const coluna1 = document.createElement('div');
-    coluna1.className = 'col-6';
-    
-    const coluna2 = document.createElement('div');
-    coluna2.className = 'col-6';
-    
-    // Distribuir os cards entre as duas colunas
+    // Adicionar cada pintura como um card
     pinturas.forEach((pintura, index) => {
-      const card = criarCardPintura(pintura);
+      const cardDiv = document.createElement('div');
+      cardDiv.className = 'col-md-6 col-12 mb-3';
       
-      // Adicionar à coluna apropriada (alternando)
-      if (index % 2 === 0) {
-        coluna1.appendChild(card);
-      } else {
-        coluna2.appendChild(card);
-      }
+      const card = criarCardPintura(pintura);
+      cardDiv.appendChild(card);
+      containerPinturas.appendChild(cardDiv);
     });
-    
-    // Adicionar as colunas ao container
-    containerPinturas.appendChild(coluna1);
-    containerPinturas.appendChild(coluna2);
     
     // Obter o preço base do veículo
     precoBaseVeiculo = obterPrecoPublicoVeiculo();
@@ -93,23 +80,22 @@ async function carregarCardsPinturas(modeloId) {
 
 // Função para criar um card de pintura
 function criarCardPintura(pintura) {
-  const cardContainer = document.createElement('div');
-  cardContainer.className = 'paint-option mb-3';
-  
   const card = document.createElement('div');
-  card.className = 'card';
-  card.style.cursor = 'pointer';
+  card.className = 'card pintura-card';
   
   const cardBody = document.createElement('div');
   cardBody.className = 'card-body';
   
   const titulo = document.createElement('h6');
-  titulo.textContent = `Pintura ${pintura.tipo}`;
+  titulo.className = 'card-title';
+  titulo.textContent = `Pintura ${pintura.tipo || 'SÓLIDA'}`;
   
   const nome = document.createElement('p');
+  nome.className = 'card-text';
   nome.textContent = pintura.nome;
   
-  const preco = document.createElement('strong');
+  const preco = document.createElement('p');
+  preco.className = 'card-text text-primary';
   preco.textContent = window.formatarMoeda ? window.formatarMoeda(pintura.preco) : 'R$ 0,00';
   
   // Montar a estrutura do card
@@ -117,7 +103,6 @@ function criarCardPintura(pintura) {
   cardBody.appendChild(nome);
   cardBody.appendChild(preco);
   card.appendChild(cardBody);
-  cardContainer.appendChild(card);
   
   // Adicionar evento de clique
   card.addEventListener('click', () => {
@@ -127,17 +112,23 @@ function criarCardPintura(pintura) {
     // Atualizar a pintura atual
     pinturaAtual = pintura;
     
-    // Atualizar a cor selecionada
-    const corElement = document.getElementById('selectedColor');
+    // Atualizar a cor selecionada no card do veículo
+    const corElement = document.getElementById('veiculoCor');
     if (corElement) {
-      corElement.textContent = pintura.nome;
+      corElement.textContent = `Cor: ${pintura.nome}`;
     }
     
     // Atualizar a imagem do veículo com a imagem da pintura, se disponível
-    const carImage = document.getElementById('carImage');
-    if (carImage && pintura.imageUrl) {
-      carImage.src = pintura.imageUrl;
+    const veiculoImagem = document.getElementById('veiculoImagem');
+    if (veiculoImagem && pintura.imageUrl) {
+      veiculoImagem.src = pintura.imageUrl;
       console.log('Imagem da pintura atualizada:', pintura.imageUrl);
+    } else if (veiculoImagem) {
+      // Se não tiver imagem específica da pintura, usar a imagem padrão do modelo
+      const modeloId = document.getElementById('configuradorModelo').value;
+      if (modeloId) {
+        veiculoImagem.src = `/images/modelos/${modeloId}.jpg`;
+      }
     }
     
     try {
@@ -156,7 +147,7 @@ function criarCardPintura(pintura) {
       console.log('Preço total:', precoTotal);
       
       // Atualizar o preço exibido no card da imagem
-      const precoElement = document.querySelector('.car-price strong');
+      const precoElement = document.getElementById('veiculoPreco');
       if (precoElement) {
         precoElement.textContent = window.formatarMoeda ? window.formatarMoeda(precoTotal) : 'R$ 0,00';
       }
@@ -172,18 +163,24 @@ function criarCardPintura(pintura) {
         }
       }
       
+      // Atualizar o valor no resumo de pintura
+      const precoPinturaResumo = document.getElementById('precoPinturaResumo');
+      if (precoPinturaResumo) {
+        precoPinturaResumo.textContent = window.formatarMoeda ? window.formatarMoeda(precoPintura) : 'R$ 0,00';
+      }
+      
     } catch (error) {
       console.error('Erro ao calcular preço total:', error);
     }
     
     // Destacar o card selecionado
-    document.querySelectorAll('.paint-option .card').forEach(c => {
-      c.classList.remove('border-primary');
+    document.querySelectorAll('.pintura-card').forEach(c => {
+      c.classList.remove('selected');
     });
-    card.classList.add('border-primary');
+    card.classList.add('selected');
   });
   
-  return cardContainer;
+  return card;
 }
 
 // Inicializar quando o DOM estiver carregado
@@ -193,40 +190,26 @@ document.addEventListener('DOMContentLoaded', () => {
   const opcoesPin = document.getElementById('opcoesPin');
   
   if (configuradorModelo && opcoesPin) {
-    // Carregar cards iniciais se houver um modelo selecionado
-    if (configuradorModelo.value) {
-      carregarCardsPinturas(configuradorModelo.value);
-    }
-    
-    // Adicionar evento para recarregar os cards quando o modelo mudar
-    configuradorModelo.addEventListener('change', () => {
-      if (configuradorModelo.value) {
-        carregarCardsPinturas(configuradorModelo.value);
+    // Adicionar evento para carregar pinturas quando um modelo for selecionado
+    configuradorModelo.addEventListener('change', function() {
+      if (this.value) {
+        carregarCardsPinturas(this.value);
+      } else {
+        // Limpar o container de pinturas se nenhum modelo estiver selecionado
+        opcoesPin.innerHTML = '';
       }
     });
     
-    // Adicionar evento para atualizar o preço base quando a versão mudar
-    const configuradorVersao = document.getElementById('configuradorVersao');
-    if (configuradorVersao) {
-      configuradorVersao.addEventListener('change', () => {
-        // Aguardar um pouco para que os preços sejam atualizados pelo index.js
-        setTimeout(() => {
-          // Obter o preço público atualizado
-          precoBaseVeiculo = obterPrecoPublicoVeiculo();
-          console.log('Preço público atualizado:', window.formatarMoeda ? window.formatarMoeda(precoBaseVeiculo) : 'R$ 0,00');
-          
-          // Se houver uma pintura selecionada, recalcular o preço total
-          if (pinturaAtual) {
-            const precoPintura = parseFloat(pinturaAtual.preco) || 0;
-            const precoTotal = precoBaseVeiculo + precoPintura;
-            
-            const precoElement = document.querySelector('.car-price strong');
-            if (precoElement) {
-              precoElement.textContent = window.formatarMoeda ? window.formatarMoeda(precoTotal) : 'R$ 0,00';
-            }
-          }
-        }, 500); // Aguardar 500ms para garantir que os preços foram atualizados
-      });
+    // Verificar se já existe um modelo selecionado
+    if (configuradorModelo.value) {
+      carregarCardsPinturas(configuradorModelo.value);
     }
   }
+  
+  // Adicionar evento para carregar pinturas quando os detalhes do veículo forem carregados
+  document.addEventListener('veiculoDetalhesCarregados', function(event) {
+    if (event.detail && event.detail.modeloId) {
+      carregarCardsPinturas(event.detail.modeloId);
+    }
+  });
 });

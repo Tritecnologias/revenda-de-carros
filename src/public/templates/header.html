@@ -1,0 +1,64 @@
+<!-- Barra superior preta -->
+<nav class="navbar navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/index.html">Revenda de Carros</a>
+        <div class="ms-auto d-flex align-items-center">
+            <span class="text-light me-3" id="userInfo">Administrador (1) - Último acesso: 26/03/2025, 17:43:55</span>
+            <div class="dropdown">
+                <button class="btn btn-outline-light dropdown-toggle" type="button" id="userMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                    Conta
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuButton">
+                    <li><a class="dropdown-item" href="/meus-dados.html">MEUS DADOS</a></li>
+                    <li><a class="dropdown-item" href="/alterar-senha.html">ALTERAR SENHA</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><button class="dropdown-item" id="logoutButton">SAIR</button></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- Menu azul centralizado -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+        <button class="navbar-toggler mx-auto" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavBlue">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse justify-content-center" id="navbarNavBlue">
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link text-white" href="/admin/users.html">USUÁRIOS</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-white" href="/index.html">CONFIGURADOR</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-white" href="/isencoes.html">ISENÇÕES</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-white" href="/cotacoes.html">COTAÇÕES</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-white" href="/clientes.html">CLIENTES</a>
+                </li>
+                <li class="nav-item dropdown" id="veiculosMenuContainer">
+                    <a class="nav-link text-white dropdown-toggle" href="#" id="veiculosDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        VEÍCULOS
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="veiculosDropdown">
+                        <li><a class="dropdown-item" href="/veiculos/marca.html">MARCA</a></li>
+                        <li><a class="dropdown-item" href="/veiculos/modelo.html">MODELO</a></li>
+                        <li><a class="dropdown-item" href="/veiculos/veiculo.html">VEÍCULO</a></li>
+                        <li><a class="dropdown-item" href="/veiculos/opcional.html">OPCIONAIS</a></li>
+                        <li><a class="dropdown-item" href="/pinturas.html">PINTURAS</a></li>
+                        <li><a class="dropdown-item" href="/veiculos/venda-direta.html">VENDA DIRETA</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-white" href="/index.html">CONFIGURADOR</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>

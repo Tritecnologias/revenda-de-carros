@@ -1,5 +1,5 @@
-// Inicialização da autenticação
-const auth = new Auth();
+// Variáveis globais
+let auth;
 let currentPage = 1;
 const itemsPerPage = 10;
 let totalItems = 0;
@@ -8,26 +8,55 @@ let opcionais = [];
 let modelosOpcionais = [];
 
 // Elementos do DOM
-const opcionaisTableBody = document.getElementById('opcionaisTableBody');
-const modeloOpcionaisTableBody = document.getElementById('modeloOpcionaisTableBody');
-const paginationControls = document.getElementById('paginationControls');
-const opcionalForm = document.getElementById('opcionalForm');
-const modeloOpcionalForm = document.getElementById('modeloOpcionalForm');
-const editAssociacaoForm = document.getElementById('editAssociacaoForm');
-const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
-const editAssociacaoModal = new bootstrap.Modal(document.getElementById('editAssociacaoModal'));
-const errorMessage = document.getElementById('errorMessage');
-const associacaoErrorMessage = document.getElementById('associacaoErrorMessage');
-const editAssociacaoErrorMessage = document.getElementById('editAssociacaoErrorMessage');
+let opcionaisTableBody;
+let modeloOpcionaisTableBody;
+let paginationControls;
+let opcionalForm;
+let modeloOpcionalForm;
+let editAssociacaoForm;
+let deleteModal;
+let editAssociacaoModal;
+let errorMessage;
+let associacaoErrorMessage;
+let editAssociacaoErrorMessage;
 
-// Verificar autenticação e redirecionar se não estiver autenticado
-document.addEventListener('DOMContentLoaded', () => {
+// Função para inicializar os elementos do DOM
+function initializeElements() {
+    // Inicialização da autenticação
+    auth = new Auth();
+    
+    // Elementos do DOM
+    opcionaisTableBody = document.getElementById('opcionaisTableBody');
+    modeloOpcionaisTableBody = document.getElementById('modeloOpcionaisTableBody');
+    paginationControls = document.getElementById('paginationControls');
+    opcionalForm = document.getElementById('opcionalForm');
+    modeloOpcionalForm = document.getElementById('modeloOpcionalForm');
+    editAssociacaoForm = document.getElementById('editAssociacaoForm');
+    
+    const deleteModalElement = document.getElementById('deleteModal');
+    if (deleteModalElement) {
+        deleteModal = new bootstrap.Modal(deleteModalElement);
+    }
+    
+    const editAssociacaoModalElement = document.getElementById('editAssociacaoModal');
+    if (editAssociacaoModalElement) {
+        editAssociacaoModal = new bootstrap.Modal(editAssociacaoModalElement);
+    }
+    
+    errorMessage = document.getElementById('errorMessage');
+    associacaoErrorMessage = document.getElementById('associacaoErrorMessage');
+    editAssociacaoErrorMessage = document.getElementById('editAssociacaoErrorMessage');
+    
+    // Verificar autenticação
     auth.checkAuthAndRedirect();
     
     // Configurar botão de logout
-    document.getElementById('logoutButton').addEventListener('click', () => {
-        auth.logout();
-    });
+    const logoutButton = document.getElementById('logoutButton');
+    if (logoutButton) {
+        logoutButton.addEventListener('click', () => {
+            auth.logout();
+        });
+    }
     
     // Inicializar inputs monetários
     initMonetaryInputs();
@@ -38,33 +67,79 @@ document.addEventListener('DOMContentLoaded', () => {
     loadModelosOpcionais();
     
     // Configurar eventos
-    document.getElementById('saveButton').addEventListener('click', saveOpcional);
-    document.getElementById('limparButton').addEventListener('click', () => {
-        opcionalForm.reset();
-        document.getElementById('opcionalId').value = '';
-        errorMessage.classList.add('d-none');
-        opcionalForm.classList.remove('was-validated');
-    });
+    const saveButton = document.getElementById('saveButton');
+    if (saveButton) {
+        saveButton.addEventListener('click', saveOpcional);
+    }
     
-    document.getElementById('associarButton').addEventListener('click', associarOpcionalModelo);
-    document.getElementById('limparAssociacaoButton').addEventListener('click', () => {
-        modeloOpcionalForm.reset();
-        associacaoErrorMessage.classList.add('d-none');
-        modeloOpcionalForm.classList.remove('was-validated');
-    });
+    const limparButton = document.getElementById('limparButton');
+    if (limparButton) {
+        limparButton.addEventListener('click', () => {
+            if (opcionalForm) {
+                opcionalForm.reset();
+                const opcionalIdElement = document.getElementById('opcionalId');
+                if (opcionalIdElement) {
+                    opcionalIdElement.value = '';
+                }
+                if (errorMessage) {
+                    errorMessage.classList.add('d-none');
+                }
+                opcionalForm.classList.remove('was-validated');
+            }
+        });
+    }
     
-    document.getElementById('saveAssociacaoButton').addEventListener('click', updateAssociacao);
-    document.getElementById('confirmDeleteButton').addEventListener('click', deleteItem);
+    const associarButton = document.getElementById('associarButton');
+    if (associarButton) {
+        associarButton.addEventListener('click', associarOpcionalModelo);
+    }
+    
+    const limparAssociacaoButton = document.getElementById('limparAssociacaoButton');
+    if (limparAssociacaoButton) {
+        limparAssociacaoButton.addEventListener('click', () => {
+            if (modeloOpcionalForm) {
+                modeloOpcionalForm.reset();
+                if (associacaoErrorMessage) {
+                    associacaoErrorMessage.classList.add('d-none');
+                }
+                modeloOpcionalForm.classList.remove('was-validated');
+            }
+        });
+    }
+    
+    const saveAssociacaoButton = document.getElementById('saveAssociacaoButton');
+    if (saveAssociacaoButton) {
+        saveAssociacaoButton.addEventListener('click', updateAssociacao);
+    }
+    
+    const confirmDeleteButton = document.getElementById('confirmDeleteButton');
+    if (confirmDeleteButton) {
+        confirmDeleteButton.addEventListener('click', deleteItem);
+    }
     
     // Filtro de modelo
-    document.getElementById('filtroModeloSelect').addEventListener('change', function() {
-        const modeloId = this.value;
-        if (modeloId) {
-            filterModeloOpcionaisByModelo(modeloId);
-        } else {
-            renderModelosOpcionais(modelosOpcionais);
-        }
-    });
+    const filtroModeloSelect = document.getElementById('filtroModeloSelect');
+    if (filtroModeloSelect) {
+        filtroModeloSelect.addEventListener('change', function() {
+            const modeloId = this.value;
+            if (modeloId) {
+                filterModeloOpcionaisByModelo(modeloId);
+            } else {
+                renderModelosOpcionais(modelosOpcionais);
+            }
+        });
+    }
+}
+
+// Verificar autenticação e redirecionar se não estiver autenticado
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM carregado, aguardando carregamento do layout...');
+    
+    // Aguardar um pequeno tempo para garantir que o layout-manager.js tenha carregado o cabeçalho
+    setTimeout(() => {
+        console.log('Inicializando elementos do DOM para opcionais...');
+        initializeElements();
+    }, 100);
 });
 
 // Função para carregar opcionais

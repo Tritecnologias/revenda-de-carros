@@ -64,6 +64,28 @@ let UsersController = class UsersController {
         const userId = req.user.id;
         return this.usersService.changePassword(userId, changePasswordDto.currentPassword, changePasswordDto.newPassword);
     }
+    async checkUserByEmail(email) {
+        try {
+            const user = await this.usersService.findByEmail(email);
+            return {
+                id: user.id,
+                email: user.email,
+                nome: user.nome,
+                role: user.role
+            };
+        }
+        catch (error) {
+            throw new common_1.HttpException(error.message || 'Error fetching user', error.status || common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+    async updateUserRole(id, updateRoleDto) {
+        try {
+            return await this.usersService.updateRole(+id, updateRoleDto.role);
+        }
+        catch (error) {
+            throw new common_1.HttpException(error.message || 'Error updating user role', error.status || common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
     async remove(id) {
         try {
             await this.usersService.remove(+id);
@@ -127,6 +149,23 @@ __decorate([
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "changePassword", null);
+__decorate([
+    (0, common_1.Get)('check-email/:email'),
+    (0, roles_decorator_1.Roles)('admin'),
+    __param(0, (0, common_1.Param)('email')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "checkUserByEmail", null);
+__decorate([
+    (0, common_1.Put)('update-role/:id'),
+    (0, roles_decorator_1.Roles)('admin'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "updateUserRole", null);
 __decorate([
     (0, common_1.Delete)(':id'),
     (0, roles_decorator_1.Roles)('admin'),

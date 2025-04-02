@@ -1,0 +1,35 @@
+<!-- Cabeçalho padrão para todas as páginas do sistema -->
+<!-- Barra superior preta -->
+<nav class="navbar navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/index.html">Revenda de Carros</a>
+        <div class="ms-auto d-flex align-items-center">
+            <span class="text-light me-3" id="userInfo">Carregando...</span>
+            <div class="dropdown">
+                <button class="btn btn-outline-light dropdown-toggle" type="button" id="userMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                    Conta
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuButton">
+                    <li><a class="dropdown-item" href="/meus-dados.html">MEUS DADOS</a></li>
+                    <li><a class="dropdown-item" href="/alterar-senha.html">ALTERAR SENHA</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><button class="dropdown-item" id="logoutButton">SAIR</button></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- Menu azul centralizado - será preenchido pelo menu-manager.js -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+        <button class="navbar-toggler mx-auto" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavBlue">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse justify-content-center" id="navbarNavBlue">
+            <ul class="navbar-nav">
+                <!-- Menu será carregado dinamicamente pelo menu-manager.js -->
+            </ul>
+        </div>
+    </div>
+</nav>

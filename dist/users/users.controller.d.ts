@@ -13,22 +13,22 @@ export declare class UsersController {
     findOne(id: string): Promise<import("./entities/user.entity").User>;
     create(createUserDto: CreateUserDto): Promise<import("./entities/user.entity").User>;
     update(id: string, updateUserDto: UpdateUserDto): Promise<import("./entities/user.entity").User>;
-    updateProfile(req: any, updateUserDto: UpdateUserDto): Promise<{
-        id: number;
-        email: string;
-        nome: string;
-        role: string;
-        isActive: boolean;
-        lastLoginAt: Date;
-        createdAt: Date;
-        updatedAt: Date;
-    }>;
+    updateProfile(req: any, updateUserDto: UpdateUserDto): Promise<import("./entities/user.entity").User>;
     changePassword(req: any, changePasswordDto: {
         currentPassword: string;
         newPassword: string;
     }): Promise<{
         message: string;
     }>;
+    checkUserByEmail(email: string): Promise<{
+        id: number;
+        email: string;
+        nome: string;
+        role: string;
+    }>;
+    updateUserRole(id: string, updateRoleDto: {
+        role: string;
+    }): Promise<import("./entities/user.entity").User>;
     remove(id: string): Promise<{
         message: string;
     }>;

@@ -14,14 +14,6 @@ function initApp() {
 
     const user = auth.getUser();
     console.log('Usuário atual:', user);
-    
-    // Mostrar/ocultar itens do menu baseado no papel do usuário
-    if (user && user.role === 'admin') {
-        document.querySelectorAll('.admin-only').forEach(el => {
-            el.style.display = '';
-        });
-        console.log('Elementos de admin exibidos');
-    }
 
     // Elementos do configurador
     const marcaSelect = document.getElementById('configuradorMarca');

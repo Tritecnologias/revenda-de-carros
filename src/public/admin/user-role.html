@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciamento de Papéis de Usuário</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>Gerenciamento de Papéis de Usuário</h1>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                Verificar Papel do Usuário
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="emailInput" class="form-label">Email do Usuário</label>
+                    <input type="email" class="form-control" id="emailInput" placeholder="exemplo@email.com">
+                </div>
+                <button id="checkUserBtn" class="btn btn-primary">Verificar Usuário</button>
+            </div>
+        </div>
+        
+        <div id="userInfoCard" class="card mb-4" style="display: none;">
+            <div class="card-header">
+                Informações do Usuário
+            </div>
+            <div class="card-body">
+                <div id="userInfo">
+                    <!-- Informações do usuário serão exibidas aqui -->
+                </div>
+                <div class="mt-3">
+                    <label for="roleSelect" class="form-label">Papel do Usuário</label>
+                    <select class="form-select" id="roleSelect">
+                        <option value="user">Usuário</option>
+                        <option value="cadastrador">Cadastrador</option>
+                        <option value="admin">Administrador</option>
+                    </select>
+                </div>
+                <button id="updateRoleBtn" class="btn btn-success mt-3">Atualizar Papel</button>
+            </div>
+        </div>
+        
+        <div id="alertContainer"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/auth.js"></script>
+    <script>
+        // Inicializar autenticação
+        const auth = new Auth();
+        
+        // Verificar se o usuário está autenticado e é admin
+        if (!auth.isAuthenticated() || auth.getUser().role !== 'admin') {
+            window.location.href = '/';
+        }
+        
+        // Elementos do DOM
+        const emailInput = document.getElementById('emailInput');
+        const checkUserBtn = document.getElementById('checkUserBtn');
+        const userInfoCard = document.getElementById('userInfoCard');
+        const userInfo = document.getElementById('userInfo');
+        const roleSelect = document.getElementById('roleSelect');
+        const updateRoleBtn = document.getElementById('updateRoleBtn');
+        const alertContainer = document.getElementById('alertContainer');
+        
+        let currentUserId = null;
+        
+        // Função para mostrar alertas
+        function showAlert(message, type = 'danger') {
+            alertContainer.innerHTML = `
+                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+        }
+        
+        // Verificar usuário pelo email
+        checkUserBtn.addEventListener('click', async () => {
+            const email = emailInput.value.trim();
+            if (!email) {
+                showAlert('Por favor, insira um email válido.');
+                return;
+            }
+            
+            try {
+                const token = auth.getToken();
+                const response = await fetch(`/users/check-email/${email}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Usuário não encontrado ou erro na requisição.');
+                }
+                
+                const userData = await response.json();
+                currentUserId = userData.id;
+                
+                userInfo.innerHTML = `
+                    <p><strong>ID:</strong> ${userData.id}</p>
+                    <p><strong>Nome:</strong> ${userData.nome}</p>
+                    <p><strong>Email:</strong> ${userData.email}</p>
+                    <p><strong>Papel Atual:</strong> ${userData.role}</p>
+                `;
+                
+                roleSelect.value = userData.role;
+                userInfoCard.style.display = 'block';
+                
+            } catch (error) {
+                showAlert(error.message);
+                userInfoCard.style.display = 'none';
+            }
+        });
+        
+        // Atualizar papel do usuário
+        updateRoleBtn.addEventListener('click', async () => {
+            if (!currentUserId) {
+                showAlert('Nenhum usuário selecionado.');
+                return;
+            }
+            
+            const newRole = roleSelect.value;
+            
+            try {
+                const token = auth.getToken();
+                const response = await fetch(`/users/update-role/${currentUserId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ role: newRole })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Erro ao atualizar o papel do usuário.');
+                }
+                
+                showAlert('Papel do usuário atualizado com sucesso!', 'success');
+                
+                // Atualizar a exibição
+                const userData = await response.json();
+                userInfo.querySelector('p:nth-child(4)').innerHTML = `<strong>Papel Atual:</strong> ${userData.role}`;
+                
+            } catch (error) {
+                showAlert(error.message);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,54 @@
+/**
+ * Estilos específicos para controle de acesso baseado em papéis
+ * Esta abordagem usa CSS para controlar a visibilidade dos menus
+ */
+
+/* Esconder todos os menus restritos por padrão */
+.admin-only,
+.cadastrador-only,
+.veiculos-menu {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    position: absolute !important;
+    left: -9999px !important;
+    top: -9999px !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+}
+
+/* Classe para mostrar menus para usuários autorizados */
+body.role-admin .admin-only,
+body.role-admin .cadastrador-only,
+body.role-admin .veiculos-menu,
+body.role-cadastrador .cadastrador-only,
+body.role-cadastrador .veiculos-menu {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    pointer-events: auto !important;
+}
+
+/* Para itens de lista na navegação */
+body.role-admin li.admin-only,
+body.role-admin li.cadastrador-only,
+body.role-admin li.veiculos-menu,
+body.role-cadastrador li.cadastrador-only,
+body.role-cadastrador li.veiculos-menu {
+    display: list-item !important;
+}
+
+/* Para itens de navegação inline */
+body.role-admin .nav-item.admin-only,
+body.role-admin .nav-item.cadastrador-only,
+body.role-admin .nav-item.veiculos-menu,
+body.role-cadastrador .nav-item.cadastrador-only,
+body.role-cadastrador .nav-item.veiculos-menu {
+    display: inline-block !important;
+}

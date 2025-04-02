@@ -6,49 +6,85 @@ let totalItems = 0;
 let marcas = [];
 
 // Elementos do DOM
-const modelosTableBody = document.getElementById('modelosTableBody');
-const paginationControls = document.getElementById('paginationControls');
-const modeloForm = document.getElementById('modeloForm');
-const modeloModal = new bootstrap.Modal(document.getElementById('modeloModal'));
-const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
-const errorMessage = document.getElementById('errorMessage');
-const saveButton = document.getElementById('saveButton');
-const saveSpinner = document.getElementById('saveSpinner');
-const confirmDeleteButton = document.getElementById('confirmDeleteButton');
-const deleteSpinner = document.getElementById('deleteSpinner');
-const marcaSelect = document.getElementById('marcaId');
+let modelosTableBody;
+let paginationControls;
+let modeloForm;
+let modeloModal;
+let deleteModal;
+let errorMessage;
+let saveButton;
+let saveSpinner;
+let confirmDeleteButton;
+let deleteSpinner;
+let marcaSelect;
 
-// Verificar autenticação e redirecionar se não estiver autenticado
-document.addEventListener('DOMContentLoaded', () => {
-    auth.checkAuthAndRedirect();
+// Inicializar elementos após o carregamento do DOM
+function initializeElements() {
+    modelosTableBody = document.getElementById('modelosTableBody');
+    paginationControls = document.getElementById('paginationControls');
+    modeloForm = document.getElementById('modeloForm');
     
-    // Configurar botão de logout
-    document.getElementById('logoutButton').addEventListener('click', () => {
-        auth.logout();
-    });
+    const modeloModalElement = document.getElementById('modeloModal');
+    if (modeloModalElement) {
+        modeloModal = new bootstrap.Modal(modeloModalElement);
+    }
+    
+    const deleteModalElement = document.getElementById('deleteModal');
+    if (deleteModalElement) {
+        deleteModal = new bootstrap.Modal(deleteModalElement);
+    }
+    
+    errorMessage = document.getElementById('errorMessage');
+    saveButton = document.getElementById('saveButton');
+    saveSpinner = document.getElementById('saveSpinner');
+    confirmDeleteButton = document.getElementById('confirmDeleteButton');
+    deleteSpinner = document.getElementById('deleteSpinner');
+    marcaSelect = document.getElementById('marcaId');
+    
+    // Configurar eventos
+    if (saveButton) {
+        saveButton.addEventListener('click', saveModelo);
+    }
+    
+    if (confirmDeleteButton) {
+        confirmDeleteButton.addEventListener('click', deleteModelo);
+    }
+    
+    // Reset do formulário quando o modal é fechado
+    if (modeloModalElement) {
+        modeloModalElement.addEventListener('hidden.bs.modal', () => {
+            modeloForm.reset();
+            document.getElementById('modeloId').value = '';
+            document.getElementById('modeloModalTitle').textContent = 'NOVO MODELO';
+            errorMessage.classList.add('d-none');
+            modeloForm.classList.remove('was-validated');
+        });
+    }
     
     // Carregar marcas para o select
     loadMarcasSelect();
     
     // Carregar modelos
     loadModelos();
+}
+
+// Verificar autenticação e redirecionar se não estiver autenticado
+document.addEventListener('DOMContentLoaded', () => {
+    // Verificar autenticação
+    auth.checkAuthAndRedirect();
     
-    // Configurar eventos
-    saveButton.addEventListener('click', saveModelo);
-    confirmDeleteButton.addEventListener('click', deleteModelo);
-    
-    // Reset do formulário quando o modal é fechado
-    document.getElementById('modeloModal').addEventListener('hidden.bs.modal', () => {
-        modeloForm.reset();
-        document.getElementById('modeloId').value = '';
-        document.getElementById('modeloModalTitle').textContent = 'NOVO MODELO';
-        errorMessage.classList.add('d-none');
-        modeloForm.classList.remove('was-validated');
-    });
+    // Inicializar elementos após garantir que o DOM está completamente carregado
+    // e que o cabeçalho foi carregado pelo layout-manager.js
+    setTimeout(initializeElements, 500);
 });
 
 // Função para carregar marcas para o select
 async function loadMarcasSelect() {
+    if (!marcaSelect) {
+        console.error('Elemento marcaSelect não encontrado');
+        return;
+    }
+    
     try {
         const token = auth.getToken();
         const response = await fetch('/api/veiculos/marcas/all', {
@@ -64,12 +100,10 @@ async function loadMarcasSelect() {
         
         marcas = await response.json();
         
-        // Limpar opções existentes, mantendo a primeira
-        while (marcaSelect.options.length > 1) {
-            marcaSelect.remove(1);
-        }
+        // Limpar select
+        marcaSelect.innerHTML = '<option value="">Selecione uma marca</option>';
         
-        // Adicionar novas opções
+        // Adicionar opções
         marcas.forEach(marca => {
             const option = document.createElement('option');
             option.value = marca.id;
@@ -84,6 +118,11 @@ async function loadMarcasSelect() {
 
 // Função para carregar modelos
 async function loadModelos() {
+    if (!modelosTableBody) {
+        console.error('Elemento modelosTableBody não encontrado');
+        return;
+    }
+    
     try {
         const token = auth.getToken();
         const response = await fetch(`/api/veiculos/modelos?page=${currentPage}&limit=${itemsPerPage}`, {
@@ -110,31 +149,33 @@ async function loadModelos() {
 
 // Função para renderizar modelos na tabela
 function renderModelos(modelos) {
+    if (!modelosTableBody) {
+        console.error('Elemento modelosTableBody não encontrado');
+        return;
+    }
+    
     modelosTableBody.innerHTML = '';
     
     if (modelos.length === 0) {
-        const row = document.createElement('tr');
-        row.innerHTML = '<td colspan="5" class="text-center">Nenhum modelo encontrado</td>';
-        modelosTableBody.appendChild(row);
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="5" class="text-center">Nenhum modelo encontrado</td>';
+        modelosTableBody.appendChild(tr);
         return;
     }
     
     modelos.forEach(modelo => {
+        const tr = document.createElement('tr');
+        
         // Encontrar o nome da marca
         const marca = marcas.find(m => m.id === modelo.marcaId) || { nome: 'Desconhecida' };
         
-        const row = document.createElement('tr');
-        row.innerHTML = `
+        tr.innerHTML = `
             <td>${modelo.id}</td>
             <td>${marca.nome}</td>
             <td>${modelo.nome}</td>
+            <td>${modelo.ativo ? '<span class="badge bg-success">Ativo</span>' : '<span class="badge bg-danger">Inativo</span>'}</td>
             <td>
-                <span class="badge ${modelo.status === 'ativo' ? 'bg-success' : 'bg-danger'}">
-                    ${modelo.status === 'ativo' ? 'Ativo' : 'Inativo'}
-                </span>
-            </td>
-            <td>
-                <button class="btn btn-sm btn-primary me-1" onclick="editModelo(${modelo.id})">
+                <button class="btn btn-sm btn-primary" onclick="editModelo(${modelo.id})">
                     <i class="fas fa-edit"></i>
                 </button>
                 <button class="btn btn-sm btn-danger" onclick="showDeleteModal(${modelo.id})">
@@ -142,43 +183,50 @@ function renderModelos(modelos) {
                 </button>
             </td>
         `;
-        modelosTableBody.appendChild(row);
+        
+        modelosTableBody.appendChild(tr);
     });
 }
 
 // Função para renderizar controles de paginação
 function renderPagination() {
-    const totalPages = Math.ceil(totalItems / itemsPerPage);
-    paginationControls.innerHTML = '';
-    
-    if (totalPages <= 1) {
+    if (!paginationControls) {
+        console.error('Elemento paginationControls não encontrado');
         return;
     }
     
-    const pagination = document.createElement('ul');
-    pagination.className = 'pagination justify-content-center';
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
     
-    // Botão anterior
-    const prevLi = document.createElement('li');
-    prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
-    prevLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(${currentPage - 1})">Anterior</a>`;
-    pagination.appendChild(prevLi);
-    
-    // Páginas
-    for (let i = 1; i <= totalPages; i++) {
-        const pageLi = document.createElement('li');
-        pageLi.className = `page-item ${i === currentPage ? 'active' : ''}`;
-        pageLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(${i})">${i}</a>`;
-        pagination.appendChild(pageLi);
+    if (totalPages <= 1) {
+        paginationControls.innerHTML = '';
+        return;
     }
     
-    // Botão próximo
-    const nextLi = document.createElement('li');
-    nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
-    nextLi.innerHTML = `<a class="page-link" href="#" onclick="changePage(${currentPage + 1})">Próximo</a>`;
-    pagination.appendChild(nextLi);
+    let paginationHTML = `
+        <nav aria-label="Navegação de página">
+            <ul class="pagination justify-content-center">
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${currentPage - 1}); return false;">Anterior</a>
+                </li>
+    `;
     
-    paginationControls.appendChild(pagination);
+    for (let i = 1; i <= totalPages; i++) {
+        paginationHTML += `
+            <li class="page-item ${currentPage === i ? 'active' : ''}">
+                <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i}</a>
+            </li>
+        `;
+    }
+    
+    paginationHTML += `
+                <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${currentPage + 1}); return false;">Próximo</a>
+                </li>
+            </ul>
+        </nav>
+    `;
+    
+    paginationControls.innerHTML = paginationHTML;
 }
 
 // Função para mudar de página
@@ -192,33 +240,35 @@ function changePage(page) {
 }
 
 // Função para editar modelo
-async function editModelo(id) {
-    try {
-        const token = auth.getToken();
-        const response = await fetch(`/api/veiculos/modelos/${id}`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error('Falha ao carregar dados do modelo');
+function editModelo(id) {
+    const token = auth.getToken();
+    
+    fetch(`/api/veiculos/modelos/${id}`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`
         }
-        
-        const modelo = await response.json();
-        
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Falha ao carregar modelo');
+        }
+        return response.json();
+    })
+    .then(modelo => {
         document.getElementById('modeloId').value = modelo.id;
         document.getElementById('marcaId').value = modelo.marcaId;
-        document.getElementById('nome').value = modelo.nome;
-        document.getElementById('status').value = modelo.status;
+        document.getElementById('modeloNome').value = modelo.nome;
+        document.getElementById('modeloAtivo').checked = modelo.ativo;
+        
         document.getElementById('modeloModalTitle').textContent = 'EDITAR MODELO';
         
         modeloModal.show();
-    } catch (error) {
-        console.error('Erro ao carregar modelo:', error);
-        showError('Não foi possível carregar os dados do modelo. Por favor, tente novamente mais tarde.');
-    }
+    })
+    .catch(error => {
+        console.error('Erro ao carregar modelo para edição:', error);
+        showError('Não foi possível carregar o modelo para edição. Por favor, tente novamente mais tarde.');
+    });
 }
 
 // Função para mostrar modal de exclusão
@@ -228,105 +278,125 @@ function showDeleteModal(id) {
 }
 
 // Função para salvar modelo
-async function saveModelo() {
+function saveModelo() {
+    // Validar formulário
     if (!modeloForm.checkValidity()) {
         modeloForm.classList.add('was-validated');
         return;
     }
     
-    const modeloId = document.getElementById('modeloId').value;
-    const marcaId = document.getElementById('marcaId').value;
-    const nome = document.getElementById('nome').value;
-    const status = document.getElementById('status').value;
+    // Mostrar spinner
+    saveButton.disabled = true;
+    saveSpinner.classList.remove('d-none');
     
+    // Obter dados do formulário
+    const id = document.getElementById('modeloId').value;
+    const marcaId = document.getElementById('marcaId').value;
+    const nome = document.getElementById('modeloNome').value;
+    const ativo = document.getElementById('modeloAtivo').checked;
+    
+    // Validar marca
+    if (!marcaId) {
+        showError('Por favor, selecione uma marca.');
+        saveButton.disabled = false;
+        saveSpinner.classList.add('d-none');
+        return;
+    }
+    
+    // Preparar dados para envio
     const modeloData = {
         marcaId,
         nome,
-        status
+        ativo
     };
     
-    try {
-        saveButton.disabled = true;
-        saveSpinner.classList.remove('d-none');
-        errorMessage.classList.add('d-none');
-        
-        const token = auth.getToken();
-        const url = modeloId ? `/api/veiculos/modelos/${modeloId}` : '/api/veiculos/modelos';
-        const method = modeloId ? 'PUT' : 'POST';
-        
-        const response = await fetch(url, {
-            method,
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(modeloData)
-        });
-        
+    const token = auth.getToken();
+    const method = id ? 'PUT' : 'POST';
+    const url = id ? `/api/veiculos/modelos/${id}` : '/api/veiculos/modelos';
+    
+    // Enviar requisição
+    fetch(url, {
+        method,
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(modeloData)
+    })
+    .then(response => {
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Falha ao salvar modelo');
+            throw new Error('Falha ao salvar modelo');
         }
-        
+        return response.json();
+    })
+    .then(() => {
+        // Fechar modal e recarregar modelos
         modeloModal.hide();
         loadModelos();
-    } catch (error) {
+    })
+    .catch(error => {
         console.error('Erro ao salvar modelo:', error);
-        errorMessage.textContent = error.message || 'Não foi possível salvar o modelo. Por favor, tente novamente mais tarde.';
-        errorMessage.classList.remove('d-none');
-    } finally {
+        showError('Não foi possível salvar o modelo. Por favor, tente novamente mais tarde.');
+    })
+    .finally(() => {
+        // Esconder spinner
         saveButton.disabled = false;
         saveSpinner.classList.add('d-none');
-    }
+    });
 }
 
 // Função para excluir modelo
-async function deleteModelo() {
-    const modeloId = document.getElementById('deleteId').value;
+function deleteModelo() {
+    // Mostrar spinner
+    confirmDeleteButton.disabled = true;
+    deleteSpinner.classList.remove('d-none');
     
-    try {
-        confirmDeleteButton.disabled = true;
-        deleteSpinner.classList.remove('d-none');
-        
-        const token = auth.getToken();
-        const response = await fetch(`/api/veiculos/modelos/${modeloId}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Falha ao excluir modelo');
+    // Obter ID do modelo a ser excluído
+    const id = document.getElementById('deleteId').value;
+    
+    const token = auth.getToken();
+    
+    // Enviar requisição
+    fetch(`/api/veiculos/modelos/${id}`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${token}`
         }
-        
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Falha ao excluir modelo');
+        }
+        return response.json();
+    })
+    .then(() => {
+        // Fechar modal e recarregar modelos
         deleteModal.hide();
         loadModelos();
-    } catch (error) {
+    })
+    .catch(error => {
         console.error('Erro ao excluir modelo:', error);
-        alert('Não foi possível excluir o modelo. ' + (error.message || 'Por favor, tente novamente mais tarde.'));
-    } finally {
+        showError('Não foi possível excluir o modelo. Por favor, tente novamente mais tarde.');
+    })
+    .finally(() => {
+        // Esconder spinner
         confirmDeleteButton.disabled = false;
         deleteSpinner.classList.add('d-none');
-    }
+    });
 }
 
 // Função para mostrar mensagem de erro
 function showError(message) {
-    const alertDiv = document.createElement('div');
-    alertDiv.className = 'alert alert-danger alert-dismissible fade show mt-3';
-    alertDiv.role = 'alert';
-    alertDiv.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    `;
+    if (!errorMessage) {
+        console.error('Elemento errorMessage não encontrado');
+        return;
+    }
     
-    document.querySelector('.container').insertBefore(alertDiv, document.querySelector('.card'));
+    errorMessage.textContent = message;
+    errorMessage.classList.remove('d-none');
     
-    // Auto-fechar após 5 segundos
+    // Esconder mensagem após 5 segundos
     setTimeout(() => {
-        const bsAlert = new bootstrap.Alert(alertDiv);
-        bsAlert.close();
+        errorMessage.classList.add('d-none');
     }, 5000);
 }

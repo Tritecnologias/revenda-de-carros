@@ -2,6 +2,8 @@ import { Controller, Get, Post, Body, Param, Put, Delete, Query, UseGuards } fro
 import { VeiculosService } from '../services/veiculos.service';
 import { CreateVeiculoDto, UpdateVeiculoDto } from '../dto/veiculo.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
+import { Roles } from '../../auth/decorators/roles.decorator';
 
 @Controller('api/veiculos')
 export class VeiculosController {
@@ -28,7 +30,8 @@ export class VeiculosController {
   }
 
   @Get()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'cadastrador')
   async findAll(
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
@@ -38,19 +41,22 @@ export class VeiculosController {
   }
 
   @Get(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'cadastrador')
   async findOne(@Param('id') id: number) {
     return this.veiculosService.findOne(id);
   }
 
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'cadastrador')
   async create(@Body() createVeiculoDto: CreateVeiculoDto) {
     return this.veiculosService.create(createVeiculoDto);
   }
 
   @Put(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'cadastrador')
   async update(
     @Param('id') id: number,
     @Body() updateVeiculoDto: UpdateVeiculoDto,
@@ -59,7 +65,8 @@ export class VeiculosController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'cadastrador')
   async remove(@Param('id') id: number) {
     return this.veiculosService.remove(id);
   }

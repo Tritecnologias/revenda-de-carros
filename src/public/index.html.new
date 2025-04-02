@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Revenda de Carros</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="/css/role-styles.css">
+    
+    <style>
+        /* Estilos para o menu centralizado */
+        .navbar-dark.bg-primary .navbar-nav {
+            margin: 0 auto;
+        }
+        
+        /* Espaçamento entre itens do menu */
+        .navbar-nav .nav-item {
+            margin: 0 5px;
+        }
+        
+        /* Estilos para o menu VEÍCULOS */
+        body:not(.role-admin):not(.role-cadastrador) #veiculosMenuContainer {
+            display: none !important;
+            visibility: hidden !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header - Apenas com logo e botão de usuário, sem menus -->
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Revenda de Carros</a>
+            
+            <div class="d-flex align-items-center">
+                <span class="text-light me-3" id="userInfo">Teste (4) - Último acesso: 26/03/2025, 17:03:39</span>
+                <div class="dropdown">
+                    <button class="btn btn-outline-light dropdown-toggle" type="button" id="userMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                        Conta
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuButton">
+                        <li><a class="dropdown-item" href="/meus-dados.html">MEUS DADOS</a></li>
+                        <li><a class="dropdown-item" href="/alterar-senha.html">ALTERAR SENHA</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><button class="dropdown-item" id="logoutButton">SAIR</button></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Menu azul centralizado -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <button class="navbar-toggler mx-auto" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavBlue">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse justify-content-center" id="navbarNavBlue">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link text-white" href="/admin/users.html">USUÁRIOS</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-white" href="/index.html">CONFIGURADOR</a>
+                    </li>
+                    <li class="nav-item dropdown" id="veiculosMenuContainer">
+                        <a class="nav-link text-white dropdown-toggle" href="#" id="veiculosDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            VEÍCULOS
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="veiculosDropdown">
+                            <li><a class="dropdown-item" href="/veiculos/marca.html">MARCA</a></li>
+                            <li><a class="dropdown-item" href="/veiculos/modelo.html">MODELO</a></li>
+                            <li><a class="dropdown-item" href="/veiculos/veiculo.html">VEÍCULO</a></li>
+                            <li><a class="dropdown-item" href="/veiculos/opcional.html">OPCIONAIS</a></li>
+                            <li><a class="dropdown-item" href="/pinturas.html">PINTURAS</a></li>
+                            <li><a class="dropdown-item" href="/veiculos/venda-direta.html">VENDA DIRETA</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Configurator Section -->
+    <div class="container mt-4">
+        <div class="bg-light p-3 rounded">
+            <div class="row align-items-center">
+                <div class="col-md-2 col-12 mb-2 mb-md-0">
+                    <label class="form-label">Configurador</label>
+                </div>
+                <div class="col-md-3 col-12 mb-2 mb-md-0">
+                    <div class="input-group">
+                        <select class="form-select" id="configuradorMarca">
+                            <option value="">Selecione uma marca</option>
+                        </select>
+                        <button class="btn btn-outline-secondary" type="button" id="recarregarMarcas" title="Recarregar marcas">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-3 col-12 mb-2 mb-md-0">
+                    <select class="form-select" id="configuradorModelo" disabled>
+                        <option value="">Selecione um modelo</option>
+                    </select>
+                </div>
+                <div class="col-md-4 col-12">
+                    <select class="form-select" id="configuradorVersao" disabled>
+                        <option value="">Selecione uma versão</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Vehicle Details -->
+        <div class="mt-4">
+            <h4 id="veiculoTitulo">Selecione um veículo para configurar</h4>
+            <ul class="nav nav-tabs">
+                <li class="nav-item">
+                    <a class="nav-link active" href="#">Equipamentos</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">Diagrama</a>
+                </li>
+            </ul>
+
+            <!-- Price Information -->
+            <div class="row mt-3">
+                <div class="col-md col-6 mb-2">
+                    <div class="border p-2">
+                        <small>PREÇO PÚBLICO</small><br>
+                        <strong id="precoPublicoCard">R$ 0,00</strong>
+                    </div>
+                </div>
+                <div class="col-md col-6 mb-2">
+                    <div class="bg-success bg-opacity-25 p-2">
+                        <small>PCD IPI/ICMS</small><br>
+                        <strong id="pcdIpiIcmsCard">R$ 0,00</strong>
+                    </div>
+                </div>
+                <div class="col-md col-6 mb-2">
+                    <div class="bg-info bg-opacity-25 p-2">
+                        <small>PCD IPI</small><br>
+                        <strong id="pcdIpiCard">R$ 0,00</strong>
+                    </div>
+                </div>
+                <div class="col-md col-6 mb-2">
+                    <div class="bg-warning p-2">
+                        <small>TAXI IPI/ICMS</small><br>
+                        <strong id="taxiIpiIcmsCard">R$ 0,00</strong>
+                    </div>
+                </div>
+                <div class="col-md col-6 mb-2">
+                    <div class="bg-warning p-2">
+                        <small>TAXI IPI</small><br>
+                        <strong id="taxiIpiCard">R$ 0,00</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configuration Options -->
+            <div class="row mt-3">
+                <div class="col-md-6 col-12 mb-2">
+                    <select class="form-select" id="vendasDiretasSelect">
+                        <option value="">DESCONTOS VENDA DIRETA</option>
+                    </select>
+                </div>
+                <div class="col-md-6 col-12 mb-2">
+                    <div class="input-group">
+                        <span class="input-group-text">DESC.%</span>
+                        <input type="text" id="descontoInput" class="form-control" value="0">
+                    </div>
+                </div>
+                <div class="col-md-6 col-12 mb-2">
+                    <div class="input-group">
+                        <span class="input-group-text">DESC.R$</span>
+                        <input type="text" class="form-control" id="descontoReaisInput" value="0">
+                    </div>
+                </div>
+                <div class="col-md-6 col-12 mb-2">
+                    <div class="input-group">
+                        <span class="input-group-text">AGIO R$</span>
+                        <input type="text" class="form-control" id="agioReaisInput" value="0">
+                    </div>
+                </div>
+                <div class="col-md-6 col-12 mb-2">
+                    <div class="input-group">
+                        <span class="input-group-text">QT:</span>
+                        <input type="text" class="form-control" id="quantidadeInput" value="1">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Paint Options and Car Image -->
+            <div class="row mt-4">
+                <!-- Left Column - Paint Options -->
+                <div class="col-lg-5 col-md-6 col-12 mb-4 mb-md-0">
+                    <h5 class="mb-3">Opções de Pintura</h5>
+                    <div class="row" id="opcoesPin">
+                        <!-- Os cards de pinturas serão carregados dinamicamente via JavaScript -->
+                    </div>
+                </div>
+                
+                <!-- Right Column - Car Image -->
+                <div class="col-lg-7 col-md-6 col-12">
+                    <div class="card mb-4">
+                        <img src="" id="carImage" class="card-img-top" alt="Imagem do Veículo">
+                        <div class="card-body text-center">
+                            <h5 class="card-title" id="modeloNome">Selecione um modelo</h5>
+                            <p class="card-text" id="selectedColor">Selecione uma cor</p>
+                            <div class="car-price">
+                                <small>Preço a partir de</small>
+                                <strong id="precoTotal">R$ 0,00</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Optional Equipment -->
+            <div class="mt-4">
+                <h5>EQUIPAMENTOS OPCIONAIS</h5>
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Descrição</th>
+                                <th>Preço</th>
+                                <th>Selecionar</th>
+                            </tr>
+                        </thead>
+                        <tbody id="opcionaisTableBody">
+                            <!-- Os opcionais serão carregados dinamicamente via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Summary and Final Values -->
+            <div class="row mt-4 pb-4">
+                <div class="col-12">
+                    <h5>RESUMO E VALORES FINAIS</h5>
+                    <div class="row g-2 pb-4" style="padding-bottom: 30px;">
+                        <div class="col">
+                            <div class="p-3 border bg-light">
+                                <div class="d-flex justify-content-between">
+                                    <span>Preço Base:</span>
+                                    <span id="precoBaseResumo">R$ 0,00</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="p-3 border bg-light">
+                                <div class="d-flex justify-content-between">
+                                    <span>Pintura:</span>
+                                    <span id="precoPinturaResumo">R$ 0,00</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="p-3 border bg-light">
+                                <div class="d-flex justify-content-between">
+                                    <span>Opcionais:</span>
+                                    <span id="precoOpcionaisResumo">R$ 0,00</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-2">
+                        <div class="col-md-3 col-6">
+                            <div class="p-3 border bg-light">
+                                <div class="d-flex justify-content-between">
+                                    <span>Subtotal:</span>
+                                    <span id="subtotalResumo">R$ 0,00</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="p-3 border bg-light">
+                                <div class="d-flex justify-content-between">
+                                    <span>Desconto:</span>
+                                    <span id="descontoResumo">R$ 0,00</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="p-3 border bg-light">
+                                <div class="d-flex justify-content-between">
+                                    <span>Ágio:</span>
+                                    <span id="agioResumo">R$ 0,00</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="p-3 border bg-primary text-white">
+                                <div class="d-flex justify-content-between">
+                                    <span>TOTAL:</span>
+                                    <span id="totalFinalResumo">R$ 0,00</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts principais -->
+    <script src="/js/config.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/utils.js"></script>
+    <script src="/js/index.js"></script>
+    <script src="/js/configurador-pinturas.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Verificar se o usuário está autenticado
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuthentication().then(user => {
+                if (user) {
+                    // Exibir informações do usuário
+                    const userInfo = document.getElementById('userInfo');
+                    if (userInfo) {
+                        const lastAccess = user.ultimoAcesso ? new Date(user.ultimoAcesso) : new Date();
+                        const formattedDate = lastAccess.toLocaleDateString('pt-BR') + ', ' + 
+                                            lastAccess.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                        userInfo.textContent = `${user.nome} (${user.id}) - Último acesso: ${formattedDate}`;
+                    }
+                    
+                    // Adicionar classe baseada no papel do usuário
+                    if (user.papel === 'admin') {
+                        document.body.classList.add('role-admin');
+                    } else if (user.papel === 'cadastrador') {
+                        document.body.classList.add('role-cadastrador');
+                    } else {
+                        document.body.classList.add('role-usuario');
+                    }
+                    
+                    // Configurar botão de logout
+                    const logoutButton = document.getElementById('logoutButton');
+                    if (logoutButton) {
+                        logoutButton.addEventListener('click', function() {
+                            logout().then(() => {
+                                window.location.href = '/login.html';
+                            });
+                        });
+                    }
+                } else {
+                    // Redirecionar para a página de login se não estiver autenticado
+                    window.location.href = '/login.html';
+                }
+            });
+        });
+        
+        // Variáveis globais para armazenar valores
+        let valorOpcionaisSelecionados = 0;
+        let valorPinturasSelecionadas = 0;
+        
+        // Função para atualizar o resumo de valores
+        function atualizarResumoValores() {
+            // Obter valores base
+            const precoBase = obterPrecoBaseVeiculo();
+            
+            // Atualizar campos de resumo
+            document.getElementById('precoBaseResumo').textContent = formatarMoeda(precoBase);
+            document.getElementById('precoPinturaResumo').textContent = formatarMoeda(valorPinturasSelecionadas);
+            document.getElementById('precoOpcionaisResumo').textContent = formatarMoeda(valorOpcionaisSelecionados);
+            
+            // Calcular subtotal
+            const subtotal = precoBase + valorPinturasSelecionadas + valorOpcionaisSelecionados;
+            document.getElementById('subtotalResumo').textContent = formatarMoeda(subtotal);
+            
+            // Obter valores de desconto e ágio
+            const descontoPercentual = parseFloat(document.getElementById('descontoInput').value) || 0;
+            const descontoReais = converterParaNumero(document.getElementById('descontoReaisInput').value) || 0;
+            const agio = converterParaNumero(document.getElementById('agioReaisInput').value) || 0;
+            
+            // Calcular desconto total (percentual + fixo)
+            const descontoPercentualValor = subtotal * (descontoPercentual / 100);
+            const descontoTotal = descontoPercentualValor + descontoReais;
+            document.getElementById('descontoResumo').textContent = formatarMoeda(descontoTotal);
+            
+            // Atualizar ágio
+            document.getElementById('agioResumo').textContent = formatarMoeda(agio);
+            
+            // Calcular total final
+            const totalFinal = subtotal - descontoTotal + agio;
+            document.getElementById('totalFinalResumo').textContent = formatarMoeda(totalFinal);
+        }
+        
+        // Função para obter o preço base do veículo
+        function obterPrecoBaseVeiculo() {
+            const precoPublicoElement = document.getElementById('precoPublicoCard');
+            if (precoPublicoElement) {
+                return converterParaNumero(precoPublicoElement.textContent);
+            }
+            return 0;
+        }
+    </script>
+    
+    <script>
+        // Chamar loadMarcas diretamente após o carregamento dos scripts
+        console.log('Chamando loadMarcas diretamente do script inline');
+        setTimeout(function() {
+            if (typeof loadMarcas === 'function') {
+                loadMarcas();
+            } else {
+                console.error('Função loadMarcas não encontrada');
+            }
+        }, 500);
+    </script>
+</body>
+</html>

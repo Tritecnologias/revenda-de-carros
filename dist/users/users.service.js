@@ -86,22 +86,21 @@ let UsersService = class UsersService {
             lastLoginAt: new Date(),
         });
     }
-    async updateProfile(userId, updateUserDto) {
-        const user = await this.findById(userId);
-        if (!user) {
-            throw new common_1.HttpException('User not found', common_1.HttpStatus.NOT_FOUND);
+    async updateProfile(id, updateUserDto) {
+        const user = await this.findById(id);
+        if (updateUserDto.nome) {
+            user.nome = updateUserDto.nome;
         }
-        if (updateUserDto.email && updateUserDto.email !== user.email) {
-            const existingUser = await this.findByEmail(updateUserDto.email);
-            if (existingUser) {
-                throw new common_1.HttpException('Email already in use', common_1.HttpStatus.BAD_REQUEST);
-            }
+        return this.usersRepository.save(user);
+    }
+    async updateRole(id, role) {
+        const user = await this.findById(id);
+        const validRoles = ['admin', 'cadastrador', 'user'];
+        if (!validRoles.includes(role)) {
+            throw new common_1.HttpException('Invalid role', common_1.HttpStatus.BAD_REQUEST);
         }
-        user.nome = updateUserDto.nome;
-        user.email = updateUserDto.email;
-        await this.usersRepository.save(user);
-        const { password, ...result } = user;
-        return result;
+        user.role = role;
+        return this.usersRepository.save(user);
     }
     async changePassword(userId, currentPassword, newPassword) {
         const user = await this.findById(userId);

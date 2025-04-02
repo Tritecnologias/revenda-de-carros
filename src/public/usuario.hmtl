@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="refresh" content="0;url=/usuario.html">
+    <title>Redirecionando...</title>
+    <script>
+        // Redirecionamento imediato via JavaScript
+        window.location.replace('/usuario.html');
+    </script>
+</head>
+<body>
+    <!-- Página intencionalmente vazia para evitar qualquer conteúdo que possa piscar -->
+</body>
+</html>

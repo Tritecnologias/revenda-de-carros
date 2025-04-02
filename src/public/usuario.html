@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configurador</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Estilos para o menu centralizado */
+        .navbar-dark.bg-primary .navbar-nav {
+            margin: 0 auto;
+        }
+        
+        /* Espaçamento entre itens do menu */
+        .navbar-nav .nav-item {
+            margin: 0 5px;
+        }
+        
+        .pintura-card {
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+            margin-bottom: 15px;
+        }
+        .pintura-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .pintura-card.selected {
+            border-color: #0d6efd;
+            background-color: rgba(13, 110, 253, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <!-- Barra de navegação superior escura -->
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Revenda de Carros</a>
+            
+            <div class="d-flex align-items-center">
+                <span class="text-light me-3" id="userInfo">Carregando...</span>
+                <div class="dropdown">
+                    <button class="btn btn-outline-light dropdown-toggle" type="button" id="userMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                        Conta
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuButton">
+                        <li><a class="dropdown-item" href="/meus-dados.html">MEUS DADOS</a></li>
+                        <li><a class="dropdown-item" href="/alterar-senha.html">ALTERAR SENHA</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><button class="dropdown-item" id="logoutButton">SAIR</button></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Barra de navegação azul com CONFIGURADOR -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <button class="navbar-toggler mx-auto" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavBlue">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse justify-content-center" id="navbarNavBlue">
+                <ul class="navbar-nav">
+                    <!-- Os itens de menu serão carregados dinamicamente pelo menu-manager.js -->
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Conteúdo principal -->
+    <div class="container mt-4">
+        <!-- Seleção de veículo -->
+        <div class="bg-light p-3 rounded">
+            <div class="row align-items-center">
+                <div class="col-md-2 col-12 mb-2 mb-md-0">
+                    <label class="form-label">Configurador</label>
+                </div>
+                <div class="col-md-3 col-12 mb-2 mb-md-0">
+                    <div class="input-group">
+                        <select class="form-select" id="configuradorMarca">
+                            <option value="">Selecione uma marca</option>
+                        </select>
+                        <button class="btn btn-outline-secondary" type="button" id="recarregarMarcas" title="Recarregar marcas">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-3 col-12 mb-2 mb-md-0">
+                    <select class="form-select" id="configuradorModelo" disabled>
+                        <option value="">Selecione um modelo</option>
+                    </select>
+                </div>
+                <div class="col-md-4 col-12">
+                    <select class="form-select" id="configuradorVersao" disabled>
+                        <option value="">Selecione uma versão</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detalhes do veículo -->
+        <div class="mt-4">
+            <h4 id="veiculoTitulo">Selecione um veículo para configurar</h4>
+            
+            <!-- Abas -->
+            <ul class="nav nav-tabs">
+                <li class="nav-item">
+                    <a class="nav-link active" href="#">Equipamentos</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">Diagrama</a>
+                </li>
+            </ul>
+
+            <!-- Informações de preço -->
+            <div class="row mt-3">
+                <div class="col-md col-6 mb-2">
+                    <div class="border p-2">
+                        <small>PREÇO PÚBLICO</small><br>
+                        <strong id="precoPublicoCard">R$ 0,00</strong>
+                    </div>
+                </div>
+                <div class="col-md col-6 mb-2">
+                    <div class="bg-success bg-opacity-25 p-2">
+                        <small>PCD IPI/ICMS</small><br>
+                        <strong id="pcdIpiIcmsCard">R$ 0,00</strong>
+                    </div>
+                </div>
+                <div class="col-md col-6 mb-2">
+                    <div class="bg-info bg-opacity-25 p-2">
+                        <small>PCD IPI</small><br>
+                        <strong id="pcdIpiCard">R$ 0,00</strong>
+                    </div>
+                </div>
+                <div class="col-md col-6 mb-2">
+                    <div class="bg-warning p-2">
+                        <small>TAXI IPI/ICMS</small><br>
+                        <strong id="taxiIpiIcmsCard">R$ 0,00</strong>
+                    </div>
+                </div>
+                <div class="col-md col-6 mb-2">
+                    <div class="bg-warning p-2">
+                        <small>TAXI IPI</small><br>
+                        <strong id="taxiIpiCard">R$ 0,00</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Opções de configuração -->
+            <div class="row mt-3">
+                <div class="col-md-6 col-12 mb-2">
+                    <select class="form-select" id="vendasDiretasSelect">
+                        <option value="">DESCONTOS VENDA DIRETA</option>
+                    </select>
+                </div>
+                <div class="col-md-6 col-12 mb-2">
+                    <div class="input-group">
+                        <span class="input-group-text">DESC.%</span>
+                        <input type="text" id="descontoInput" class="form-control" value="0">
+                    </div>
+                </div>
+                <div class="col-md-6 col-12 mb-2">
+                    <div class="input-group">
+                        <span class="input-group-text">DESC.R$</span>
+                        <input type="text" class="form-control" id="descontoReaisInput" value="0">
+                    </div>
+                </div>
+                <div class="col-md-6 col-12 mb-2">
+                    <div class="input-group">
+                        <span class="input-group-text">AGIO R$</span>
+                        <input type="text" class="form-control" id="agioReaisInput" value="0">
+                    </div>
+                </div>
+                <div class="col-md-6 col-12 mb-2">
+                    <div class="input-group">
+                        <span class="input-group-text">QT:</span>
+                        <input type="text" class="form-control" id="quantidadeInput" value="1">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Opções de pintura e imagem do veículo -->
+            <div class="row mt-4">
+                <div class="col-md-6 col-12">
+                    <h5>Opções de Pintura</h5>
+                    <div id="opcoesPin" class="row">
+                        <!-- Exemplo de opções de pintura (serão substituídas pelo JavaScript) -->
+                        <div class="col-md-6 col-12 mb-3">
+                            <div class="card pintura-card">
+                                <div class="card-body">
+                                    <h6 class="card-title">Pintura SÓLIDA</h6>
+                                    <p class="card-text">Preto Vulcano</p>
+                                    <p class="card-text text-primary">R$ 0,00</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-12 mb-3">
+                            <div class="card pintura-card">
+                                <div class="card-body">
+                                    <h6 class="card-title">Pintura SÓLIDA</h6>
+                                    <p class="card-text">Branco Banchisa</p>
+                                    <p class="card-text text-primary">R$ 790,00</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-12 mb-3">
+                            <div class="card pintura-card">
+                                <div class="card-body">
+                                    <h6 class="card-title">Pintura SÓLIDA</h6>
+                                    <p class="card-text">Vermelho Monte Carlo</p>
+                                    <p class="card-text text-primary">R$ 790,00</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-12">
+                    <div class="card">
+                        <div class="text-center">
+                            <img id="veiculoImagem" src="" alt="Imagem do Veículo" class="img-fluid">
+                        </div>
+                        <div class="card-body text-center">
+                            <h5 id="veiculoModeloNome" class="card-title">MODELO DO VEÍCULO</h5>
+                            <p id="veiculoCor" class="card-text">Cor: Cor selecionada</p>
+                            <p class="card-text">
+                                <small>A partir de</small><br>
+                                <strong id="veiculoPreco" class="text-primary fs-4">R$ 0,00</strong>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Opcionais -->
+            <div class="mt-4">
+                <h5>Opcionais</h5>
+                <div class="table-responsive">
+                    <table class="table table-striped table-sm">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Descrição</th>
+                                <th>Preço</th>
+                                <th>Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="opcionaisTableBody">
+                            <!-- Opcionais serão carregados via JavaScript -->
+                            <tr>
+                                <td>B58</td>
+                                <td>PACK STYLE Rodas de liga leve 5.5 X 14", Retrovisores externos elétricos com Tilt-down e Sensor de temperatura externa</td>
+                                <td>R$ 2.300,00</td>
+                                <td><button class="btn btn-sm btn-primary">Adicionar</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Resumo e valores finais -->
+            <div class="mt-4 pb-4">
+                <h5>RESUMO E VALORES FINAIS</h5>
+                <div class="row g-2 pb-4">
+                    <div class="col">
+                        <div class="p-3 border bg-light">
+                            <div class="d-flex justify-content-between">
+                                <span>Preço Base:</span>
+                                <span id="precoBaseResumo">R$ 0,00</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="p-3 border bg-light">
+                            <div class="d-flex justify-content-between">
+                                <span>Pintura:</span>
+                                <span id="precoPinturaResumo">R$ 0,00</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="p-3 border bg-light">
+                            <div class="d-flex justify-content-between">
+                                <span>Opcionais:</span>
+                                <span id="precoOpcionaisResumo">R$ 0,00</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="p-3 border bg-light">
+                            <div class="d-flex justify-content-between">
+                                <span>Desconto:</span>
+                                <span id="descontoResumo">R$ 0,00</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="p-3 border bg-light">
+                            <div class="d-flex justify-content-between">
+                                <span>Ágio:</span>
+                                <span id="agioResumo">R$ 0,00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/config.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/utils.js"></script>
+    <script src="/js/menu-manager.js"></script>
+    <script src="/js/index.js"></script>
+    <script src="/js/configurador-pinturas.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Verificar se o usuário está autenticado
+            checkAuthentication().then(user => {
+                if (user) {
+                    // Exibir informações do usuário
+                    const userInfo = document.getElementById('userInfo');
+                    if (userInfo) {
+                        const lastAccess = user.ultimoAcesso ? new Date(user.ultimoAcesso) : new Date();
+                        const formattedDate = lastAccess.toLocaleDateString('pt-BR') + ', ' + 
+                                            lastAccess.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                        userInfo.textContent = `${user.nome} (${user.id}) - Último acesso: ${formattedDate}`;
+                    }
+                    
+                    // Verificar se o usuário é um usuário comum
+                    if (user.papel !== 'usuario') {
+                        // Redirecionar administradores e cadastradores para a página principal
+                        window.location.href = '/index.html?redirected=true';
+                        return;
+                    }
+                    
+                    // Inicializar o menu com base no usuário atual
+                    initializeMenu(user);
+                    
+                    // Configurar botão de logout
+                    const logoutButton = document.getElementById('logoutButton');
+                    if (logoutButton) {
+                        logoutButton.addEventListener('click', function() {
+                            logout().then(() => {
+                                window.location.href = '/login.html';
+                            });
+                        });
+                    }
+                    
+                    // Inicializar o configurador
+                    if (typeof loadMarcas === 'function') {
+                        loadMarcas();
+                    }
+                    
+                    // Configurar botão de recarregar marcas
+                    const recarregarMarcasBtn = document.getElementById('recarregarMarcas');
+                    if (recarregarMarcasBtn) {
+                        recarregarMarcasBtn.addEventListener('click', function() {
+                            if (typeof loadMarcas === 'function') {
+                                loadMarcas();
+                            }
+                        });
+                    }
+                    
+                    // Remover parâmetro redirected=true da URL se existir
+                    if (window.location.search.includes('redirected=true')) {
+                        const newUrl = window.location.href.replace(/[?&]redirected=true/, '');
+                        window.history.replaceState({}, document.title, newUrl);
+                    }
+                } else {
+                    // Redirecionar para a página de login se não estiver autenticado
+                    window.location.href = '/login.html';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

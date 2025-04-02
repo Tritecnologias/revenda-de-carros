@@ -92,29 +92,28 @@ export class UsersService {
     });
   }
 
-  async updateProfile(userId: number, updateUserDto: UpdateUserDto) {
-    const user = await this.findById(userId);
-    if (!user) {
-      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+  async updateProfile(id: number, updateUserDto: UpdateUserDto): Promise<User> {
+    const user = await this.findById(id);
+    
+    // Atualizar apenas os campos permitidos
+    if (updateUserDto.nome) {
+      user.nome = updateUserDto.nome;
     }
+    
+    return this.usersRepository.save(user);
+  }
 
-    if (updateUserDto.email && updateUserDto.email !== user.email) {
-      const existingUser = await this.findByEmail(updateUserDto.email);
-      if (existingUser) {
-        throw new HttpException(
-          'Email already in use',
-          HttpStatus.BAD_REQUEST,
-        );
-      }
+  async updateRole(id: number, role: string): Promise<User> {
+    const user = await this.findById(id);
+    
+    // Verificar se o papel é válido
+    const validRoles = ['admin', 'cadastrador', 'user'];
+    if (!validRoles.includes(role)) {
+      throw new HttpException('Invalid role', HttpStatus.BAD_REQUEST);
     }
-
-    // Atualizar apenas nome e email
-    user.nome = updateUserDto.nome;
-    user.email = updateUserDto.email;
-    await this.usersRepository.save(user);
-
-    const { password, ...result } = user;
-    return result;
+    
+    user.role = role;
+    return this.usersRepository.save(user);
   }
 
   async changePassword(

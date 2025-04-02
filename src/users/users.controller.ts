@@ -84,6 +84,41 @@ export class UsersController {
     );
   }
 
+  @Get('check-email/:email')
+  @Roles('admin')
+  async checkUserByEmail(@Param('email') email: string) {
+    try {
+      const user = await this.usersService.findByEmail(email);
+      return {
+        id: user.id,
+        email: user.email,
+        nome: user.nome,
+        role: user.role
+      };
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Error fetching user',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Put('update-role/:id')
+  @Roles('admin')
+  async updateUserRole(
+    @Param('id') id: string, 
+    @Body() updateRoleDto: { role: string }
+  ) {
+    try {
+      return await this.usersService.updateRole(+id, updateRoleDto.role);
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Error updating user role',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
   @Delete(':id')
   @Roles('admin')
   async remove(@Param('id') id: string) {

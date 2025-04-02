@@ -17,16 +17,8 @@ export declare class UsersService {
     update(id: number, updateData: UpdateUserDto): Promise<User>;
     remove(id: number): Promise<void>;
     updateLastLogin(id: number): Promise<void>;
-    updateProfile(userId: number, updateUserDto: UpdateUserDto): Promise<{
-        id: number;
-        email: string;
-        nome: string;
-        role: string;
-        isActive: boolean;
-        lastLoginAt: Date;
-        createdAt: Date;
-        updatedAt: Date;
-    }>;
+    updateProfile(id: number, updateUserDto: UpdateUserDto): Promise<User>;
+    updateRole(id: number, role: string): Promise<User>;
     changePassword(userId: number, currentPassword: string, newPassword: string): Promise<{
         message: string;
     }>;

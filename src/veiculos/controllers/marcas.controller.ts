@@ -2,13 +2,16 @@ import { Controller, Get, Post, Body, Param, Put, Delete, Query, UseGuards } fro
 import { MarcasService } from '../services/marcas.service';
 import { CreateMarcaDto, UpdateMarcaDto } from '../dto/marca.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
+import { Roles } from '../../auth/decorators/roles.decorator';
 
 @Controller('api/veiculos/marcas')
 export class MarcasController {
   constructor(private readonly marcasService: MarcasService) {}
 
   @Get()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'cadastrador')
   async findAll(
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
@@ -17,7 +20,8 @@ export class MarcasController {
   }
 
   @Get('all')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'cadastrador')
   async findAllActive() {
     console.log('MarcasController: Acessando rota /api/veiculos/marcas/all');
     const result = await this.marcasService.findAllActive();
@@ -39,19 +43,22 @@ export class MarcasController {
   }
 
   @Get(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'cadastrador')
   async findOne(@Param('id') id: number) {
     return this.marcasService.findOne(id);
   }
 
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'cadastrador')
   async create(@Body() createMarcaDto: CreateMarcaDto) {
     return this.marcasService.create(createMarcaDto);
   }
 
   @Put(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'cadastrador')
   async update(
     @Param('id') id: number,
     @Body() updateMarcaDto: UpdateMarcaDto,
@@ -60,7 +67,8 @@ export class MarcasController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'cadastrador')
   async remove(@Param('id') id: number) {
     return this.marcasService.remove(id);
   }

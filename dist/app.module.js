@@ -35,9 +35,9 @@ exports.AppModule = AppModule = __decorate([
             }),
             typeorm_1.TypeOrmModule.forRoot({
                 type: 'mysql',
-                host: 'localhost',
+                host: '127.0.0.1',
                 port: 3306,
-                username: 'root',
+                username: 'wanderson',
                 password: 'Flavinha@2022',
                 database: 'revenda_carros',
                 entities: [veiculo_entity_1.Veiculo, pintura_entity_1.Pintura, modelo_pintura_entity_1.ModeloPintura, user_entity_1.User, marca_entity_1.Marca, modelo_entity_1.Modelo, veiculo_entity_2.Veiculo, opcional_entity_1.Opcional, modelo_opcional_entity_1.ModeloOpcional, venda_direta_entity_1.VendaDireta],
