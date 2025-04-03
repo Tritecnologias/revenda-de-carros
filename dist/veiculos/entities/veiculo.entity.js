@@ -13,6 +13,7 @@ exports.Veiculo = void 0;
 const typeorm_1 = require("typeorm");
 const marca_entity_1 = require("./marca.entity");
 const modelo_entity_1 = require("./modelo.entity");
+const versao_entity_1 = require("./versao.entity");
 let Veiculo = class Veiculo {
 };
 exports.Veiculo = Veiculo;
@@ -39,9 +40,14 @@ __decorate([
     __metadata("design:type", Number)
 ], Veiculo.prototype, "modeloId", void 0);
 __decorate([
-    (0, typeorm_1.Column)(),
-    __metadata("design:type", String)
+    (0, typeorm_1.ManyToOne)(() => versao_entity_1.Versao),
+    (0, typeorm_1.JoinColumn)({ name: 'versaoId' }),
+    __metadata("design:type", versao_entity_1.Versao)
 ], Veiculo.prototype, "versao", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", Number)
+], Veiculo.prototype, "versaoId", void 0);
 __decorate([
     (0, typeorm_1.Column)(),
     __metadata("design:type", Number)

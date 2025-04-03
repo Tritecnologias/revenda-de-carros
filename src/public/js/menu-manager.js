@@ -17,8 +17,22 @@ class MenuManager {
      */
     init(user, containerId = 'navbarNavBlue') {
         console.log('Inicializando MenuManager com usuário:', user);
-        // Usar a propriedade role que é definida no auth.js
-        console.log('Papel do usuário:', user.role);
+        
+        // Garantir que o usuário tenha a propriedade 'role' para compatibilidade
+        if (user) {
+            if (user.papel && !user.role) {
+                user.role = user.papel;
+                // Atualizar no localStorage para manter a consistência
+                const userString = localStorage.getItem('user');
+                if (userString) {
+                    const storedUser = JSON.parse(userString);
+                    storedUser.role = storedUser.papel;
+                    localStorage.setItem('user', JSON.stringify(storedUser));
+                }
+            }
+            console.log('Papel do usuário:', user.role || user.papel);
+        }
+        
         this.currentUser = user;
         this.menuContainer = document.getElementById(containerId);
         
@@ -42,24 +56,29 @@ class MenuManager {
         }
         
         // Limpa o container de menu
-        const navbarUl = this.menuContainer.querySelector('ul.navbar-nav');
-        if (navbarUl) {
-            navbarUl.innerHTML = '';
-            
-            // Usar apenas a propriedade 'role' que é definida no auth.js
-            const papel = this.currentUser.role || 'usuario';
-            console.log('Renderizando menu para usuário com papel:', papel);
-            
-            // Adiciona os itens de menu com base no papel do usuário
-            if (papel === 'admin') {
-                this.renderAdminMenu(navbarUl);
-            } else if (papel === 'cadastrador') {
-                this.renderCadastradorMenu(navbarUl);
-            } else {
-                this.renderUsuarioMenu(navbarUl);
-            }
+        // Verificar se já existe uma ul dentro do container
+        let navbarUl = this.menuContainer.querySelector('ul.navbar-nav');
+        
+        if (!navbarUl) {
+            // Se não existir, criar uma nova ul
+            navbarUl = document.createElement('ul');
+            navbarUl.className = 'navbar-nav';
+            this.menuContainer.appendChild(navbarUl);
         } else {
-            console.error('Elemento ul.navbar-nav não encontrado no container de menu');
+            // Se existir, limpar o conteúdo
+            navbarUl.innerHTML = '';
+        }
+        
+        // Determinar qual menu renderizar com base no papel do usuário
+        const userRole = this.currentUser.role || this.currentUser.papel;
+        console.log('Renderizando menu para papel:', userRole);
+        
+        if (userRole === 'admin') {
+            this.renderAdminMenu(navbarUl);
+        } else if (userRole === 'cadastrador') {
+            this.renderCadastradorMenu(navbarUl);
+        } else {
+            this.renderUsuarioMenu(navbarUl);
         }
     }
     
@@ -70,14 +89,71 @@ class MenuManager {
     renderAdminMenu(navbarUl) {
         console.log('Renderizando menu de administrador');
         
-        // Menu de Usuários (apenas para administradores)
-        navbarUl.appendChild(this.createMenuItem('USUÁRIOS', '/admin/users.html'));
+        // Itens do menu do administrador conforme a imagem
+        const menuItems = [
+            { text: 'USUÁRIOS', href: '/admin/users.html' },
+            { text: 'CONFIGURADOR', href: '/index.html' },
+            { text: 'OPÇÕES', href: '/opcoes.html' },
+            { text: 'COTAÇÕES', href: '/cotacoes.html' },
+            { text: 'CLIENTES', href: '/clientes.html' }
+        ];
         
-        // Menu de Configurador
-        navbarUl.appendChild(this.createMenuItem('CONFIGURADOR', '/index.html'));
+        // Adicionar itens de menu simples
+        menuItems.forEach(item => {
+            navbarUl.appendChild(this.createMenuItem(item.text, item.href));
+        });
         
-        // Menu dropdown de Veículos
-        navbarUl.appendChild(this.createVeiculosDropdown());
+        // Menu dropdown de VEÍCULOS
+        const veiculosLi = document.createElement('li');
+        veiculosLi.className = 'nav-item dropdown';
+        
+        const dropdownToggle = document.createElement('a');
+        dropdownToggle.className = 'nav-link dropdown-toggle';
+        dropdownToggle.href = '#';
+        dropdownToggle.id = 'veiculosDropdown';
+        dropdownToggle.role = 'button';
+        dropdownToggle.setAttribute('data-bs-toggle', 'dropdown');
+        dropdownToggle.setAttribute('aria-expanded', 'false');
+        dropdownToggle.textContent = 'VEÍCULOS';
+        
+        const dropdownMenu = document.createElement('ul');
+        dropdownMenu.className = 'dropdown-menu';
+        dropdownMenu.setAttribute('aria-labelledby', 'veiculosDropdown');
+        
+        // Itens do dropdown de VEÍCULOS
+        const veiculosItems = [
+            { text: 'MARCAS', href: '/veiculos/marca.html' },
+            { text: 'MODELOS', href: '/veiculos/modelo.html' },
+            { text: 'VERSÕES', href: '/admin/versoes.html' },
+            { text: 'VEÍCULOS', href: '/veiculos/veiculo.html' },
+            { text: 'OPCIONAIS', href: '/veiculos/opcional.html' },
+            { text: 'PINTURAS', href: '/pinturas.html' },
+            { text: 'VENDA DIRETA', href: '/veiculos/venda-direta.html' }
+        ];
+        
+        veiculosItems.forEach(item => {
+            const dropdownItem = document.createElement('li');
+            const itemLink = document.createElement('a');
+            itemLink.className = 'dropdown-item';
+            itemLink.href = item.href;
+            itemLink.textContent = item.text;
+            
+            // Verificar se este item corresponde à URL atual
+            if (window.location.pathname === item.href) {
+                itemLink.classList.add('active');
+                dropdownToggle.classList.add('active');
+            }
+            
+            dropdownItem.appendChild(itemLink);
+            dropdownMenu.appendChild(dropdownItem);
+        });
+        
+        veiculosLi.appendChild(dropdownToggle);
+        veiculosLi.appendChild(dropdownMenu);
+        navbarUl.appendChild(veiculosLi);
+        
+        // Item SUPORTE
+        navbarUl.appendChild(this.createMenuItem('SUPORTE', '/suporte.html'));
     }
     
     /**
@@ -90,8 +166,57 @@ class MenuManager {
         // Menu de Configurador
         navbarUl.appendChild(this.createMenuItem('CONFIGURADOR', '/index.html'));
         
-        // Menu dropdown de Veículos
-        navbarUl.appendChild(this.createVeiculosDropdown());
+        // Menu dropdown de VEÍCULOS
+        const veiculosLi = document.createElement('li');
+        veiculosLi.className = 'nav-item dropdown';
+        
+        const dropdownToggle = document.createElement('a');
+        dropdownToggle.className = 'nav-link dropdown-toggle';
+        dropdownToggle.href = '#';
+        dropdownToggle.id = 'veiculosDropdown';
+        dropdownToggle.role = 'button';
+        dropdownToggle.setAttribute('data-bs-toggle', 'dropdown');
+        dropdownToggle.setAttribute('aria-expanded', 'false');
+        dropdownToggle.textContent = 'VEÍCULOS';
+        
+        const dropdownMenu = document.createElement('ul');
+        dropdownMenu.className = 'dropdown-menu';
+        dropdownMenu.setAttribute('aria-labelledby', 'veiculosDropdown');
+        
+        // Itens do dropdown de VEÍCULOS
+        const veiculosItems = [
+            { text: 'MARCAS', href: '/veiculos/marca.html' },
+            { text: 'MODELOS', href: '/veiculos/modelo.html' },
+            { text: 'VERSÕES', href: '/admin/versoes.html' },
+            { text: 'VEÍCULOS', href: '/veiculos/veiculo.html' },
+            { text: 'OPCIONAIS', href: '/veiculos/opcional.html' },
+            { text: 'PINTURAS', href: '/pinturas.html' },
+            { text: 'VENDA DIRETA', href: '/veiculos/venda-direta.html' }
+        ];
+        
+        veiculosItems.forEach(item => {
+            const dropdownItem = document.createElement('li');
+            const itemLink = document.createElement('a');
+            itemLink.className = 'dropdown-item';
+            itemLink.href = item.href;
+            itemLink.textContent = item.text;
+            
+            // Verificar se este item corresponde à URL atual
+            if (window.location.pathname === item.href) {
+                itemLink.classList.add('active');
+                dropdownToggle.classList.add('active');
+            }
+            
+            dropdownItem.appendChild(itemLink);
+            dropdownMenu.appendChild(dropdownItem);
+        });
+        
+        veiculosLi.appendChild(dropdownToggle);
+        veiculosLi.appendChild(dropdownMenu);
+        navbarUl.appendChild(veiculosLi);
+        
+        // Item SUPORTE
+        navbarUl.appendChild(this.createMenuItem('SUPORTE', '/suporte.html'));
     }
     
     /**
@@ -101,8 +226,11 @@ class MenuManager {
     renderUsuarioMenu(navbarUl) {
         console.log('Renderizando menu de usuário comum');
         
-        // Apenas o menu de configurador para usuários comuns
-        navbarUl.appendChild(this.createMenuItem('CONFIGURADOR', '/usuario.html'));
+        // Menu de Configurador
+        navbarUl.appendChild(this.createMenuItem('CONFIGURADOR', '/index.html'));
+        
+        // Item SUPORTE
+        navbarUl.appendChild(this.createMenuItem('SUPORTE', '/suporte.html'));
     }
     
     /**
@@ -117,64 +245,17 @@ class MenuManager {
         li.className = 'nav-item';
         
         const a = document.createElement('a');
-        a.className = `nav-link text-white${active ? ' active' : ''}`;
+        a.className = `nav-link${active ? ' active' : ''}`;
         a.href = href;
+        
+        // Verificar se este item corresponde à URL atual
+        if (window.location.pathname === href) {
+            a.classList.add('active');
+        }
+        
         a.textContent = text;
         
         li.appendChild(a);
-        return li;
-    }
-    
-    /**
-     * Cria o dropdown de Veículos
-     * @returns {HTMLElement} - Elemento LI do dropdown
-     */
-    createVeiculosDropdown() {
-        const li = document.createElement('li');
-        li.className = 'nav-item dropdown';
-        
-        const a = document.createElement('a');
-        a.className = 'nav-link text-white dropdown-toggle';
-        a.href = '#';
-        a.id = 'veiculosDropdown';
-        a.role = 'button';
-        a.dataset.bsToggle = 'dropdown';
-        a.setAttribute('aria-expanded', 'false');
-        a.textContent = 'VEÍCULOS';
-        
-        const ul = document.createElement('ul');
-        ul.className = 'dropdown-menu';
-        ul.setAttribute('aria-labelledby', 'veiculosDropdown');
-        
-        // Adiciona os itens do dropdown
-        const items = [
-            { text: 'MARCA', href: '/veiculos/marca.html' },
-            { text: 'MODELO', href: '/veiculos/modelo.html' },
-            { text: 'VEÍCULO', href: '/veiculos/veiculo.html' },
-            { text: 'OPCIONAIS', href: '/veiculos/opcional.html' },
-            { text: 'PINTURAS', href: '/pinturas.html' },
-            { text: 'VENDA DIRETA', href: '/veiculos/venda-direta.html' }
-        ];
-        
-        items.forEach(item => {
-            const li = document.createElement('li');
-            const a = document.createElement('a');
-            a.className = 'dropdown-item';
-            a.href = item.href;
-            a.textContent = item.text;
-            
-            // Verifica se este item está ativo (corresponde à URL atual)
-            if (window.location.pathname === item.href) {
-                a.classList.add('active');
-            }
-            
-            li.appendChild(a);
-            ul.appendChild(li);
-        });
-        
-        li.appendChild(a);
-        li.appendChild(ul);
-        
         return li;
     }
 }
@@ -182,14 +263,34 @@ class MenuManager {
 // Cria uma instância global do gerenciador de menu
 window.menuManager = new MenuManager();
 
-/**
- * Função para inicializar o menu após a autenticação
- * @param {Object} user - Objeto do usuário autenticado
- */
-function initializeMenu(user) {
-    if (user) {
-        window.menuManager.init(user);
+// Função para inicializar o menu após a autenticação
+function initMenu() {
+    console.log('Inicializando menu...');
+    const userString = localStorage.getItem('user');
+    if (userString) {
+        try {
+            const user = JSON.parse(userString);
+            console.log('Usuário encontrado no localStorage:', user);
+            
+            // Garantir que o usuário tenha a propriedade 'role' para compatibilidade
+            if (user.papel && !user.role) {
+                user.role = user.papel;
+                // Atualizar no localStorage para manter a consistência
+                localStorage.setItem('user', JSON.stringify(user));
+                console.log('Propriedade role adicionada ao usuário:', user);
+            }
+            
+            window.menuManager.init(user);
+        } catch (error) {
+            console.error('Erro ao inicializar menu:', error);
+        }
     } else {
-        console.error('Usuário não fornecido para inicialização do menu');
+        console.warn('Usuário não encontrado no localStorage');
     }
 }
+
+// Inicializar o menu quando o DOM estiver carregado
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM carregado, inicializando menu...');
+    initMenu();
+});

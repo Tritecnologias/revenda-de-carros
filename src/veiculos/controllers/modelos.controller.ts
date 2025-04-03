@@ -42,7 +42,7 @@ export class ModelosController {
   @Get('by-marca/:marcaId')
   @UseGuards(JwtAuthGuard)
   async findByMarca(@Param('marcaId') marcaId: number) {
-    console.log(`Controller: Buscando modelos para marca ID: ${marcaId}`);
+    console.log(`ModelosController: Buscando modelos para marca ID: ${marcaId}`);
     return this.modelosService.findByMarca(marcaId);
   }
 

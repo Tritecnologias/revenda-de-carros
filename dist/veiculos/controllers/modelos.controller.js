@@ -43,7 +43,7 @@ let ModelosController = class ModelosController {
         return modelos;
     }
     async findByMarca(marcaId) {
-        console.log(`Controller: Buscando modelos para marca ID: ${marcaId}`);
+        console.log(`ModelosController: Buscando modelos para marca ID: ${marcaId}`);
         return this.modelosService.findByMarca(marcaId);
     }
     async findByMarcaPublic(marcaId) {

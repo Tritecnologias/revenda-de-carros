@@ -19,16 +19,19 @@ const typeorm_2 = require("typeorm");
 const veiculo_entity_1 = require("../entities/veiculo.entity");
 const marcas_service_1 = require("./marcas.service");
 const modelos_service_1 = require("./modelos.service");
+const versoes_service_1 = require("./versoes.service");
 let VeiculosService = class VeiculosService {
-    constructor(veiculosRepository, marcasService, modelosService) {
+    constructor(veiculosRepository, marcasService, modelosService, versoesService) {
         this.veiculosRepository = veiculosRepository;
         this.marcasService = marcasService;
         this.modelosService = modelosService;
+        this.versoesService = versoesService;
     }
     async findAll(page = 1, limit = 10, modeloId) {
         const queryBuilder = this.veiculosRepository.createQueryBuilder('veiculo')
             .leftJoinAndSelect('veiculo.marca', 'marca')
             .leftJoinAndSelect('veiculo.modelo', 'modelo')
+            .leftJoinAndSelect('veiculo.versao', 'versao')
             .orderBy('veiculo.createdAt', 'DESC');
         if (modeloId) {
             queryBuilder.where('veiculo.modeloId = :modeloId', { modeloId });
@@ -48,7 +51,7 @@ let VeiculosService = class VeiculosService {
     async findOne(id) {
         const veiculo = await this.veiculosRepository.findOne({
             where: { id },
-            relations: ['marca', 'modelo'],
+            relations: ['marca', 'modelo', 'versao'],
         });
         if (!veiculo) {
             throw new common_1.NotFoundException(`Veículo com ID ${id} não encontrado`);
@@ -58,6 +61,7 @@ let VeiculosService = class VeiculosService {
     async create(createVeiculoDto) {
         await this.marcasService.findOne(createVeiculoDto.marcaId);
         await this.modelosService.findOne(createVeiculoDto.modeloId);
+        await this.versoesService.findOne(createVeiculoDto.versaoId);
         const veiculo = this.veiculosRepository.create(createVeiculoDto);
         return this.veiculosRepository.save(veiculo);
     }
@@ -68,6 +72,9 @@ let VeiculosService = class VeiculosService {
         }
         if (updateVeiculoDto.modeloId) {
             await this.modelosService.findOne(updateVeiculoDto.modeloId);
+        }
+        if (updateVeiculoDto.versaoId) {
+            await this.versoesService.findOne(updateVeiculoDto.versaoId);
         }
         await this.veiculosRepository.update(id, updateVeiculoDto);
         return this.findOne(id);
@@ -83,6 +90,7 @@ exports.VeiculosService = VeiculosService = __decorate([
     __param(0, (0, typeorm_1.InjectRepository)(veiculo_entity_1.Veiculo)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
         marcas_service_1.MarcasService,
-        modelos_service_1.ModelosService])
+        modelos_service_1.ModelosService,
+        versoes_service_1.VersoesService])
 ], VeiculosService);
 //# sourceMappingURL=veiculos.service.js.map

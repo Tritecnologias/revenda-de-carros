@@ -3,11 +3,13 @@ import { Veiculo } from '../entities/veiculo.entity';
 import { CreateVeiculoDto, UpdateVeiculoDto } from '../dto/veiculo.dto';
 import { MarcasService } from './marcas.service';
 import { ModelosService } from './modelos.service';
+import { VersoesService } from './versoes.service';
 export declare class VeiculosService {
     private veiculosRepository;
     private marcasService;
     private modelosService;
-    constructor(veiculosRepository: Repository<Veiculo>, marcasService: MarcasService, modelosService: ModelosService);
+    private versoesService;
+    constructor(veiculosRepository: Repository<Veiculo>, marcasService: MarcasService, modelosService: ModelosService, versoesService: VersoesService);
     findAll(page?: number, limit?: number, modeloId?: number): Promise<{
         items: Veiculo[];
         total: number;

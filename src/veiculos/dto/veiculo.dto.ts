@@ -10,8 +10,9 @@ export class CreateVeiculoDto {
   @Type(() => Number)
   modeloId: number;
 
-  @IsString()
-  versao: string;
+  @IsNumber()
+  @Type(() => Number)
+  versaoId: number;
 
   @IsInt()
   @Min(1900)
@@ -39,6 +40,10 @@ export class CreateVeiculoDto {
   @Min(0)
   @Type(() => Number)
   preco: number;
+
+  @IsString()
+  @IsOptional()
+  placa?: string;
 
   @IsNumber()
   @IsOptional()
@@ -95,9 +100,10 @@ export class UpdateVeiculoDto {
   @Type(() => Number)
   modeloId?: number;
 
-  @IsString()
+  @IsNumber()
   @IsOptional()
-  versao?: string;
+  @Type(() => Number)
+  versaoId?: number;
 
   @IsInt()
   @IsOptional()
@@ -127,6 +133,10 @@ export class UpdateVeiculoDto {
   @Min(0)
   @Type(() => Number)
   preco?: number;
+
+  @IsString()
+  @IsOptional()
+  placa?: string;
 
   @IsNumber()
   @IsOptional()

@@ -1,6 +1,7 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { Marca } from './marca.entity';
 import { Modelo } from './modelo.entity';
+import { Versao } from './versao.entity';
 
 @Entity('veiculos')
 export class Veiculo {
@@ -21,8 +22,12 @@ export class Veiculo {
   @Column({ nullable: true })
   modeloId: number;
 
-  @Column()
-  versao: string;
+  @ManyToOne(() => Versao)
+  @JoinColumn({ name: 'versaoId' })
+  versao: Versao;
+
+  @Column({ nullable: true })
+  versaoId: number;
 
   @Column()
   ano: number;

@@ -6,17 +6,17 @@
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Layout Manager: Inicializando...');
     
+    // Verificar se estamos em uma página que não deve ter o cabeçalho padrão
+    const currentPath = window.location.pathname.toLowerCase();
+    const excludedPages = ['/login.html', '/logoff.html'];
+    
+    if (excludedPages.some(page => currentPath.endsWith(page))) {
+        console.log('Layout Manager: Página excluída do carregamento do cabeçalho padrão:', currentPath);
+        return;
+    }
+    
     // Carregar o cabeçalho padrão
     loadStandardHeader();
-    
-    // Atualizar informações do usuário
-    updateUserInfo();
-    
-    // Configurar controle de acesso baseado no papel do usuário
-    setupRoleBasedAccess();
-    
-    // Configurar botão de logout
-    setupLogoutButton();
 });
 
 /**
@@ -50,10 +50,16 @@ function loadStandardHeader() {
                 // Atualizar informações do usuário
                 updateUserInfo();
                 
+                // Configurar botão de logout APÓS o cabeçalho ser carregado
+                setupLogoutButton();
+                
+                // Configurar controle de acesso baseado no papel do usuário
+                setupRoleBasedAccess();
+                
                 // Inicializar o menu centralizado
                 initializeMenuSystem();
             } else {
-                console.error('Layout Manager: Erro ao carregar o cabeçalho padrão:', xhr.status);
+                console.error('Layout Manager: Erro ao carregar cabeçalho:', xhr.status);
             }
         }
     };
@@ -127,22 +133,40 @@ function setupRoleBasedAccess() {
  * Configura o botão de logout
  */
 function setupLogoutButton() {
-    const logoutButton = document.getElementById('logoutButton');
+    console.log('Layout Manager: Configurando botão de logout...');
+    
+    // Usar querySelector para garantir que o botão seja encontrado mesmo em subcontainers
+    const logoutButton = document.querySelector('#logoutButton');
     if (!logoutButton) {
         console.warn('Layout Manager: Botão de logout não encontrado');
         return;
     }
     
-    logoutButton.addEventListener('click', function() {
-        console.log('Layout Manager: Botão de logout clicado');
-        
-        // Limpar dados de autenticação
+    console.log('Layout Manager: Botão de logout encontrado, configurando evento de clique');
+    
+    // Remover eventos anteriores para evitar duplicação
+    logoutButton.removeEventListener('click', handleLogout);
+    
+    // Adicionar novo evento de clique
+    logoutButton.addEventListener('click', handleLogout);
+}
+
+/**
+ * Função para lidar com o clique no botão de logout
+ */
+function handleLogout() {
+    console.log('Layout Manager: Botão de logout clicado');
+    
+    if (window.auth) {
+        console.log('Layout Manager: Chamando método de logout da classe Auth');
+        window.auth.logout();
+    } else {
+        console.warn('Layout Manager: Objeto auth não encontrado, usando fallback');
+        // Fallback se auth não estiver disponível
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        
-        // Redirecionar para a página de login
-        window.location.href = '/login.html';
-    });
+        window.location.href = '/logoff.html';
+    }
 }
 
 /**

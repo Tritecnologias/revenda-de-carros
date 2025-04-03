@@ -296,7 +296,7 @@ function replaceNavigation(mobileNavHTML, desktopNavHTML) {
             } else {
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
-                window.location.href = '/login.html';
+                window.location.href = '/logoff.html';
             }
         });
     }
@@ -310,7 +310,7 @@ function replaceNavigation(mobileNavHTML, desktopNavHTML) {
             } else {
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
-                window.location.href = '/login.html';
+                window.location.href = '/logoff.html';
             }
         });
     }

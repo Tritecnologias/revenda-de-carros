@@ -24,6 +24,7 @@ const veiculo_entity_2 = require("./veiculos/entities/veiculo.entity");
 const opcional_entity_1 = require("./veiculos/entities/opcional.entity");
 const modelo_opcional_entity_1 = require("./veiculos/entities/modelo-opcional.entity");
 const venda_direta_entity_1 = require("./veiculos/entities/venda-direta.entity");
+const versao_entity_1 = require("./veiculos/entities/versao.entity");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -40,7 +41,7 @@ exports.AppModule = AppModule = __decorate([
                 username: 'wanderson',
                 password: 'Flavinha@2022',
                 database: 'revenda_carros',
-                entities: [veiculo_entity_1.Veiculo, pintura_entity_1.Pintura, modelo_pintura_entity_1.ModeloPintura, user_entity_1.User, marca_entity_1.Marca, modelo_entity_1.Modelo, veiculo_entity_2.Veiculo, opcional_entity_1.Opcional, modelo_opcional_entity_1.ModeloOpcional, venda_direta_entity_1.VendaDireta],
+                entities: [veiculo_entity_1.Veiculo, pintura_entity_1.Pintura, modelo_pintura_entity_1.ModeloPintura, user_entity_1.User, marca_entity_1.Marca, modelo_entity_1.Modelo, veiculo_entity_2.Veiculo, opcional_entity_1.Opcional, modelo_opcional_entity_1.ModeloOpcional, venda_direta_entity_1.VendaDireta, versao_entity_1.Versao],
                 synchronize: true,
             }),
             configurador_module_1.ConfiguradorModule,

@@ -85,10 +85,13 @@
                         
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label for="versao" class="form-label">Versão</label>
-                                <input type="text" class="form-control" id="versao" required>
+                                <label for="versaoId" class="form-label">Versão</label>
+                                <select class="form-select" id="versaoId" required>
+                                    <option value="">Selecione uma versão</option>
+                                    <!-- Opções serão carregadas via JavaScript -->
+                                </select>
                                 <div class="invalid-feedback">
-                                    Por favor, informe a versão
+                                    Por favor, selecione uma versão
                                 </div>
                             </div>
                             
@@ -236,6 +239,7 @@
     <script src="/js/config.js"></script>
     <script src="/js/auth.js"></script>
     <script src="/js/layout-manager.js"></script>
+    <script src="/js/logout-handler.js"></script>
     <script src="/js/veiculos/veiculo.js"></script>
     <script>
         // Inicializar formatação de campos monetários

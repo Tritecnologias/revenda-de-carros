@@ -1,12 +1,14 @@
 import { Marca } from './marca.entity';
 import { Modelo } from './modelo.entity';
+import { Versao } from './versao.entity';
 export declare class Veiculo {
     id: number;
     marca: Marca;
     marcaId: number;
     modelo: Modelo;
     modeloId: number;
-    versao: string;
+    versao: Versao;
+    versaoId: number;
     ano: number;
     descricao: string;
     motor: string;

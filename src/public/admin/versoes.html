@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciamento de Versões - Sistema de Revenda de Carros</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <!-- Barra de navegação superior -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Revenda de Carros</a>
+            <div class="d-flex">
+                <span class="navbar-text me-3">
+                    <span id="user-info">Administrador (1)</span> - Último acesso: <span id="last-login">02/04/2025, 19:20:18</span>
+                </span>
+                <div class="dropdown">
+                    <button class="btn btn-outline-light dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                        Conta
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton">
+                        <li><a class="dropdown-item" href="#" id="logout-btn">Sair</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Menu azul centralizado -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <button class="navbar-toggler mx-auto" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavBlue">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse justify-content-center" id="navbarNavBlue">
+                <ul class="navbar-nav">
+                    <!-- Os itens de menu serão carregados dinamicamente pelo menu-manager.js -->
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+            <h1 class="h2">Gerenciamento de Versões</h1>
+            <div class="btn-toolbar mb-2 mb-md-0">
+                <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalVersao">
+                    <i class="bi bi-plus-circle"></i> Nova Versão
+                </button>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <label for="filtroMarca" class="form-label">Marca</label>
+                <select id="filtroMarca" class="form-select">
+                    <option value="">Todas as marcas</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="filtroModelo" class="form-label">Modelo</label>
+                <select id="filtroModelo" class="form-select">
+                    <option value="">Todos os modelos</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="filtroStatus" class="form-label">Status</label>
+                <select id="filtroStatus" class="form-select">
+                    <option value="">Todos</option>
+                    <option value="ativo">Ativo</option>
+                    <option value="inativo">Inativo</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Tabela de versões -->
+        <div class="table-responsive">
+            <table class="table table-striped table-sm">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Versão</th>
+                        <th>Modelo</th>
+                        <th>Marca</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaVersoes">
+                    <!-- Os dados serão carregados dinamicamente -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal para adicionar/editar versão -->
+    <div class="modal fade" id="modalVersao" tabindex="-1" aria-labelledby="modalVersaoLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalVersaoLabel">Nova Versão</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formVersao">
+                        <input type="hidden" id="versaoId">
+                        <div class="mb-3">
+                            <label for="marcaSelect" class="form-label">Marca</label>
+                            <select class="form-select" id="marcaSelect" required>
+                                <option value="">Selecione uma marca</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="modeloSelect" class="form-label">Modelo</label>
+                            <select class="form-select" id="modeloSelect" required>
+                                <option value="">Selecione um modelo</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="nomeVersao" class="form-label">Nome da Versão</label>
+                            <input type="text" class="form-control" id="nomeVersao" required>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="statusVersao" checked>
+                            <label class="form-check-label" for="statusVersao">Ativo</label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="salvarVersao">Salvar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Carregar config.js primeiro, antes de qualquer outro script -->
+    <script src="/js/config.js"></script>
+    <script>
+        // Verificar se o arquivo config.js foi carregado corretamente
+        if (typeof config === 'undefined') {
+            console.error('O arquivo config.js não foi carregado corretamente.');
+            alert('Erro ao carregar configurações. Por favor, recarregue a página.');
+        } else {
+            console.log('Config carregado com sucesso. API Base URL:', config.apiBaseUrl);
+        }
+    </script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/menu-manager.js"></script>
+    <script>
+        // Inicializar o menu quando o DOM estiver carregado
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM carregado, inicializando componentes...');
+            
+            // Preencher informações do usuário
+            const userString = localStorage.getItem('user');
+            const lastLogin = localStorage.getItem('lastLogin');
+            
+            if (userString) {
+                const user = JSON.parse(userString);
+                document.getElementById('user-info').textContent = user.nome + ' (' + user.id + ')';
+                
+                if (lastLogin) {
+                    document.getElementById('last-login').textContent = lastLogin;
+                }
+                
+                // Inicializar o menu
+                if (typeof initMenu === 'function') {
+                    console.log('Chamando função initMenu');
+                    initMenu();
+                } else if (window.menuManager) {
+                    console.log('Usando menuManager para inicializar o menu');
+                    window.menuManager.init(user, 'navbarNavBlue');
+                } else {
+                    console.error('Nenhum mecanismo de menu encontrado!');
+                }
+            }
+            
+            // Configurar o botão de logout
+            document.getElementById('logout-btn').addEventListener('click', function() {
+                console.log('Botão de logout clicado');
+                if (window.auth) {
+                    window.auth.logout();
+                } else {
+                    // Fallback se auth não estiver disponível
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    window.location.href = '/logoff.html';
+                }
+            });
+        });
+    </script>
+    <!-- Carregar versoes.js por último, depois que todos os outros scripts foram carregados -->
+    <script src="/js/veiculos/versoes.js"></script>
+</body>
+</html>

@@ -5,6 +5,7 @@ import { Veiculo } from '../entities/veiculo.entity';
 import { CreateVeiculoDto, UpdateVeiculoDto } from '../dto/veiculo.dto';
 import { MarcasService } from './marcas.service';
 import { ModelosService } from './modelos.service';
+import { VersoesService } from './versoes.service';
 
 @Injectable()
 export class VeiculosService {
@@ -13,12 +14,14 @@ export class VeiculosService {
     private veiculosRepository: Repository<Veiculo>,
     private marcasService: MarcasService,
     private modelosService: ModelosService,
+    private versoesService: VersoesService,
   ) {}
 
   async findAll(page = 1, limit = 10, modeloId?: number) {
     const queryBuilder = this.veiculosRepository.createQueryBuilder('veiculo')
       .leftJoinAndSelect('veiculo.marca', 'marca')
       .leftJoinAndSelect('veiculo.modelo', 'modelo')
+      .leftJoinAndSelect('veiculo.versao', 'versao')
       .orderBy('veiculo.createdAt', 'DESC');
 
     // Filtrar por modelo se fornecido
@@ -43,7 +46,7 @@ export class VeiculosService {
   async findOne(id: number) {
     const veiculo = await this.veiculosRepository.findOne({
       where: { id },
-      relations: ['marca', 'modelo'],
+      relations: ['marca', 'modelo', 'versao'],
     });
     
     if (!veiculo) {
@@ -59,6 +62,9 @@ export class VeiculosService {
 
     // Verificar se o modelo existe
     await this.modelosService.findOne(createVeiculoDto.modeloId);
+    
+    // Verificar se a versão existe
+    await this.versoesService.findOne(createVeiculoDto.versaoId);
 
     const veiculo = this.veiculosRepository.create(createVeiculoDto);
     return this.veiculosRepository.save(veiculo);
@@ -76,6 +82,11 @@ export class VeiculosService {
     // Verificar se o modelo existe, se foi fornecido
     if (updateVeiculoDto.modeloId) {
       await this.modelosService.findOne(updateVeiculoDto.modeloId);
+    }
+    
+    // Verificar se a versão existe, se foi fornecida
+    if (updateVeiculoDto.versaoId) {
+      await this.versoesService.findOne(updateVeiculoDto.versaoId);
     }
 
     // Atualizar o veículo

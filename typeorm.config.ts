@@ -9,6 +9,7 @@ import { Veiculo } from './src/veiculos/entities/veiculo.entity';
 import { Opcional } from './src/veiculos/entities/opcional.entity';
 import { ModeloOpcional } from './src/veiculos/entities/modelo-opcional.entity';
 import { VendaDireta } from './src/veiculos/entities/venda-direta.entity';
+import { Versao } from './src/veiculos/entities/versao.entity';
 
 export default new DataSource({
   type: 'mysql',
@@ -17,7 +18,7 @@ export default new DataSource({
   username: 'root',
   password: 'Flavinha@2022',
   database: 'revenda_carros',
-  entities: [ConfiguradorVeiculo, Pintura, ModeloPintura, User, Marca, Modelo, Veiculo, Opcional, ModeloOpcional, VendaDireta],
+  entities: [ConfiguradorVeiculo, Pintura, ModeloPintura, User, Marca, Modelo, Veiculo, Opcional, ModeloOpcional, VendaDireta, Versao],
   migrations: ['src/migrations/*.ts'],
   synchronize: true, // Temporariamente habilitado para sincronizar as entidades
 });

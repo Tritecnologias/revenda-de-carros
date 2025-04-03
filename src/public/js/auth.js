@@ -25,6 +25,12 @@ class Auth {
     setAuth(token, user) {
         console.log('Setting auth...');
         this.token = token;
+        
+        // Garantir que o usuário tenha a propriedade 'role' para compatibilidade
+        if (user && user.papel && !user.role) {
+            user.role = user.papel;
+        }
+        
         this.user = user;
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(user));
@@ -41,8 +47,82 @@ class Auth {
         console.log('Auth cleared successfully');
     }
 
+    logout() {
+        console.log('Auth: Logout method called');
+        
+        // Criar overlay para animação de logout
+        const overlay = document.createElement('div');
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100%';
+        overlay.style.height = '100%';
+        overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+        overlay.style.color = 'white';
+        overlay.style.display = 'flex';
+        overlay.style.flexDirection = 'column';
+        overlay.style.justifyContent = 'center';
+        overlay.style.alignItems = 'center';
+        overlay.style.zIndex = '9999';
+        overlay.style.fontFamily = 'monospace';
+        overlay.style.fontSize = '16px';
+        overlay.style.transition = 'opacity 0.5s';
+        overlay.style.opacity = '0';
+        
+        document.body.appendChild(overlay);
+        
+        // Forçar reflow para que a transição funcione
+        overlay.offsetHeight;
+        overlay.style.opacity = '1';
+        
+        // Função para adicionar uma linha de texto à animação
+        const addLine = (text) => {
+            const line = document.createElement('div');
+            line.textContent = text;
+            line.style.margin = '5px';
+            overlay.appendChild(line);
+        };
+        
+        // Iniciar animação
+        setTimeout(() => {
+            addLine('Iniciando processo de logout...');
+            
+            setTimeout(() => {
+                addLine('Removendo token de autenticação...');
+                
+                setTimeout(() => {
+                    addLine('Removendo dados do usuário...');
+                    
+                    setTimeout(() => {
+                        addLine('Limpando localStorage...');
+                        
+                        setTimeout(() => {
+                            addLine('Logout concluído! Redirecionando...');
+                            
+                            // Limpar autenticação e redirecionar
+                            setTimeout(() => {
+                                this.clearAuth();
+                                window.location.href = '/logoff.html';
+                            }, 1000);
+                        }, 500);
+                    }, 500);
+                }, 500);
+            }, 500);
+        }, 500);
+    }
+
     checkAuthAndRedirect() {
         console.log('Checking auth and redirecting...');
+        
+        // Verificar se estamos na página de login ou logoff
+        const currentPath = window.location.pathname.toLowerCase();
+        const excludedPages = ['/login.html', '/logoff.html'];
+        
+        if (excludedPages.some(page => currentPath.endsWith(page))) {
+            console.log('Auth: Página de login ou logoff, não verificando autenticação');
+            return;
+        }
+        
         if (!this.isAuthenticated()) {
             console.log('Not authenticated, redirecting to login page...');
             window.location.href = '/login.html';
@@ -193,24 +273,17 @@ class Auth {
     }
     
     login(email, password) {
-        console.log('Attempting to login...');
+        console.log('Logging in...');
         
         const loginData = {
             email: email,
             password: password
         };
         
-        // Mostrar spinner e desabilitar botão
-        const loginButton = document.getElementById('loginButton');
-        const loginSpinner = document.getElementById('loginSpinner');
+        console.log('Login data:', loginData);
+        console.log('API URL:', `${config.apiBaseUrl}/auth/login`);
         
-        if (loginButton) loginButton.disabled = true;
-        if (loginSpinner) loginSpinner.classList.remove('d-none');
-        
-        // Usar config.apiBaseUrl em vez de API_URL
-        const apiUrl = config && config.apiBaseUrl ? config.apiBaseUrl : '';
-        
-        return fetch(`${apiUrl}/auth/login`, {
+        return fetch(`${config.apiBaseUrl}/auth/login`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -218,75 +291,85 @@ class Auth {
             body: JSON.stringify(loginData)
         })
         .then(response => {
+            console.log('Login response status:', response.status);
+            
             if (!response.ok) {
-                throw new Error('Login failed');
+                console.error('Login failed with status:', response.status);
+                throw new Error(`Login failed with status: ${response.status}`);
             }
+            
             return response.json();
         })
         .then(data => {
-            console.log('Login successful:', data);
+            console.log('Login response:', data);
             
-            // Armazenar token e dados do usuário
-            localStorage.setItem('token', data.access_token);
-            localStorage.setItem('user', JSON.stringify(data.user));
-            localStorage.setItem('lastLogin', new Date().toLocaleString());
-            
-            this.token = data.access_token;
-            this.user = data.user;
-            
-            // Redirecionar com base no papel do usuário
-            if (data.user && data.user.role) {
-                console.log('User role:', data.user.role);
+            if (data.access_token) {
+                const token = data.access_token;
+                const user = data.user;
                 
-                // Redirecionar para a página apropriada
-                if (data.user.role === 'admin' || data.user.role === 'cadastrador') {
-                    console.log('Redirecting to index.html (admin/cadastrador)');
+                this.setAuth(token, user);
+                console.log('Auth set with token and user');
+                
+                // Redirecionar com base no papel do usuário
+                if (user.role === 'admin' || user.role === 'cadastrador') {
+                    console.log('Redirecting to admin page...');
                     window.location.href = '/index.html';
                 } else {
-                    console.log('Redirecting to usuario.html (regular user)');
+                    console.log('Redirecting to user page...');
                     window.location.href = '/usuario.html';
                 }
+                
+                return data;
             } else {
-                // Papel não definido, redirecionar para página padrão
-                console.log('Role not defined, redirecting to default page');
-                window.location.href = '/index.html';
+                console.error('No token received in login response');
+                throw new Error('No token received');
             }
-            
-            return data;
         })
         .catch(error => {
             console.error('Login error:', error);
-            
-            // Esconder spinner e habilitar botão
-            if (loginButton) loginButton.disabled = false;
-            if (loginSpinner) loginSpinner.classList.add('d-none');
             
             // Mostrar mensagem de erro
             const loginError = document.getElementById('loginError');
             if (loginError) {
                 loginError.classList.remove('d-none');
-                setTimeout(() => {
-                    loginError.classList.add('d-none');
-                }, 3000);
+            }
+            
+            // Esconder spinner e habilitar botão
+            const loginSpinner = document.getElementById('loginSpinner');
+            const loginButton = document.getElementById('loginButton');
+            
+            if (loginSpinner) {
+                loginSpinner.classList.add('d-none');
+            }
+            
+            if (loginButton) {
+                loginButton.disabled = false;
             }
             
             throw error;
         });
     }
 
-    logout() {
-        console.log('Logout method called, clearing auth...');
-        this.clearAuth();
-        console.log('Redirecting to login page...');
-        window.location.href = '/login.html';
-    }
 }
 
 // Initialize auth on page load
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Initializing auth on page load...');
     window.auth = new Auth();
+    
+    // Verificar se já existe um objeto auth global
+    if (!window.auth) {
+        console.error('Auth: Falha ao inicializar objeto auth global');
+    } else {
+        console.log('Auth: Objeto auth global inicializado com sucesso');
+    }
+    
+    // Verificar autenticação
+    checkAuthentication();
 });
+
+// Garantir que o objeto auth esteja disponível globalmente
+window.auth = window.auth || new Auth();
 
 // Exportar a classe Auth para o escopo global
 window.Auth = Auth;
@@ -317,7 +400,7 @@ function logout() {
     console.log('Logout helper function called');
     return new Promise((resolve) => {
         if (window.auth) {
-            window.auth.clearAuth();
+            window.auth.logout();
         }
         resolve();
     });

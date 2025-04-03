@@ -81,7 +81,7 @@ async function loadMarcas() {
     
     try {
         const token = auth.getToken();
-        const response = await fetch(`/api/veiculos/marcas?page=${currentPage}&limit=${itemsPerPage}`, {
+        const response = await fetch(`${config.apiBaseUrl}/api/veiculos/marcas?page=${currentPage}&limit=${itemsPerPage}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -195,7 +195,7 @@ function changePage(page) {
 function editMarca(id) {
     const token = auth.getToken();
     
-    fetch(`/api/veiculos/marcas/${id}`, {
+    fetch(`${config.apiBaseUrl}/api/veiculos/marcas/${id}`, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${token}`
@@ -253,7 +253,7 @@ function saveMarca() {
     
     const token = auth.getToken();
     const method = id ? 'PUT' : 'POST';
-    const url = id ? `/api/veiculos/marcas/${id}` : '/api/veiculos/marcas';
+    const url = id ? `${config.apiBaseUrl}/api/veiculos/marcas/${id}` : `${config.apiBaseUrl}/api/veiculos/marcas`;
     
     // Enviar requisição
     fetch(url, {
@@ -298,7 +298,7 @@ function deleteMarca() {
     const token = auth.getToken();
     
     // Enviar requisição
-    fetch(`/api/veiculos/marcas/${id}`, {
+    fetch(`${config.apiBaseUrl}/api/veiculos/marcas/${id}`, {
         method: 'DELETE',
         headers: {
             'Authorization': `Bearer ${token}`

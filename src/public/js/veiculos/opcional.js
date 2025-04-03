@@ -147,7 +147,7 @@ async function loadOpcionais() {
     try {
         console.log('Carregando opcionais...');
         // Não precisamos mais enviar o token para este endpoint
-        const response = await fetch('/opcionais/api/list');
+        const response = await fetch(`${config.apiBaseUrl}/opcionais/api/list`);
         
         if (!response.ok) {
             throw new Error('Falha ao carregar opcionais');
@@ -168,7 +168,7 @@ async function loadOpcionais() {
 async function loadModelos() {
     try {
         const token = auth.getToken();
-        const response = await fetch('/api/veiculos/modelos/all', {
+        const response = await fetch(`${config.apiBaseUrl}/api/veiculos/modelos/all`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -324,7 +324,7 @@ function filterModeloOpcionaisByModelo(modeloId) {
 async function editOpcional(id) {
     try {
         const token = auth.getToken();
-        const response = await fetch(`/opcionais/api/${id}`, {
+        const response = await fetch(`/opcionais/${id}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`

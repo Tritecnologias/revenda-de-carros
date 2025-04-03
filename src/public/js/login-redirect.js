@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Redirecionar com base no papel
                         if (userData.role === 'admin' || userData.role === 'cadastrador') {
                             console.log('Login Redirect: Redirecionando para admin/cadastrador');
-                            window.location.href = '/admin-index.html';
+                            window.location.href = '/index.html';
                         } else {
                             console.log('Login Redirect: Redirecionando para usuário comum');
                             window.location.href = '/usuario.html';

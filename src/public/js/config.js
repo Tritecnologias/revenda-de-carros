@@ -1,3 +1,5 @@
+console.log('Carregando config.js...');
+
 /**
  * Configuração da API
  * Este arquivo centraliza as configurações da API para facilitar a mudança entre ambientes

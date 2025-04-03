@@ -42,10 +42,28 @@ let VeiculosController = class VeiculosController {
         return this.veiculosService.findOne(id);
     }
     async create(createVeiculoDto) {
-        return this.veiculosService.create(createVeiculoDto);
+        console.log('VeiculosController: Criando veículo com dados:', JSON.stringify(createVeiculoDto));
+        try {
+            const result = await this.veiculosService.create(createVeiculoDto);
+            console.log('VeiculosController: Veículo criado com sucesso, ID:', result.id);
+            return result;
+        }
+        catch (error) {
+            console.error('VeiculosController: Erro ao criar veículo:', error.message);
+            throw error;
+        }
     }
     async update(id, updateVeiculoDto) {
-        return this.veiculosService.update(id, updateVeiculoDto);
+        console.log(`VeiculosController: Atualizando veículo ID ${id} com dados:`, JSON.stringify(updateVeiculoDto));
+        try {
+            const result = await this.veiculosService.update(id, updateVeiculoDto);
+            console.log(`VeiculosController: Veículo ID ${id} atualizado com sucesso`);
+            return result;
+        }
+        catch (error) {
+            console.error(`VeiculosController: Erro ao atualizar veículo ID ${id}:`, error.message);
+            throw error;
+        }
     }
     async remove(id) {
         return this.veiculosService.remove(id);

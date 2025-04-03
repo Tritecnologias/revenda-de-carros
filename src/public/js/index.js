@@ -340,7 +340,17 @@ async function loadVersoes(modeloId) {
     }
     
     try {
-        const response = await fetch(`${config.apiBaseUrl}/api/veiculos/public?modeloId=${modeloId}`, {
+        console.log('Carregando versões para o modelo ID:', modeloId);
+        
+        // Mostrar mensagem de carregamento
+        const versaoSelect = document.getElementById('configuradorVersao');
+        if (versaoSelect) {
+            versaoSelect.innerHTML = '<option value="">Carregando versões...</option>';
+            versaoSelect.disabled = true;
+        }
+        
+        // Buscar versões diretamente da API de versões por modelo
+        const response = await fetch(`${config.apiBaseUrl}/api/versoes/modelo/${modeloId}/public`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
@@ -351,29 +361,85 @@ async function loadVersoes(modeloId) {
             throw new Error(`Falha ao carregar versões: ${response.status} ${response.statusText}`);
         }
         
-        const data = await response.json();
-        const veiculos = data.items || [];
+        const versoes = await response.json();
+        console.log('Versões carregadas (dados brutos):', JSON.stringify(versoes));
         
-        const versaoSelect = document.getElementById('configuradorVersao');
         if (versaoSelect) {
             // Limpar select
             versaoSelect.innerHTML = '<option value="">Selecione uma versão</option>';
             
             // Adicionar versões
-            veiculos.forEach(veiculo => {
+            if (Array.isArray(versoes) && versoes.length > 0) {
+                console.log(`Processando ${versoes.length} versões`);
+                
+                versoes.forEach((versao, index) => {
+                    console.log(`Versão ${index + 1}:`, versao);
+                    
+                    const option = document.createElement('option');
+                    option.value = versao.id;
+                    
+                    // Usar o campo nome_versao conforme definido na entidade Versao
+                    if (versao.nome_versao) {
+                        option.textContent = versao.nome_versao;
+                        console.log(`Usando campo 'nome_versao': ${versao.nome_versao}`);
+                    } else if (versao.nome) {
+                        option.textContent = versao.nome;
+                        console.log(`Usando campo 'nome': ${versao.nome}`);
+                    } else if (versao.descricao) {
+                        option.textContent = versao.descricao;
+                        console.log(`Usando campo 'descricao': ${versao.descricao}`);
+                    } else {
+                        // Fallback para qualquer outro campo que possa conter o nome
+                        const possibleFields = ['versao', 'name', 'title', 'description'];
+                        let found = false;
+                        
+                        for (const field of possibleFields) {
+                            if (versao[field]) {
+                                option.textContent = versao[field];
+                                console.log(`Usando campo '${field}': ${versao[field]}`);
+                                found = true;
+                                break;
+                            }
+                        }
+                        
+                        if (!found) {
+                            // Se não encontrar nenhum campo adequado, usar o ID como fallback
+                            option.textContent = `Versão ${versao.id}`;
+                            console.log(`Nenhum campo de nome encontrado, usando ID: ${versao.id}`);
+                        }
+                    }
+                    
+                    // Armazenar dados adicionais como atributos de dados
+                    if (versao.preco) {
+                        option.dataset.preco = versao.preco;
+                    }
+                    
+                    versaoSelect.appendChild(option);
+                    console.log(`Opção adicionada: value=${option.value}, text=${option.textContent}`);
+                });
+                
+                // Habilitar select
+                versaoSelect.disabled = false;
+                console.log('Select de versões habilitado com', versoes.length, 'opções');
+            } else {
+                // Caso não haja versões disponíveis
+                console.log('Nenhuma versão disponível para este modelo');
                 const option = document.createElement('option');
-                option.value = veiculo.id;
-                option.textContent = veiculo.versao;
+                option.value = "";
+                option.textContent = "Nenhuma versão disponível";
                 versaoSelect.appendChild(option);
-            });
-            
-            // Habilitar select
-            versaoSelect.disabled = false;
+                versaoSelect.disabled = true;
+            }
         }
         
     } catch (error) {
         console.error('Erro ao carregar versões:', error);
-        alert('Erro ao carregar versões. Por favor, tente novamente.');
+        
+        const versaoSelect = document.getElementById('configuradorVersao');
+        if (versaoSelect) {
+            versaoSelect.innerHTML = '<option value="">Erro ao carregar versões</option>';
+            versaoSelect.disabled = true;
+        }
     }
 }
 

@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadMarcasSelect() {
     try {
         const token = auth.getToken();
-        const response = await fetch('/api/veiculos/marcas/all', {
+        const response = await fetch(`${config.apiBaseUrl}/api/veiculos/marcas/all`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -110,7 +110,7 @@ async function loadModelosByMarca() {
     
     try {
         const token = auth.getToken();
-        const response = await fetch(`/api/veiculos/modelos/by-marca/${marcaId}`, {
+        const response = await fetch(`${config.apiBaseUrl}/api/veiculos/modelos/by-marca/${marcaId}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -140,7 +140,7 @@ async function loadModelosByMarca() {
 async function loadDescricoes() {
     try {
         const token = auth.getToken();
-        const response = await fetch(`/api/veiculos/descricoes?page=${currentPage}&limit=${itemsPerPage}`, {
+        const response = await fetch(`${config.apiBaseUrl}/api/veiculos/descricoes?page=${currentPage}&limit=${itemsPerPage}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -252,7 +252,7 @@ function changePage(page) {
 async function editDescricao(id) {
     try {
         const token = auth.getToken();
-        const response = await fetch(`/api/veiculos/descricoes/${id}`, {
+        const response = await fetch(`${config.apiBaseUrl}/api/veiculos/descricoes/${id}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -331,7 +331,7 @@ async function saveDescricao() {
         errorMessage.classList.add('d-none');
         
         const token = auth.getToken();
-        const url = descricaoId ? `/api/veiculos/descricoes/${descricaoId}` : '/api/veiculos/descricoes';
+        const url = descricaoId ? `${config.apiBaseUrl}/api/veiculos/descricoes/${descricaoId}` : `${config.apiBaseUrl}/api/veiculos/descricoes`;
         const method = descricaoId ? 'PUT' : 'POST';
         
         const response = await fetch(url, {
@@ -369,7 +369,7 @@ async function deleteDescricao() {
         deleteSpinner.classList.remove('d-none');
         
         const token = auth.getToken();
-        const response = await fetch(`/api/veiculos/descricoes/${descricaoId}`, {
+        const response = await fetch(`${config.apiBaseUrl}/api/veiculos/descricoes/${descricaoId}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${token}`

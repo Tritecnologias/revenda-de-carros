@@ -87,7 +87,7 @@ async function loadMarcasSelect() {
     
     try {
         const token = auth.getToken();
-        const response = await fetch('/api/veiculos/marcas/all', {
+        const response = await fetch(`${config.apiBaseUrl}/api/veiculos/marcas/all`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -125,7 +125,7 @@ async function loadModelos() {
     
     try {
         const token = auth.getToken();
-        const response = await fetch(`/api/veiculos/modelos?page=${currentPage}&limit=${itemsPerPage}`, {
+        const response = await fetch(`${config.apiBaseUrl}/api/veiculos/modelos?page=${currentPage}&limit=${itemsPerPage}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -243,7 +243,7 @@ function changePage(page) {
 function editModelo(id) {
     const token = auth.getToken();
     
-    fetch(`/api/veiculos/modelos/${id}`, {
+    fetch(`${config.apiBaseUrl}/api/veiculos/modelos/${id}`, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${token}`
@@ -312,7 +312,7 @@ function saveModelo() {
     
     const token = auth.getToken();
     const method = id ? 'PUT' : 'POST';
-    const url = id ? `/api/veiculos/modelos/${id}` : '/api/veiculos/modelos';
+    const url = id ? `${config.apiBaseUrl}/api/veiculos/modelos/${id}` : `${config.apiBaseUrl}/api/veiculos/modelos`;
     
     // Enviar requisição
     fetch(url, {
@@ -357,7 +357,7 @@ function deleteModelo() {
     const token = auth.getToken();
     
     // Enviar requisição
-    fetch(`/api/veiculos/modelos/${id}`, {
+    fetch(`${config.apiBaseUrl}/api/veiculos/modelos/${id}`, {
         method: 'DELETE',
         headers: {
             'Authorization': `Bearer ${token}`
