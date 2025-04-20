@@ -12,9 +12,6 @@ export class Pintura {
   @Column()
   nome: string;
 
-  @Column({ nullable: true })
-  imageUrl: string;
-
   @OneToMany(() => ModeloPintura, modeloPintura => modeloPintura.pintura)
   modeloPinturas: ModeloPintura[];
 }

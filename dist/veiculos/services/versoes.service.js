@@ -17,6 +17,7 @@ const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const versao_entity_1 = require("../entities/versao.entity");
+const veiculo_entity_1 = require("../entities/veiculo.entity");
 const modelos_service_1 = require("./modelos.service");
 class CreateVersaoDto {
 }
@@ -25,8 +26,9 @@ class UpdateVersaoDto {
 }
 exports.UpdateVersaoDto = UpdateVersaoDto;
 let VersoesService = class VersoesService {
-    constructor(versaoRepository, modelosService) {
+    constructor(versaoRepository, veiculosRepository, modelosService) {
         this.versaoRepository = versaoRepository;
+        this.veiculosRepository = veiculosRepository;
         this.modelosService = modelosService;
     }
     async findAll() {
@@ -45,10 +47,25 @@ let VersoesService = class VersoesService {
         return versao;
     }
     async findByModelo(modeloId) {
-        return this.versaoRepository.find({
+        const versoes = await this.versaoRepository.find({
             where: { modeloId },
             relations: ['modelo', 'modelo.marca'],
         });
+        const result = await Promise.all(versoes.map(async (versao) => {
+            console.log('Buscando veiculo por versaoId:', versao.id, 'modeloId:', versao.modeloId);
+            const veiculo = await this.veiculosRepository
+                .createQueryBuilder('veiculo')
+                .where('veiculo.versaoId = :versaoId', { versaoId: versao.id })
+                .andWhere('veiculo.modeloId = :modeloId', { modeloId: versao.modeloId })
+                .orderBy('veiculo.ano', 'DESC')
+                .getOne();
+            return {
+                ...versao,
+                veiculoId: veiculo ? veiculo.id : null,
+                veiculo: veiculo || null,
+            };
+        }));
+        return result;
     }
     async create(createVersaoDto) {
         await this.modelosService.findOne(createVersaoDto.modeloId);
@@ -72,7 +89,9 @@ exports.VersoesService = VersoesService;
 exports.VersoesService = VersoesService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(versao_entity_1.Versao)),
+    __param(1, (0, typeorm_1.InjectRepository)(veiculo_entity_1.Veiculo)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
         modelos_service_1.ModelosService])
 ], VersoesService);
 //# sourceMappingURL=versoes.service.js.map

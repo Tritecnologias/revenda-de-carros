@@ -199,6 +199,19 @@ function converterParaNumero(valor) {
     return parseFloat(valor.replace(/[^\d,.-]/g, '').replace(',', '.')) || 0;
 }
 
+// Função para formatar valor monetário (sem precisar de um elemento DOM)
+function formatarValorMonetario(valor) {
+    if (valor === undefined || valor === null) {
+        return '0,00';
+    }
+    
+    // Usar o formato brasileiro: ponto como separador de milhar e vírgula como separador decimal
+    return new Intl.NumberFormat('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    }).format(valor);
+}
+
 // Função para carregar marcas para o select
 async function loadMarcasSelect() {
     if (!marcaSelect) {
@@ -207,19 +220,45 @@ async function loadMarcasSelect() {
     }
     
     try {
-        const token = auth.getToken();
+        // Verificar se o usuário está autenticado antes de fazer a requisição
+        if (!localStorage.getItem('token')) {
+            console.error('Token de autenticação não encontrado no localStorage');
+            // Redirecionar para a página de login
+            window.location.href = '/login.html';
+            return;
+        }
+        
+        // Obter token diretamente do localStorage para garantir que estamos usando o token mais recente
+        const token = localStorage.getItem('token');
+        
+        console.log('Tentando carregar marcas de:', `${config.apiBaseUrl}/api/veiculos/marcas/all`);
+        console.log('Token utilizado:', token ? 'Token presente (primeiros 10 caracteres): ' + token.substring(0, 10) + '...' : 'Token ausente');
+        
         const response = await fetch(`${config.apiBaseUrl}/api/veiculos/marcas/all`, {
             method: 'GET',
             headers: {
+                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             }
         });
         
         if (!response.ok) {
+            console.error('Falha ao carregar marcas. Status:', response.status, response.statusText);
+            
+            // Se o erro for 401 (Unauthorized), tentar reautenticar
+            if (response.status === 401) {
+                console.log('Erro de autenticação. Redirecionando para login...');
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = '/login.html';
+                return;
+            }
+            
             throw new Error('Falha ao carregar marcas');
         }
         
         marcas = await response.json();
+        console.log('Marcas carregadas com sucesso:', marcas);
         
         // Limpar select
         marcaSelect.innerHTML = '<option value="">Selecione uma marca</option>';
@@ -233,12 +272,16 @@ async function loadMarcasSelect() {
         });
     } catch (error) {
         console.error('Erro ao carregar marcas:', error);
-        throw new Error('Não foi possível carregar as marcas. Por favor, tente novamente mais tarde.');
+        throw new Error('Falha ao carregar marcas');
     }
 }
 
 // Função para carregar modelos por marca
 async function loadModelosByMarca() {
+    // Obter os elementos do DOM
+    const marcaSelect = document.getElementById('marcaId');
+    const modeloSelect = document.getElementById('modeloId');
+    
     if (!modeloSelect || !marcaSelect) {
         console.error('Elementos modeloSelect ou marcaSelect não encontrados');
         return;
@@ -255,34 +298,53 @@ async function loadModelosByMarca() {
     }
     
     try {
-        const token = auth.getToken();
-        const response = await fetch(`${config.apiBaseUrl}/api/veiculos/modelos/by-marca/${marcaId}`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error('Falha ao carregar modelos');
-        }
-        
-        modelos = await response.json();
-        
-        if (modelos.length === 0) {
-            const option = document.createElement('option');
-            option.value = '';
-            option.textContent = 'Nenhum modelo encontrado para esta marca';
-            modeloSelect.appendChild(option);
+        // Obter token diretamente do localStorage para garantir que estamos usando o token mais recente
+        const token = localStorage.getItem('token');
+        if (!token) {
+            console.error('Token de autenticação não encontrado');
+            showError('Falha na autenticação. Por favor, faça login novamente.');
             return;
         }
         
-        // Adicionar opções
-        modelos.forEach(modelo => {
-            const option = document.createElement('option');
-            option.value = modelo.id;
-            option.textContent = modelo.nome;
-            modeloSelect.appendChild(option);
+        console.log('Tentando carregar modelos da marca ID:', marcaId);
+        console.log('Token utilizado:', token ? 'Token presente' : 'Token ausente');
+        
+        // Usar a URL correta conforme identificado nas memórias
+        fetch(`${config.apiBaseUrl}/api/veiculos/modelos/by-marca/${marcaId}`, {
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Falha ao carregar modelos');
+            }
+            return response.json();
+        })
+        .then(modelos => {
+            console.log('Modelos carregados:', modelos);
+            
+            // Verificar a estrutura dos dados para debug
+            if (modelos.length > 0) {
+                console.log('Exemplo de modelo:', modelos[0]);
+                console.log('Estrutura do modelo:', Object.keys(modelos[0]));
+            }
+            
+            // Limpar select de modelos
+            modeloSelect.innerHTML = '<option value="">Selecione um modelo</option>';
+            
+            // Adicionar opções
+            modelos.forEach(modelo => {
+                const option = document.createElement('option');
+                option.value = modelo.id;
+                option.textContent = modelo.nome;
+                modeloSelect.appendChild(option);
+            });
+        })
+        .catch(error => {
+            console.error('Erro ao carregar modelos:', error);
+            showError('Não foi possível carregar os modelos. Por favor, tente novamente mais tarde.');
         });
     } catch (error) {
         console.error('Erro ao carregar modelos:', error);
@@ -292,8 +354,12 @@ async function loadModelosByMarca() {
 
 // Função para carregar versões por modelo
 async function loadVersoesByModelo() {
-    if (!versaoSelect || !modeloSelect) {
-        console.error('Elementos versaoSelect ou modeloSelect não encontrados');
+    // Obter os elementos do DOM
+    const modeloSelect = document.getElementById('modeloId');
+    const versaoSelect = document.getElementById('versaoId');
+    
+    if (!modeloSelect || !versaoSelect) {
+        console.error('Elementos modeloSelect ou versaoSelect não encontrados');
         return;
     }
     
@@ -308,34 +374,54 @@ async function loadVersoesByModelo() {
     }
     
     try {
-        const token = auth.getToken();
-        const response = await fetch(`${config.apiBaseUrl}/api/versoes/modelo/${modeloId}`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error('Falha ao carregar versões');
-        }
-        
-        versoes = await response.json();
-        
-        if (versoes.length === 0) {
-            const option = document.createElement('option');
-            option.value = '';
-            option.textContent = 'Nenhuma versão encontrada para este modelo';
-            versaoSelect.appendChild(option);
+        // Obter token diretamente do localStorage para garantir que estamos usando o token mais recente
+        const token = localStorage.getItem('token');
+        if (!token) {
+            console.error('Token de autenticação não encontrado');
+            showError('Falha na autenticação. Por favor, faça login novamente.');
             return;
         }
         
-        // Adicionar opções
-        versoes.forEach(versao => {
-            const option = document.createElement('option');
-            option.value = versao.id;
-            option.textContent = versao.nome_versao;
-            versaoSelect.appendChild(option);
+        console.log('Tentando carregar versões do modelo ID:', modeloId);
+        console.log('Token utilizado:', token ? 'Token presente' : 'Token ausente');
+        
+        // Usar a URL correta conforme identificado nas memórias
+        fetch(`${config.apiBaseUrl}/api/versoes/modelo/${modeloId}/public`, {
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Falha ao carregar versões');
+            }
+            return response.json();
+        })
+        .then(versoes => {
+            console.log('Versões carregadas:', versoes);
+            
+            // Verificar a estrutura dos dados para debug
+            if (versoes.length > 0) {
+                console.log('Exemplo de versão:', versoes[0]);
+                console.log('Estrutura da versão:', Object.keys(versoes[0]));
+            }
+            
+            // Limpar select de versões
+            versaoSelect.innerHTML = '<option value="">Selecione uma versão</option>';
+            
+            // Adicionar opções
+            versoes.forEach(versao => {
+                const option = document.createElement('option');
+                option.value = versao.id;
+                option.textContent = versao.nome_versao;
+                option.dataset.veiculoId = versao.veiculoId; // Armazenar o ID do veículo como um atributo data
+                versaoSelect.appendChild(option);
+            });
+        })
+        .catch(error => {
+            console.error('Erro ao carregar versões:', error);
+            showError('Não foi possível carregar as versões. Por favor, tente novamente mais tarde.');
         });
     } catch (error) {
         console.error('Erro ao carregar versões:', error);
@@ -344,47 +430,203 @@ async function loadVersoesByModelo() {
 }
 
 // Função para carregar veículos
-async function loadVeiculos() {
+async function loadVeiculos(page = 1) {
+    console.log('Carregando veículos, página:', page);
+    
+    // Mostrar spinner de carregamento
+    const tableBody = document.getElementById('veiculosTableBody');
+    if (tableBody) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="9" class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }
+    
     try {
-        const token = auth.getToken();
-        const response = await fetch(`${config.apiBaseUrl}/api/veiculos?page=${currentPage}&limit=${itemsPerPage}`, {
-            method: 'GET',
+        const token = localStorage.getItem('token');
+        if (!token) {
+            console.error('Token de autenticação não encontrado');
+            window.location.href = '/login.html';
+            return;
+        }
+        
+        const response = await fetch(`${config.apiBaseUrl}/api/veiculos?page=${page}&limit=10`, {
             headers: {
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
             }
         });
         
         if (!response.ok) {
-            throw new Error('Falha ao carregar veículos');
+            if (response.status === 401) {
+                console.error('Sessão expirada ou token inválido');
+                window.location.href = '/login.html';
+                return;
+            }
+            throw new Error(`Erro ao carregar veículos: ${response.status}`);
         }
         
         const data = await response.json();
         console.log('Veículos carregados:', data);
         
-        // Verificar a estrutura dos dados para debug
-        if (data.items && data.items.length > 0) {
-            console.log('Exemplo de veículo:', data.items[0]);
-            console.log('Estrutura do veículo:', Object.keys(data.items[0]));
-            
-            // Verificar se os objetos relacionados estão presentes
-            if (data.items[0].marca) {
-                console.log('Estrutura da marca no veículo:', Object.keys(data.items[0].marca));
-            }
-            if (data.items[0].modelo) {
-                console.log('Estrutura do modelo no veículo:', Object.keys(data.items[0].modelo));
-            }
-            if (data.items[0].versao) {
-                console.log('Estrutura da versão no veículo:', Object.keys(data.items[0].versao));
+        // Preencher tabela
+        if (tableBody) {
+            if (!data.items || data.items.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="9" class="text-center">Nenhum veículo encontrado</td>
+                    </tr>
+                `;
+            } else {
+                tableBody.innerHTML = '';
+                
+                // Filtrar apenas os veículos que têm ID válido e todos os campos necessários
+                const veiculosValidos = data.items.filter(veiculo => 
+                    veiculo && veiculo.id && 
+                    veiculo.marca && 
+                    veiculo.modelo && 
+                    veiculo.versao
+                );
+                
+                if (veiculosValidos.length === 0) {
+                    tableBody.innerHTML = `
+                        <tr>
+                            <td colspan="9" class="text-center">Nenhum veículo válido encontrado</td>
+                        </tr>
+                    `;
+                    return;
+                }
+                
+                veiculosValidos.forEach(veiculo => {
+                    const row = document.createElement('tr');
+                    
+                    row.innerHTML = `
+                        <td>${veiculo.id}</td>
+                        <td>${veiculo.marca ? veiculo.marca.nome : ''}</td>
+                        <td>${veiculo.modelo ? veiculo.modelo.nome : ''}</td>
+                        <td>${veiculo.versao ? veiculo.versao.nome_versao : ''}</td>
+                        <td>${veiculo.ano || ''}</td>
+                        <td>R$ ${formatarValorMonetario(veiculo.preco || 0)}</td>
+                        <td>
+                            <span class="badge ${getSituacaoBadgeClass(veiculo.situacao)}">
+                                ${getSituacaoText(veiculo.situacao)}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge ${veiculo.status === 'ativo' ? 'bg-success' : 'bg-danger'}">
+                                ${veiculo.status === 'ativo' ? 'Ativo' : 'Inativo'}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-sm btn-primary" onclick="getVeiculo(${veiculo.id})">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-danger" onclick="showDeleteModal(${veiculo.id})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    
+                    tableBody.appendChild(row);
+                });
+                
+                // Atualizar paginação com base nos veículos válidos
+                updatePagination(data.page, data.totalPages);
             }
         }
-        
-        renderVeiculos(data.items || []);
-        renderPagination(data);
-        
     } catch (error) {
         console.error('Erro ao carregar veículos:', error);
-        showError('Erro ao carregar veículos. Por favor, tente novamente.');
+        if (tableBody) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="9" class="text-center text-danger">
+                        Erro ao carregar veículos: ${error.message}
+                    </td>
+                </tr>
+            `;
+        }
     }
+}
+
+// Função para formatar situação
+function getSituacaoBadgeClass(situacao) {
+    switch (situacao) {
+        case 'disponivel':
+            return 'bg-success';
+        case 'reservado':
+            return 'bg-warning';
+        case 'vendido':
+            return 'bg-info';
+        default:
+            return 'bg-secondary';
+    }
+}
+
+// Função para formatar texto da situação
+function getSituacaoText(situacao) {
+    switch (situacao) {
+        case 'disponivel':
+            return 'Disponível';
+        case 'reservado':
+            return 'Reservado';
+        case 'vendido':
+            return 'Vendido';
+        default:
+            return situacao;
+    }
+}
+
+// Função para atualizar controles de paginação
+function updatePagination(currentPage, totalPages) {
+    console.log('Atualizando paginação:', currentPage, totalPages);
+    const paginationControls = document.getElementById('paginationControls');
+    
+    if (!paginationControls) {
+        console.warn('Elemento paginationControls não encontrado');
+        return;
+    }
+    
+    if (totalPages <= 1) {
+        paginationControls.innerHTML = '';
+        return;
+    }
+    
+    let paginationHTML = `
+        <nav aria-label="Navegação de página">
+            <ul class="pagination justify-content-center">
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="loadVeiculos(${currentPage - 1}); return false;">Anterior</a>
+                </li>
+    `;
+    
+    // Mostrar no máximo 5 páginas
+    const startPage = Math.max(1, currentPage - 2);
+    const endPage = Math.min(totalPages, startPage + 4);
+    
+    for (let i = startPage; i <= endPage; i++) {
+        paginationHTML += `
+            <li class="page-item ${i === currentPage ? 'active' : ''}">
+                <a class="page-link" href="#" onclick="loadVeiculos(${i}); return false;">${i}</a>
+            </li>
+        `;
+    }
+    
+    paginationHTML += `
+                <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                    <a class="page-link" href="#" onclick="loadVeiculos(${currentPage + 1}); return false;">Próxima</a>
+                </li>
+            </ul>
+        </nav>
+    `;
+    
+    paginationControls.innerHTML = paginationHTML;
 }
 
 // Função para renderizar veículos na tabela
@@ -455,7 +697,7 @@ function renderVeiculos(veiculos) {
             <td>${modeloNome}</td>
             <td>${versaoNome}</td>
             <td>${veiculo.ano || '-'}</td>
-            <td>${formatarPreco(veiculo.preco)}</td>
+            <td>R$ ${formatarValorMonetario(veiculo.preco)}</td>
             <td>${situacao}</td>
             <td>${status}</td>
             <td>
@@ -536,77 +778,66 @@ function editVeiculo(id) {
         }
         return response.json();
     })
-    .then(async veiculo => {
-        const veiculoIdElement = document.getElementById('veiculoId');
-        if (veiculoIdElement) {
-            veiculoIdElement.value = veiculo.id;
-        }
+    .then(veiculo => {
+        console.log('Editando veículo:', veiculo);
         
-        // Selecionar marca
-        if (marcaSelect) {
-            marcaSelect.value = veiculo.marcaId;
-        }
+        // Limpar formulário
+        resetForm();
         
-        // Carregar modelos da marca e depois selecionar o modelo
-        await loadModelosByMarca();
-        if (modeloSelect) {
-            modeloSelect.value = veiculo.modeloId;
-        }
+        // Preencher formulário com dados do veículo
+        document.getElementById('veiculoId').value = veiculo.id;
+        document.getElementById('veiculoModalTitle').textContent = 'EDITAR VEÍCULO';
         
-        // Carregar versões do modelo e depois selecionar a versão
-        await loadVersoesByModelo();
-        if (versaoSelect) {
-            versaoSelect.value = veiculo.versaoId;
-        }
+        // Carregar marcas e selecionar a marca do veículo
+        loadMarcas().then(() => {
+            if (document.getElementById('marcaId')) {
+                document.getElementById('marcaId').value = veiculo.marcaId;
+                
+                // Carregar modelos da marca e selecionar o modelo do veículo
+                loadModelos(veiculo.marcaId).then(() => {
+                    if (document.getElementById('modeloId')) {
+                        document.getElementById('modeloId').value = veiculo.modeloId;
+                        
+                        // Carregar versões do modelo e selecionar a versão do veículo
+                        loadVersoes(veiculo.modeloId).then(() => {
+                            if (document.getElementById('versaoId')) {
+                                document.getElementById('versaoId').value = veiculo.versaoId;
+                            }
+                        });
+                    }
+                });
+            }
+        });
         
         // Preencher outros campos
-        const anoElement = document.getElementById('ano');
-        if (anoElement) {
-            anoElement.value = veiculo.ano;
-        }
+        if (document.getElementById('ano')) document.getElementById('ano').value = veiculo.ano;
+        if (document.getElementById('quilometragem')) document.getElementById('quilometragem').value = veiculo.quilometragem || '';
+        if (document.getElementById('preco')) document.getElementById('preco').value = formatarValorMonetario(veiculo.preco);
+        if (document.getElementById('descricao')) document.getElementById('descricao').value = veiculo.descricao || '';
+        if (document.getElementById('motor')) document.getElementById('motor').value = veiculo.motor || '';
+        if (document.getElementById('combustivel')) document.getElementById('combustivel').value = veiculo.combustivel || '';
+        if (document.getElementById('cambio')) document.getElementById('cambio').value = veiculo.cambio || '';
+        if (document.getElementById('situacao')) document.getElementById('situacao').value = veiculo.situacao || 'disponivel';
+        if (document.getElementById('status')) document.getElementById('status').value = veiculo.status || 'ativo';
         
-        const quilometragemElement = document.getElementById('quilometragem');
-        if (quilometragemElement) {
-            quilometragemElement.value = veiculo.quilometragem;
-        }
+        // Preencher campos de desconto
+        if (document.getElementById('defisicoicms')) document.getElementById('defisicoicms').value = veiculo.defisicoicms ? formatarValorMonetario(veiculo.defisicoicms) : '';
+        if (document.getElementById('defisicoipi')) document.getElementById('defisicoipi').value = veiculo.defisicoipi ? formatarValorMonetario(veiculo.defisicoipi) : '';
+        if (document.getElementById('taxicms')) document.getElementById('taxicms').value = veiculo.taxicms ? formatarValorMonetario(veiculo.taxicms) : '';
+        if (document.getElementById('taxipi')) document.getElementById('taxipi').value = veiculo.taxipi ? formatarValorMonetario(veiculo.taxipi) : '';
         
-        const precoElement = document.getElementById('preco');
-        if (precoElement) {
-            precoElement.value = formatarPreco(veiculo.preco);
-        }
-        
-        const descricaoElement = document.getElementById('descricao');
-        if (descricaoElement) {
-            descricaoElement.value = veiculo.descricao;
-        }
-        
-        const motorElement = document.getElementById('motor');
-        if (motorElement) {
-            motorElement.value = veiculo.motor;
-        }
-        
-        const combustivelElement = document.getElementById('combustivel');
-        if (combustivelElement) {
-            combustivelElement.value = veiculo.combustivel;
-        }
-        
-        const cambioElement = document.getElementById('cambio');
-        if (cambioElement) {
-            cambioElement.value = veiculo.cambio;
-        }
-        
-        const modalTitleElement = document.getElementById('veiculoModalTitle');
-        if (modalTitleElement) {
-            modalTitleElement.textContent = 'EDITAR VEÍCULO';
-        }
-        
-        if (veiculoModal) {
-            veiculoModal.show();
-        }
+        // Abrir modal
+        veiculoModal.show();
     })
     .catch(error => {
         console.error('Erro ao carregar veículo para edição:', error);
-        showError('Não foi possível carregar o veículo para edição. Por favor, tente novamente mais tarde.');
+        
+        // Verificar se é um erro de veículo não encontrado
+        if (error.message.includes('não encontrado')) {
+            showError(`O veículo solicitado não foi encontrado. É possível que ele tenha sido excluído.`);
+        } else {
+            showError('Não foi possível carregar o veículo para edição. Por favor, tente novamente mais tarde.');
+        }
     });
 }
 
@@ -654,6 +885,21 @@ function saveVeiculo() {
     const motor = document.getElementById('motor') ? document.getElementById('motor').value : '';
     const combustivel = document.getElementById('combustivel') ? document.getElementById('combustivel').value : '';
     const cambio = document.getElementById('cambio') ? document.getElementById('cambio').value : '';
+    const situacao = document.getElementById('situacao') ? document.getElementById('situacao').value : 'disponivel';
+    const status = document.getElementById('status') ? document.getElementById('status').value : 'ativo';
+    
+    // Obter valores dos campos de desconto
+    const defisicoicmsFormatado = document.getElementById('defisicoicms') ? document.getElementById('defisicoicms').value : '';
+    const defisicoipiFormatado = document.getElementById('defisicoipi') ? document.getElementById('defisicoipi').value : '';
+    const taxicmsFormatado = document.getElementById('taxicms') ? document.getElementById('taxicms').value : '';
+    const taxipiFormatado = document.getElementById('taxipi') ? document.getElementById('taxipi').value : '';
+    
+    // Converter valores formatados para números
+    const preco = precoFormatado ? converterParaNumero(precoFormatado) : 0;
+    const defisicoicms = defisicoicmsFormatado ? converterParaNumero(defisicoicmsFormatado) : 0;
+    const defisicoipi = defisicoipiFormatado ? converterParaNumero(defisicoipiFormatado) : 0;
+    const taxicms = taxicmsFormatado ? converterParaNumero(taxicmsFormatado) : 0;
+    const taxipi = taxipiFormatado ? converterParaNumero(taxipiFormatado) : 0;
     
     // Validar campos obrigatórios
     if (!marcaId) {
@@ -692,9 +938,6 @@ function saveVeiculo() {
         return;
     }
     
-    // Converter valores formatados para números
-    const preco = precoFormatado ? converterParaNumero(precoFormatado) : 0;
-    
     // Preparar dados para envio
     const veiculoData = {
         marcaId: parseInt(marcaId),
@@ -710,8 +953,12 @@ function saveVeiculo() {
         cambio: cambio || '', // Garantir que cambio nunca seja undefined
         // Campos obrigatórios que faltavam
         tipo: 'usado', // Valor padrão, pode ser 'novo' ou 'usado'
-        situacao: 'disponivel', // Valor padrão, pode ser 'disponivel', 'reservado' ou 'vendido'
-        status: 'ativo' // Valor padrão, pode ser 'ativo' ou 'inativo'
+        situacao: situacao, // Valor padrão, pode ser 'disponivel', 'reservado' ou 'vendido'
+        status: status, // Valor padrão, pode ser 'ativo' ou 'inativo'
+        defisicoicms: defisicoicms,
+        defisicoipi: defisicoipi,
+        taxicms: taxicms,
+        taxipi: taxipi
     };
     
     console.log('Dados enviados:', veiculoData);
@@ -720,6 +967,10 @@ function saveVeiculo() {
     console.log('- motor:', motor, typeof motor);
     console.log('- combustivel:', combustivel, typeof combustivel);
     console.log('- cambio:', cambio, typeof cambio);
+    console.log('- defisicoicms:', defisicoicms, typeof defisicoicms);
+    console.log('- defisicoipi:', defisicoipi, typeof defisicoipi);
+    console.log('- taxicms:', taxicms, typeof taxicms);
+    console.log('- taxipi:', taxipi, typeof taxipi);
     
     const token = auth.getToken();
     const method = id ? 'PUT' : 'POST';
@@ -735,6 +986,7 @@ function saveVeiculo() {
         body: JSON.stringify(veiculoData)
     })
     .then(response => {
+        console.log('Status da resposta:', response.status);
         if (!response.ok) {
             return response.text().then(text => {
                 console.error('Erro na resposta:', response.status, text);
@@ -743,7 +995,8 @@ function saveVeiculo() {
         }
         return response.json();
     })
-    .then(() => {
+    .then(data => {
+        console.log('Veículo salvo com sucesso:', data);
         // Fechar modal e recarregar veículos
         if (veiculoModal) {
             veiculoModal.hide();
@@ -769,7 +1022,12 @@ function saveVeiculo() {
 
 // Função para excluir veículo
 function deleteVeiculo() {
+    console.log('Excluindo veículo...');
+    
     // Mostrar spinner
+    const confirmDeleteButton = document.getElementById('confirmDeleteButton');
+    const deleteSpinner = document.getElementById('deleteSpinner');
+    
     if (confirmDeleteButton) {
         confirmDeleteButton.disabled = true;
     }
@@ -779,11 +1037,27 @@ function deleteVeiculo() {
     }
     
     // Obter ID do veículo a ser excluído
-    const id = document.getElementById('deleteId') ? document.getElementById('deleteId').value : '';
+    const veiculoIdToDelete = document.getElementById('veiculoIdToDelete');
+    if (!veiculoIdToDelete || !veiculoIdToDelete.value) {
+        console.error('ID do veículo a ser excluído não encontrado');
+        
+        if (confirmDeleteButton) {
+            confirmDeleteButton.disabled = false;
+        }
+        
+        if (deleteSpinner) {
+            deleteSpinner.classList.add('d-none');
+        }
+        
+        return;
+    }
+    
+    const id = veiculoIdToDelete.value;
+    console.log('Excluindo veículo ID:', id);
     
     const token = auth.getToken();
     
-    // Enviar requisição
+    // Enviar requisição de exclusão
     fetch(`${config.apiBaseUrl}/api/veiculos/${id}`, {
         method: 'DELETE',
         headers: {
@@ -792,16 +1066,23 @@ function deleteVeiculo() {
     })
     .then(response => {
         if (!response.ok) {
-            throw new Error('Falha ao excluir veículo');
+            return response.text().then(text => {
+                throw new Error(`Falha ao excluir veículo: ${response.status} ${text}`);
+            });
         }
+        
         return response.json();
     })
     .then(() => {
-        // Fechar modal e recarregar veículos
+        console.log('Veículo excluído com sucesso');
+        
+        // Fechar modal de confirmação
+        const deleteModal = bootstrap.Modal.getInstance(document.getElementById('deleteModal'));
         if (deleteModal) {
             deleteModal.hide();
         }
         
+        // Recarregar lista de veículos
         loadVeiculos();
     })
     .catch(error => {
@@ -822,27 +1103,452 @@ function deleteVeiculo() {
 
 // Função para exibir mensagens de erro
 function showError(message) {
-    if (errorMessage) {
-        errorMessage.textContent = message;
-        errorMessage.classList.remove('d-none');
+    console.error('Erro:', message);
+    const errorMessageElement = document.getElementById('errorMessage');
+    if (errorMessageElement) {
+        errorMessageElement.textContent = message;
+        errorMessageElement.classList.remove('d-none');
+    }
+}
+
+// Função para esconder mensagem de erro
+function hideError() {
+    console.log('Escondendo mensagem de erro');
+    
+    const errorMessageElement = document.getElementById('errorMessage');
+    if (errorMessageElement) {
+        errorMessageElement.textContent = '';
+        errorMessageElement.classList.add('d-none');
+    }
+}
+
+// Função para resetar o formulário
+function resetForm() {
+    console.log('Resetando formulário');
+    
+    // Limpar formulário
+    if (veiculoForm) {
+        veiculoForm.reset();
+        veiculoForm.classList.remove('was-validated');
+    }
+    
+    // Limpar ID do veículo
+    const veiculoIdElement = document.getElementById('veiculoId');
+    if (veiculoIdElement) {
+        veiculoIdElement.value = '';
+    }
+    
+    // Resetar título do modal
+    const modalTitleElement = document.getElementById('veiculoModalTitle');
+    if (modalTitleElement) {
+        modalTitleElement.textContent = 'NOVO VEÍCULO';
+    }
+    
+    // Esconder mensagem de erro
+    hideError();
+}
+
+// Função para carregar marcas
+function loadMarcas() {
+    console.log('Carregando marcas...');
+    return new Promise((resolve, reject) => {
+        // Obter token diretamente do localStorage para garantir que estamos usando o token mais recente
+        const token = localStorage.getItem('token');
+        if (!token) {
+            console.error('Token de autenticação não encontrado');
+            reject(new Error('Falha na autenticação. Por favor, faça login novamente.'));
+            return;
+        }
         
-        // Esconder a mensagem após 5 segundos
-        setTimeout(() => {
-            errorMessage.classList.add('d-none');
-        }, 5000);
-    } else {
-        console.error('Elemento errorMessage não encontrado. Erro:', message);
-        // Fallback para alert se o elemento não existir
-        alert(message);
+        console.log('Tentando carregar marcas de:', `${config.apiBaseUrl}/api/veiculos/marcas/all`);
+        console.log('Token utilizado:', token ? 'Token presente' : 'Token ausente');
+        
+        // Usar a URL correta conforme identificado nas memórias
+        fetch(`${config.apiBaseUrl}/api/veiculos/marcas/all`, {
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                console.error('Falha ao carregar marcas. Status:', response.status, response.statusText);
+                throw new Error(`Erro ao carregar marcas: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(marcas => {
+            console.log('Marcas carregadas:', marcas);
+            
+            // Preencher select de marcas
+            const marcaSelect = document.getElementById('marcaId');
+            if (marcaSelect) {
+                // Limpar opções existentes, mantendo apenas a primeira (placeholder)
+                while (marcaSelect.options.length > 1) {
+                    marcaSelect.remove(1);
+                }
+                
+                // Adicionar novas opções
+                marcas.forEach(marca => {
+                    const option = document.createElement('option');
+                    option.value = marca.id;
+                    option.textContent = marca.nome;
+                    marcaSelect.appendChild(option);
+                });
+            }
+            
+            resolve(marcas);
+        })
+        .catch(error => {
+            console.error('Erro ao carregar marcas:', error);
+            showError('Não foi possível carregar as marcas. Por favor, tente novamente mais tarde.');
+            reject(error);
+        });
+    });
+}
+
+// Função para carregar modelos de uma marca
+function loadModelos(marcaId) {
+    console.log('Carregando modelos da marca ID:', marcaId);
+    return new Promise((resolve, reject) => {
+        if (!marcaId) {
+            console.warn('ID da marca não fornecido para carregar modelos');
+            
+            // Limpar select de modelos
+            const modeloSelect = document.getElementById('modeloId');
+            if (modeloSelect) {
+                // Manter apenas a primeira opção (placeholder)
+                while (modeloSelect.options.length > 1) {
+                    modeloSelect.remove(1);
+                }
+            }
+            
+            // Limpar select de versões
+            const versaoSelect = document.getElementById('versaoId');
+            if (versaoSelect) {
+                // Manter apenas a primeira opção (placeholder)
+                while (versaoSelect.options.length > 1) {
+                    versaoSelect.remove(1);
+                }
+            }
+            
+            resolve([]);
+            return;
+        }
+        
+        const token = auth.getToken();
+        
+        // Usar a URL correta conforme identificado nas memórias
+        fetch(`${config.apiBaseUrl}/api/veiculos/modelos/by-marca/${marcaId}`, {
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Erro ao carregar modelos: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(modelos => {
+            console.log('Modelos carregados:', modelos);
+            
+            // Preencher select de modelos
+            const modeloSelect = document.getElementById('modeloId');
+            if (modeloSelect) {
+                // Limpar opções existentes, mantendo apenas a primeira (placeholder)
+                while (modeloSelect.options.length > 1) {
+                    modeloSelect.remove(1);
+                }
+                
+                // Adicionar novas opções
+                modelos.forEach(modelo => {
+                    const option = document.createElement('option');
+                    option.value = modelo.id;
+                    option.textContent = modelo.nome;
+                    modeloSelect.appendChild(option);
+                });
+            }
+            
+            // Limpar select de versões
+            const versaoSelect = document.getElementById('versaoId');
+            if (versaoSelect) {
+                // Manter apenas a primeira opção (placeholder)
+                while (versaoSelect.options.length > 1) {
+                    versaoSelect.remove(1);
+                }
+            }
+            
+            resolve(modelos);
+        })
+        .catch(error => {
+            console.error('Erro ao carregar modelos:', error);
+            showError('Não foi possível carregar os modelos. Por favor, tente novamente mais tarde.');
+            reject(error);
+        });
+    });
+}
+
+// Função para carregar versões de um modelo
+function loadVersoes(modeloId) {
+    console.log('Carregando versões do modelo ID:', modeloId);
+    return new Promise((resolve, reject) => {
+        if (!modeloId) {
+            console.warn('ID do modelo não fornecido para carregar versões');
+            
+            // Limpar select de versões
+            const versaoSelect = document.getElementById('versaoId');
+            if (versaoSelect) {
+                // Manter apenas a primeira opção (placeholder)
+                while (versaoSelect.options.length > 1) {
+                    versaoSelect.remove(1);
+                }
+            }
+            
+            resolve([]);
+            return;
+        }
+        
+        // Obter token diretamente do localStorage para garantir que estamos usando o token mais recente
+        const token = localStorage.getItem('token');
+        if (!token) {
+            console.error('Token de autenticação não encontrado');
+            reject(new Error('Falha na autenticação. Por favor, faça login novamente.'));
+            return;
+        }
+        
+        console.log('Tentando carregar versões do modelo ID:', modeloId);
+        console.log('Token utilizado:', token ? 'Token presente' : 'Token ausente');
+        
+        // Usar a URL correta conforme identificado nas memórias
+        fetch(`${config.apiBaseUrl}/api/versoes/modelo/${modeloId}/public`, {
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Erro ao carregar versões: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(versoes => {
+            console.log('Versões carregadas:', versoes);
+            
+            // Preencher select de versões
+            const versaoSelect = document.getElementById('versaoId');
+            if (versaoSelect) {
+                // Limpar opções existentes, mantendo apenas a primeira (placeholder)
+                while (versaoSelect.options.length > 1) {
+                    versaoSelect.remove(1);
+                }
+                
+                // Adicionar novas opções
+                versoes.forEach(versao => {
+                    console.log('Adicionando versão ao select:', versao);
+                    const option = document.createElement('option');
+                    option.value = versao.id;
+                    
+                    // Usar nome_versao em vez de nome, conforme a entidade Versao
+                    if (versao.nome_versao !== undefined) {
+                        option.textContent = versao.nome_versao;
+                    } else if (versao.nome !== undefined) {
+                        option.textContent = versao.nome;
+                    } else if (versao.name !== undefined) {
+                        option.textContent = versao.name;
+                    } else if (versao.descricao !== undefined) {
+                        option.textContent = versao.descricao;
+                    } else if (versao.description !== undefined) {
+                        option.textContent = versao.description;
+                    } else {
+                        // Se não encontrar nenhuma propriedade adequada, usar o ID como texto
+                        option.textContent = `Versão ${versao.id}`;
+                    }
+                    
+                    versaoSelect.appendChild(option);
+                });
+            }
+            
+            resolve(versoes);
+        })
+        .catch(error => {
+            console.error('Erro ao carregar versões:', error);
+            showError('Não foi possível carregar as versões. Por favor, tente novamente mais tarde.');
+            reject(error);
+        });
+    });
+}
+
+// Função para obter um veículo específico para edição
+function getVeiculo(id) {
+    console.log('Obtendo veículo ID:', id);
+    
+    const token = auth.getToken();
+    
+    fetch(`${config.apiBaseUrl}/api/veiculos/${id}`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            if (response.status === 404) {
+                throw new Error(`Veículo com ID ${id} não encontrado`);
+            }
+            throw new Error(`Falha ao carregar veículo: ${response.status} ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(veiculo => {
+        console.log('Editando veículo:', veiculo);
+        
+        // Limpar formulário
+        resetForm();
+        
+        // Preencher formulário com dados do veículo
+        document.getElementById('veiculoId').value = veiculo.id;
+        document.getElementById('veiculoModalTitle').textContent = 'EDITAR VEÍCULO';
+        
+        // Carregar marcas e selecionar a marca do veículo
+        loadMarcas().then(() => {
+            if (document.getElementById('marcaId')) {
+                document.getElementById('marcaId').value = veiculo.marcaId;
+                
+                // Carregar modelos da marca e selecionar o modelo do veículo
+                loadModelos(veiculo.marcaId).then(() => {
+                    if (document.getElementById('modeloId')) {
+                        document.getElementById('modeloId').value = veiculo.modeloId;
+                        
+                        // Carregar versões do modelo e selecionar a versão do veículo
+                        loadVersoes(veiculo.modeloId).then(() => {
+                            if (document.getElementById('versaoId')) {
+                                document.getElementById('versaoId').value = veiculo.versaoId;
+                            }
+                        });
+                    }
+                });
+            }
+        });
+        
+        // Preencher outros campos
+        if (document.getElementById('ano')) document.getElementById('ano').value = veiculo.ano;
+        if (document.getElementById('quilometragem')) document.getElementById('quilometragem').value = veiculo.quilometragem || '';
+        if (document.getElementById('preco')) document.getElementById('preco').value = formatarValorMonetario(veiculo.preco);
+        if (document.getElementById('descricao')) document.getElementById('descricao').value = veiculo.descricao || '';
+        if (document.getElementById('motor')) document.getElementById('motor').value = veiculo.motor || '';
+        if (document.getElementById('combustivel')) document.getElementById('combustivel').value = veiculo.combustivel || '';
+        if (document.getElementById('cambio')) document.getElementById('cambio').value = veiculo.cambio || '';
+        if (document.getElementById('situacao')) document.getElementById('situacao').value = veiculo.situacao || 'disponivel';
+        if (document.getElementById('status')) document.getElementById('status').value = veiculo.status || 'ativo';
+        
+        // Preencher campos de desconto
+        if (document.getElementById('defisicoicms')) document.getElementById('defisicoicms').value = veiculo.defisicoicms ? formatarValorMonetario(veiculo.defisicoicms) : '';
+        if (document.getElementById('defisicoipi')) document.getElementById('defisicoipi').value = veiculo.defisicoipi ? formatarValorMonetario(veiculo.defisicoipi) : '';
+        if (document.getElementById('taxicms')) document.getElementById('taxicms').value = veiculo.taxicms ? formatarValorMonetario(veiculo.taxicms) : '';
+        if (document.getElementById('taxipi')) document.getElementById('taxipi').value = veiculo.taxipi ? formatarValorMonetario(veiculo.taxipi) : '';
+        
+        // Abrir modal
+        veiculoModal.show();
+    })
+    .catch(error => {
+        console.error('Erro ao carregar veículo para edição:', error);
+        
+        // Verificar se é um erro de veículo não encontrado
+        if (error.message.includes('não encontrado')) {
+            showError(`O veículo solicitado não foi encontrado. É possível que ele tenha sido excluído.`);
+        } else {
+            showError('Não foi possível carregar o veículo para edição. Por favor, tente novamente mais tarde.');
+        }
+    });
+}
+
+// Função para mostrar modal de exclusão
+function showDeleteModal(id) {
+    const deleteIdElement = document.getElementById('deleteId');
+    if (deleteIdElement) {
+        deleteIdElement.value = id;
+    }
+    
+    if (deleteModal) {
+        deleteModal.show();
+    }
+}
+
+// Função para confirmar exclusão de veículo
+function confirmDeleteVeiculo(id) {
+    console.log('Confirmando exclusão do veículo ID:', id);
+    
+    // Armazenar ID do veículo a ser excluído
+    const veiculoIdToDelete = document.getElementById('veiculoIdToDelete');
+    if (veiculoIdToDelete) {
+        veiculoIdToDelete.value = id;
+    }
+    
+    // Mostrar modal de confirmação
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    if (deleteModal) {
+        deleteModal.show();
     }
 }
 
 // Verificar autenticação e redirecionar se não estiver autenticado
 document.addEventListener('DOMContentLoaded', () => {
     // Verificar autenticação
-    auth.checkAuthAndRedirect();
+    if (!auth.isAuthenticated()) {
+        window.location.href = '/login.html';
+        return;
+    }
     
-    // Inicializar elementos após garantir que o DOM está completamente carregado
-    // e que o cabeçalho foi carregado pelo layout-manager.js
-    setTimeout(initializeElements, 500);
+    // Inicializar elementos
+    initializeElements();
+    
+    // Carregar veículos
+    loadVeiculos();
+    
+    // Carregar marcas
+    loadMarcas();
+    
+    // Adicionar event listeners para os selects de marca e modelo
+    const marcaSelect = document.getElementById('marcaId');
+    if (marcaSelect) {
+        marcaSelect.addEventListener('change', function() {
+            const marcaId = this.value;
+            if (marcaId) {
+                loadModelos(marcaId);
+            }
+        });
+    }
+    
+    const modeloSelect = document.getElementById('modeloId');
+    if (modeloSelect) {
+        modeloSelect.addEventListener('change', function() {
+            const modeloId = this.value;
+            if (modeloId) {
+                loadVersoes(modeloId);
+            }
+        });
+    }
+    
+    // Adicionar event listener para o botão de salvar
+    const saveButton = document.getElementById('saveButton');
+    if (saveButton) {
+        saveButton.addEventListener('click', saveVeiculo);
+    }
+    
+    // Adicionar event listener para o botão de confirmação de exclusão
+    const confirmDeleteButton = document.getElementById('confirmDeleteButton');
+    if (confirmDeleteButton) {
+        confirmDeleteButton.addEventListener('click', deleteVeiculo);
+    }
+    
+    // Inicializar formatação de campos monetários
+    const moneyInputs = document.querySelectorAll('.money-input');
+    moneyInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            formatarCampoMonetario(this);
+        });
+    });
 });

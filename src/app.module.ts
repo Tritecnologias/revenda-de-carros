@@ -16,6 +16,8 @@ import { Opcional } from './veiculos/entities/opcional.entity';
 import { ModeloOpcional } from './veiculos/entities/modelo-opcional.entity';
 import { VendaDireta } from './veiculos/entities/venda-direta.entity';
 import { Versao } from './veiculos/entities/versao.entity';
+import { VersaoOpcional } from './veiculos/entities/versao-opcional.entity';
+import { VersaoPintura } from './veiculos/entities/versao-pintura.entity';
 
 @Module({
   imports: [
@@ -29,7 +31,7 @@ import { Versao } from './veiculos/entities/versao.entity';
       username: 'wanderson',
       password: 'Flavinha@2022',
       database: 'revenda_carros',
-      entities: [ConfiguradorVeiculo, Pintura, ModeloPintura, User, Marca, Modelo, Veiculo, Opcional, ModeloOpcional, VendaDireta, Versao],
+      entities: [ConfiguradorVeiculo, Pintura, ModeloPintura, User, Marca, Modelo, Veiculo, Opcional, ModeloOpcional, VendaDireta, Versao, VersaoOpcional, VersaoPintura],
       synchronize: true, // Disable in production
     }),
     ConfiguradorModule,

@@ -22,9 +22,4 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreatePinturaDto.prototype, "nome", void 0);
-__decorate([
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsUrl)({}, { message: 'A URL da imagem deve ser válida' }),
-    __metadata("design:type", String)
-], CreatePinturaDto.prototype, "imageUrl", void 0);
 //# sourceMappingURL=create-pintura.dto.js.map

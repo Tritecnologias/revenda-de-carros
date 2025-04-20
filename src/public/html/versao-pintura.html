@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Pinturas por Versão</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        .card-form { min-height: 400px; }
+        .card-table { min-height: 400px; }
+        .table thead th { vertical-align: middle; }
+    </style>
+</head>
+<body>
+    <!-- Header/topo preto igual à index.html -->
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="../index.html">Revenda de Carros</a>
+            <div class="d-flex align-items-center">
+                <span class="text-light me-3" id="userInfo">Carregando...</span>
+                <div class="dropdown">
+                    <button class="btn btn-outline-light dropdown-toggle" type="button" id="userMenuButton" data-bs-toggle="dropdown" aria-expanded="false">Conta</button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuButton">
+                        <li><a class="dropdown-item" href="/meus-dados.html">MEUS DADOS</a></li>
+                        <li><a class="dropdown-item" href="/alterar-senha.html">ALTERAR SENHA</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><button class="dropdown-item" id="logoutButton">SAIR</button></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+    <!-- Menu azul dinâmico -->
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background-color:#0d6efd;">
+        <div class="container">
+            <div class="collapse navbar-collapse justify-content-center" id="navbarNavBlue">
+                <!-- Menu será preenchido dinamicamente pelo menu-manager.js -->
+                <ul class="navbar-nav w-100 justify-content-center"></ul>
+            </div>
+        </div>
+    </nav>
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <!-- FORMULÁRIO -->
+            <div class="col-lg-4 col-md-5 mb-4">
+                <div class="card card-form shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <i class="bi bi-brush"></i> Associar Pintura à Versão
+                    </div>
+                    <div class="card-body">
+                        <form id="versaoPinturaForm">
+                            <input type="hidden" id="versaoPinturaId">
+                            <div class="mb-3">
+                                <label for="modeloIdForm" class="form-label">Modelo</label>
+                                <select id="modeloIdForm" class="form-select" required></select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="versaoIdForm" class="form-label">Versão</label>
+                                <select id="versaoIdForm" class="form-select" required></select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="pinturaIdForm" class="form-label">Pintura</label>
+                                <select id="pinturaIdForm" class="form-select" required></select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="precoForm" class="form-label">Preço</label>
+                                <input type="text" id="precoForm" class="form-control" required pattern="^\d+(,\d{2})?$" placeholder="Ex: 1.500,00">
+                            </div>
+                            <div class="mb-3">
+                                <label for="imageUrlForm" class="form-label">URL da Imagem</label>
+                                <input type="url" id="imageUrlForm" class="form-control" placeholder="https://exemplo.com/imagem.jpg">
+                                <div class="form-text">URL da imagem específica para esta combinação de versão e pintura</div>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-success"><i class="bi bi-save"></i> Salvar</button>
+                                <button type="button" class="btn btn-secondary" id="limparBtn"><i class="bi bi-eraser"></i> Limpar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <!-- TABELA E FILTROS -->
+            <div class="col-lg-8 col-md-7">
+                <div class="card card-table shadow-sm">
+                    <div class="card-header bg-primary text-white d-flex align-items-center justify-content-between">
+                        <span><i class="bi bi-list"></i> Pinturas Associadas</span>
+                        <div class="d-flex gap-2 align-items-center">
+                            <label for="filtroModelo" class="mb-0">Modelo:</label>
+                            <select id="filtroModelo" class="form-select form-select-sm" style="width:auto;"></select>
+                            <label for="filtroVersao" class="mb-0 ms-2">Versão:</label>
+                            <select id="filtroVersao" class="form-select form-select-sm" style="width:auto;"></select>
+                        </div>
+                    </div>
+                    <div class="card-body p-2">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Modelo</th>
+                                        <th>Versão</th>
+                                        <th>Pintura</th>
+                                        <th>Preço</th>
+                                        <th>Imagem</th>
+                                        <th class="text-center" style="width:120px;">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="versaoPinturaTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL CONFIRMAR EXCLUSÃO -->
+        <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title" id="confirmDeleteModalLabel"><i class="bi bi-trash"></i> Confirmar Exclusão</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                    </div>
+                    <div class="modal-body">
+                        Tem certeza que deseja excluir esta associação?
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Excluir</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Bootstrap JS Bundle (necessário para window.bootstrap e modais) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/config.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/menu-manager.js"></script>
+    <script src="/js/veiculos/versao-pintura.js"></script>
+</body>
+</html>

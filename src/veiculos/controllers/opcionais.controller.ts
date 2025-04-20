@@ -95,4 +95,46 @@ export class OpcionaisController {
       throw error;
     }
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('api/create')
+  async createOpcionalApi(@Body() opcionalDto: OpcionalDto) {
+    console.log('OpcionaisController: Criando opcional via API', opcionalDto);
+    try {
+      const result = await this.opcionaisService.create(opcionalDto);
+      console.log('OpcionaisController: Opcional criado com sucesso via API');
+      return result;
+    } catch (error) {
+      console.error('OpcionaisController: Erro ao criar opcional via API', error);
+      throw error;
+    }
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('api/:id')
+  async updateOpcionalApi(@Param('id') id: string, @Body() updateOpcionalDto: UpdateOpcionalDto) {
+    console.log(`OpcionaisController: Atualizando opcional ${id} via API`, updateOpcionalDto);
+    try {
+      const result = await this.opcionaisService.update(+id, updateOpcionalDto);
+      console.log(`OpcionaisController: Opcional ${id} atualizado com sucesso via API`);
+      return result;
+    } catch (error) {
+      console.error(`OpcionaisController: Erro ao atualizar opcional ${id} via API`, error);
+      throw error;
+    }
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('api/:id')
+  async removeOpcionalApi(@Param('id') id: string) {
+    console.log(`OpcionaisController: Excluindo opcional ${id} via API`);
+    try {
+      const result = await this.opcionaisService.remove(+id);
+      console.log(`OpcionaisController: Opcional ${id} excluído com sucesso via API`);
+      return result;
+    } catch (error) {
+      console.error(`OpcionaisController: Erro ao excluir opcional ${id} via API`, error);
+      throw error;
+    }
+  }
 }

@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Versao = void 0;
 const typeorm_1 = require("typeorm");
 const modelo_entity_1 = require("./modelo.entity");
+const versao_pintura_entity_1 = require("./versao-pintura.entity");
 let Versao = class Versao {
 };
 exports.Versao = Versao;
@@ -44,6 +45,10 @@ __decorate([
     (0, typeorm_1.UpdateDateColumn)(),
     __metadata("design:type", Date)
 ], Versao.prototype, "updatedAt", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => versao_pintura_entity_1.VersaoPintura, (versaoPintura) => versaoPintura.versao),
+    __metadata("design:type", Array)
+], Versao.prototype, "versaoPinturas", void 0);
 exports.Versao = Versao = __decorate([
     (0, typeorm_1.Entity)('versao')
 ], Versao);

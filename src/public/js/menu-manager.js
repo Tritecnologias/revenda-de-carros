@@ -89,13 +89,10 @@ class MenuManager {
     renderAdminMenu(navbarUl) {
         console.log('Renderizando menu de administrador');
         
-        // Itens do menu do administrador conforme a imagem
+        // Itens do menu do administrador na ordem solicitada: USUÁRIOS, CONFIGURADOR e VEÍCULOS
         const menuItems = [
             { text: 'USUÁRIOS', href: '/admin/users.html' },
-            { text: 'CONFIGURADOR', href: '/index.html' },
-            { text: 'OPÇÕES', href: '/opcoes.html' },
-            { text: 'COTAÇÕES', href: '/cotacoes.html' },
-            { text: 'CLIENTES', href: '/clientes.html' }
+            { text: 'CONFIGURADOR', href: '/index.html' }
         ];
         
         // Adicionar itens de menu simples
@@ -127,7 +124,9 @@ class MenuManager {
             { text: 'VERSÕES', href: '/admin/versoes.html' },
             { text: 'VEÍCULOS', href: '/veiculos/veiculo.html' },
             { text: 'OPCIONAIS', href: '/veiculos/opcional.html' },
+            { text: 'OPCIONAIS POR VERSÃO', href: '/veiculos/versao-opcional.html' },
             { text: 'PINTURAS', href: '/pinturas.html' },
+            { text: 'PINTURAS POR VERSÃO', href: '/html/versao-pintura.html' },
             { text: 'VENDA DIRETA', href: '/veiculos/venda-direta.html' }
         ];
         
@@ -151,9 +150,6 @@ class MenuManager {
         veiculosLi.appendChild(dropdownToggle);
         veiculosLi.appendChild(dropdownMenu);
         navbarUl.appendChild(veiculosLi);
-        
-        // Item SUPORTE
-        navbarUl.appendChild(this.createMenuItem('SUPORTE', '/suporte.html'));
     }
     
     /**
@@ -190,7 +186,9 @@ class MenuManager {
             { text: 'VERSÕES', href: '/admin/versoes.html' },
             { text: 'VEÍCULOS', href: '/veiculos/veiculo.html' },
             { text: 'OPCIONAIS', href: '/veiculos/opcional.html' },
+            { text: 'OPCIONAIS POR VERSÃO', href: '/veiculos/versao-opcional.html' },
             { text: 'PINTURAS', href: '/pinturas.html' },
+            { text: 'PINTURAS POR VERSÃO', href: '/html/versao-pintura.html' },
             { text: 'VENDA DIRETA', href: '/veiculos/venda-direta.html' }
         ];
         
@@ -214,9 +212,6 @@ class MenuManager {
         veiculosLi.appendChild(dropdownToggle);
         veiculosLi.appendChild(dropdownMenu);
         navbarUl.appendChild(veiculosLi);
-        
-        // Item SUPORTE
-        navbarUl.appendChild(this.createMenuItem('SUPORTE', '/suporte.html'));
     }
     
     /**
@@ -226,11 +221,8 @@ class MenuManager {
     renderUsuarioMenu(navbarUl) {
         console.log('Renderizando menu de usuário comum');
         
-        // Menu de Configurador
-        navbarUl.appendChild(this.createMenuItem('CONFIGURADOR', '/index.html'));
-        
-        // Item SUPORTE
-        navbarUl.appendChild(this.createMenuItem('SUPORTE', '/suporte.html'));
+        // Usuários comuns só veem o menu CONFIGURADOR
+        navbarUl.appendChild(this.createMenuItem('CONFIGURADOR', '/usuario.html'));
     }
     
     /**

@@ -53,8 +53,7 @@ export class ConfiguradorService {
       tipo: mp.pintura.tipo,
       nome: mp.pintura.nome,
       preco: mp.preco,
-      modeloPinturaId: mp.id,
-      imageUrl: mp.pintura.imageUrl
+      modeloPinturaId: mp.id
     }));
   }
 
@@ -67,8 +66,7 @@ export class ConfiguradorService {
     return modeloPinturas.map(mp => ({
       tipo: mp.pintura.tipo,
       nome: mp.pintura.nome,
-      preco: mp.preco,
-      imageUrl: mp.pintura.imageUrl
+      preco: mp.preco
     }));
   }
 

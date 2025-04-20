@@ -1,4 +1,4 @@
-import { IsString, IsEnum, IsOptional, IsUrl } from 'class-validator';
+import { IsString, IsEnum } from 'class-validator';
 
 export class CreatePinturaDto {
   @IsEnum(['SÓLIDA', 'METÁLICA'], { message: 'Tipo deve ser SÓLIDA ou METÁLICA' })
@@ -6,8 +6,4 @@ export class CreatePinturaDto {
 
   @IsString()
   nome: string;
-
-  @IsOptional()
-  @IsUrl({}, { message: 'A URL da imagem deve ser válida' })
-  imageUrl?: string;
 }

@@ -28,10 +28,6 @@ __decorate([
     __metadata("design:type", String)
 ], Pintura.prototype, "nome", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ nullable: true }),
-    __metadata("design:type", String)
-], Pintura.prototype, "imageUrl", void 0);
-__decorate([
     (0, typeorm_1.OneToMany)(() => modelo_pintura_entity_1.ModeloPintura, modeloPintura => modeloPintura.pintura),
     __metadata("design:type", Array)
 ], Pintura.prototype, "modeloPinturas", void 0);

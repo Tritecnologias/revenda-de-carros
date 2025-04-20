@@ -22,20 +22,42 @@ let marcaSelect;
 function initializeElements() {
     modelosTableBody = document.getElementById('modelosTableBody');
     paginationControls = document.getElementById('paginationControls');
+    if (!paginationControls) {
+        console.warn('Elemento paginationControls não encontrado. A paginação não funcionará corretamente.');
+    }
+    
     modeloForm = document.getElementById('modeloForm');
+    if (!modeloForm) {
+        console.warn('Elemento modeloForm não encontrado. O formulário de modelo não funcionará corretamente.');
+    }
     
     const modeloModalElement = document.getElementById('modeloModal');
     if (modeloModalElement) {
         modeloModal = new bootstrap.Modal(modeloModalElement);
+    } else {
+        console.warn('Elemento modeloModal não encontrado. O modal de modelo não funcionará corretamente.');
     }
     
-    const deleteModalElement = document.getElementById('deleteModal');
+    const deleteModalElement = document.getElementById('confirmDeleteModal');
     if (deleteModalElement) {
         deleteModal = new bootstrap.Modal(deleteModalElement);
+    } else {
+        console.warn('Elemento confirmDeleteModal não encontrado. O modal de exclusão não funcionará corretamente.');
     }
     
     errorMessage = document.getElementById('errorMessage');
-    saveButton = document.getElementById('saveButton');
+    if (!errorMessage) {
+        console.warn('Elemento errorMessage não encontrado. As mensagens de erro não serão exibidas corretamente.');
+        // Criar um elemento para mensagens de erro se não existir
+        errorMessage = document.createElement('div');
+        errorMessage.id = 'errorMessage';
+        errorMessage.className = 'alert alert-danger d-none';
+        if (modeloForm && modeloForm.parentNode) {
+            modeloForm.parentNode.insertBefore(errorMessage, modeloForm);
+        }
+    }
+    
+    saveButton = document.getElementById('saveModeloButton');
     saveSpinner = document.getElementById('saveSpinner');
     confirmDeleteButton = document.getElementById('confirmDeleteButton');
     deleteSpinner = document.getElementById('deleteSpinner');
@@ -44,20 +66,40 @@ function initializeElements() {
     // Configurar eventos
     if (saveButton) {
         saveButton.addEventListener('click', saveModelo);
+    } else {
+        console.warn('Elemento saveModeloButton não encontrado. O botão de salvar não funcionará corretamente.');
     }
     
     if (confirmDeleteButton) {
         confirmDeleteButton.addEventListener('click', deleteModelo);
+    } else {
+        console.warn('Elemento confirmDeleteButton não encontrado. O botão de excluir não funcionará corretamente.');
     }
     
     // Reset do formulário quando o modal é fechado
     if (modeloModalElement) {
         modeloModalElement.addEventListener('hidden.bs.modal', () => {
-            modeloForm.reset();
-            document.getElementById('modeloId').value = '';
-            document.getElementById('modeloModalTitle').textContent = 'NOVO MODELO';
-            errorMessage.classList.add('d-none');
-            modeloForm.classList.remove('was-validated');
+            if (modeloForm) {
+                modeloForm.reset();
+                
+                const modeloIdElement = document.getElementById('modeloId');
+                if (modeloIdElement) {
+                    modeloIdElement.value = '';
+                }
+                
+                const modeloModalTitleElement = document.getElementById('modeloModalTitle');
+                if (modeloModalTitleElement) {
+                    modeloModalTitleElement.textContent = 'NOVO MODELO';
+                }
+                
+                if (errorMessage) {
+                    errorMessage.classList.add('d-none');
+                }
+                
+                modeloForm.classList.remove('was-validated');
+            } else {
+                console.warn('modeloForm não encontrado ao fechar o modal');
+            }
         });
     }
     
@@ -191,7 +233,7 @@ function renderModelos(modelos) {
 // Função para renderizar controles de paginação
 function renderPagination() {
     if (!paginationControls) {
-        console.error('Elemento paginationControls não encontrado');
+        console.warn('Elemento paginationControls não encontrado');
         return;
     }
     
@@ -204,15 +246,23 @@ function renderPagination() {
     
     let paginationHTML = `
         <nav aria-label="Navegação de página">
-            <ul class="pagination justify-content-center">
+            <ul class="pagination">
                 <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
                     <a class="page-link" href="#" onclick="changePage(${currentPage - 1}); return false;">Anterior</a>
                 </li>
     `;
     
-    for (let i = 1; i <= totalPages; i++) {
+    // Determinar quais páginas mostrar
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(totalPages, startPage + 4);
+    
+    if (endPage - startPage < 4) {
+        startPage = Math.max(1, endPage - 4);
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
         paginationHTML += `
-            <li class="page-item ${currentPage === i ? 'active' : ''}">
+            <li class="page-item ${i === currentPage ? 'active' : ''}">
                 <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i}</a>
             </li>
         `;
@@ -259,10 +309,16 @@ function editModelo(id) {
         document.getElementById('modeloId').value = modelo.id;
         document.getElementById('marcaId').value = modelo.marcaId;
         document.getElementById('modeloNome').value = modelo.nome;
-        document.getElementById('modeloAtivo').checked = modelo.ativo;
+        
+        // Definir o status no select
+        const statusSelect = document.getElementById('modeloStatus');
+        if (statusSelect) {
+            statusSelect.value = modelo.status || 'ativo';
+        }
         
         document.getElementById('modeloModalTitle').textContent = 'EDITAR MODELO';
         
+        console.log('Modelo carregado para edição:', modelo);
         modeloModal.show();
     })
     .catch(error => {
@@ -293,7 +349,7 @@ function saveModelo() {
     const id = document.getElementById('modeloId').value;
     const marcaId = document.getElementById('marcaId').value;
     const nome = document.getElementById('modeloNome').value;
-    const ativo = document.getElementById('modeloAtivo').checked;
+    const status = document.getElementById('modeloStatus').value;
     
     // Validar marca
     if (!marcaId) {
@@ -305,10 +361,12 @@ function saveModelo() {
     
     // Preparar dados para envio
     const modeloData = {
-        marcaId,
+        marcaId: parseInt(marcaId),
         nome,
-        ativo
+        status
     };
+    
+    console.log('Enviando dados do modelo:', modeloData);
     
     const token = auth.getToken();
     const method = id ? 'PUT' : 'POST';
@@ -325,11 +383,15 @@ function saveModelo() {
     })
     .then(response => {
         if (!response.ok) {
-            throw new Error('Falha ao salvar modelo');
+            return response.text().then(text => {
+                console.error('Resposta do servidor:', text);
+                throw new Error('Falha ao salvar modelo');
+            });
         }
         return response.json();
     })
-    .then(() => {
+    .then(data => {
+        console.log('Modelo salvo com sucesso:', data);
         // Fechar modal e recarregar modelos
         modeloModal.hide();
         loadModelos();

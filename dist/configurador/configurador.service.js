@@ -54,8 +54,7 @@ let ConfiguradorService = class ConfiguradorService {
             tipo: mp.pintura.tipo,
             nome: mp.pintura.nome,
             preco: mp.preco,
-            modeloPinturaId: mp.id,
-            imageUrl: mp.pintura.imageUrl
+            modeloPinturaId: mp.id
         }));
     }
     async getPinturasParaModeloCards(modeloId) {
@@ -66,8 +65,7 @@ let ConfiguradorService = class ConfiguradorService {
         return modeloPinturas.map(mp => ({
             tipo: mp.pintura.tipo,
             nome: mp.pintura.nome,
-            preco: mp.preco,
-            imageUrl: mp.pintura.imageUrl
+            preco: mp.preco
         }));
     }
     async calcularPreco(data) {

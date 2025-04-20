@@ -83,25 +83,6 @@ function getToken() {
 function checkAuth(allowedRoles = ['admin', 'cadastrador']) {
     console.log('Verificando autenticação...');
     
-    // TEMPORÁRIO: Criar um usuário de teste para depuração
-    if (!localStorage.getItem('token') || !localStorage.getItem('user')) {
-        console.log('Criando usuário de teste para depuração...');
-        const testUser = {
-            id: 1,
-            nome: 'Admin',
-            email: 'admin@example.com',
-            role: 'admin'
-        };
-        const testToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEsImVtYWlsIjoiYWRtaW5AZXhhbXBsZS5jb20iLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE2NzIzMzY3MjAsImV4cCI6MTY3MjQyMzEyMH0.8Jj9OLLVvxI9zFQOdjkWsQ9MzBqWMvf1j-jyFOKk5Nc';
-        
-        localStorage.setItem('user', JSON.stringify(testUser));
-        localStorage.setItem('token', testToken);
-        
-        if (typeof auth !== 'undefined') {
-            auth.setAuth(testToken, testUser);
-        }
-    }
-    
     // Verificar se auth.js está carregado e funcionando
     if (typeof auth === 'undefined') {
         console.error('Auth não está disponível. Verifique se auth.js foi carregado.');
@@ -259,10 +240,11 @@ function carregarVersoes() {
     let url = `${config.apiBaseUrl}/api/versoes`;
     
     // Adicionar parâmetros de filtro se necessário
-    const params = new URLSearchParams();
     if (modeloId) {
         url = `${config.apiBaseUrl}/api/versoes/modelo/${modeloId}`;
     }
+    
+    console.log('URL da requisição:', url);
     
     // Fazer requisição para API
     const token = getToken();

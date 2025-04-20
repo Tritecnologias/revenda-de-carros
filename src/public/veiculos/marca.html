@@ -35,6 +35,9 @@
                         </tbody>
                     </table>
                 </div>
+                <div id="paginationControls" class="d-flex justify-content-center mt-3">
+                    <!-- Controles de paginação serão adicionados via JavaScript -->
+                </div>
             </div>
         </div>
     </div>
@@ -48,6 +51,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
+                    <div id="errorMessage" class="alert alert-danger d-none"></div>
                     <form id="marcaForm">
                         <input type="hidden" id="marcaId">
                         <div class="mb-3">

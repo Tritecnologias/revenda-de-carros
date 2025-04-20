@@ -3,16 +3,25 @@ document.addEventListener('DOMContentLoaded', () => {
   initMonetaryInputs();
   
   // Carregar dados iniciais
-  carregarPinturas();
+  if (document.getElementById('pinturasList')) {
+    carregarPinturas();
+  }
   carregarModelos();
-  carregarAssociacoes();
+  if (document.getElementById('filtroModelo')) {
+    carregarAssociacoes();
+  }
   
   // Event listeners para formulários
-  document.getElementById('pinturaForm').addEventListener('submit', salvarPintura);
-  document.getElementById('modeloPinturaForm').addEventListener('submit', associarPintura);
-  document.getElementById('btnLimpar').addEventListener('click', limparFormularioPintura);
-  document.getElementById('btnLimparAssociacao').addEventListener('click', limparFormularioAssociacao);
-  document.getElementById('filtroModelo').addEventListener('change', filtrarAssociacoes);
+  const pinturaForm = document.getElementById('pinturaForm');
+  if (pinturaForm) pinturaForm.addEventListener('submit', salvarPintura);
+  const modeloPinturaForm = document.getElementById('modeloPinturaForm');
+  if (modeloPinturaForm) modeloPinturaForm.addEventListener('submit', associarPintura);
+  const btnLimpar = document.getElementById('btnLimpar');
+  if (btnLimpar) btnLimpar.addEventListener('click', limparFormularioPintura);
+  const btnLimparAssociacao = document.getElementById('btnLimparAssociacao');
+  if (btnLimparAssociacao) btnLimparAssociacao.addEventListener('click', limparFormularioAssociacao);
+  const filtroModelo = document.getElementById('filtroModelo');
+  if (filtroModelo) filtroModelo.addEventListener('change', filtrarAssociacoes);
 });
 
 // Funções para gerenciar pinturas
@@ -23,54 +32,52 @@ async function carregarPinturas() {
     
     // Preencher tabela de pinturas
     const pinturasList = document.getElementById('pinturasList');
-    pinturasList.innerHTML = '';
-    
-    pinturas.forEach(pintura => {
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td>${pintura.tipo}</td>
-        <td>${pintura.nome}</td>
-        <td>${pintura.imageUrl ? `<a href="${pintura.imageUrl}" target="_blank">Ver imagem</a>` : 'Sem imagem'}</td>
-        <td>
-          <button class="btn btn-sm btn-primary" onclick="editarPintura(${pintura.id})">Editar</button>
-          <button class="btn btn-sm btn-danger" onclick="excluirPintura(${pintura.id})">Excluir</button>
-        </td>
-      `;
-      pinturasList.appendChild(row);
-    });
-    
+    if (pinturasList) {
+      pinturasList.innerHTML = '';
+      pinturas.forEach(pintura => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${pintura.tipo}</td>
+          <td>${pintura.nome}</td>
+          <td>
+            <button class="btn btn-sm btn-primary" onclick="editarPintura(${pintura.id})">Editar</button>
+            <button class="btn btn-sm btn-danger" onclick="excluirPintura(${pintura.id})">Excluir</button>
+          </td>
+        `;
+        pinturasList.appendChild(row);
+      });
+    }
     // Preencher select de pinturas
     const pinturaSelect = document.getElementById('pinturaSelect');
-    pinturaSelect.innerHTML = '<option value="">Selecione a pintura...</option>';
-    
-    pinturas.forEach(pintura => {
-      const option = document.createElement('option');
-      option.value = pintura.id;
-      option.textContent = `${pintura.tipo} - ${pintura.nome}`;
-      pinturaSelect.appendChild(option);
-    });
+    if (pinturaSelect) {
+      pinturaSelect.innerHTML = '<option value="">Selecione a pintura...</option>';
+      pinturas.forEach(pintura => {
+        const option = document.createElement('option');
+        option.value = pintura.id;
+        option.textContent = `${pintura.tipo} - ${pintura.nome}`;
+        pinturaSelect.appendChild(option);
+      });
+    }
   } catch (error) {
-    console.error('Erro ao carregar pinturas:', error);
-    alert('Erro ao carregar pinturas. Verifique o console para mais detalhes.');
+    // Silencioso
   }
 }
 
 async function salvarPintura(event) {
   event.preventDefault();
   
-  const pinturaId = document.getElementById('pinturaId').value;
-  const tipo = document.getElementById('tipo').value;
-  const nome = document.getElementById('nome').value;
-  const imageUrl = document.getElementById('imageUrl').value;
+  const pinturaId = document.getElementById('pinturaId');
+  const tipo = document.getElementById('tipo');
+  const nome = document.getElementById('nome');
   
-  const pintura = { tipo, nome, imageUrl };
+  const pintura = { tipo: tipo ? tipo.value : '', nome: nome ? nome.value : '' };
   
   try {
     let url = '/configurador/pinturas';
     let method = 'POST';
     
-    if (pinturaId) {
-      url = `${url}/${pinturaId}`;
+    if (pinturaId && pinturaId.value) {
+      url = `${url}/${pinturaId.value}`;
       method = 'PUT';
     }
     
@@ -83,7 +90,7 @@ async function salvarPintura(event) {
     });
     
     if (response.ok) {
-      alert(pinturaId ? 'Pintura atualizada com sucesso!' : 'Pintura cadastrada com sucesso!');
+      alert(pinturaId && pinturaId.value ? 'Pintura atualizada com sucesso!' : 'Pintura cadastrada com sucesso!');
       limparFormularioPintura();
       carregarPinturas();
       carregarAssociacoes();
@@ -102,10 +109,12 @@ async function editarPintura(id) {
     const response = await fetch(`/configurador/pinturas/detalhe/${id}`);
     const pintura = await response.json();
     
-    document.getElementById('pinturaId').value = pintura.id;
-    document.getElementById('tipo').value = pintura.tipo;
-    document.getElementById('nome').value = pintura.nome;
-    document.getElementById('imageUrl').value = pintura.imageUrl || '';
+    const pinturaId = document.getElementById('pinturaId');
+    if (pinturaId) pinturaId.value = pintura.id;
+    const tipo = document.getElementById('tipo');
+    if (tipo) tipo.value = pintura.tipo;
+    const nome = document.getElementById('nome');
+    if (nome) nome.value = pintura.nome;
   } catch (error) {
     console.error('Erro ao carregar pintura para edição:', error);
     alert('Erro ao carregar pintura para edição. Verifique o console para mais detalhes.');
@@ -137,44 +146,36 @@ async function excluirPintura(id) {
 }
 
 function limparFormularioPintura() {
-  document.getElementById('pinturaId').value = '';
-  document.getElementById('tipo').value = '';
-  document.getElementById('nome').value = '';
-  document.getElementById('imageUrl').value = '';
+  const pinturaId = document.getElementById('pinturaId');
+  if (pinturaId) pinturaId.value = '';
+  const tipo = document.getElementById('tipo');
+  if (tipo) tipo.value = '';
+  const nome = document.getElementById('nome');
+  if (nome) nome.value = '';
 }
 
 // Funções para gerenciar modelos
 async function carregarModelos() {
   try {
-    const response = await fetch('/api/veiculos/modelos/public/all');
-    let modelos = await response.json();
-    
-    // Verificar se a resposta é um objeto com uma propriedade 'items'
-    if (modelos && typeof modelos === 'object' && !Array.isArray(modelos) && modelos.items) {
-      modelos = modelos.items;
-    }
-    
-    // Verificar se modelos é um array
-    if (!Array.isArray(modelos)) {
-      console.error('Resposta não é um array:', modelos);
-      modelos = []; // Definir como array vazio para evitar erros
-    }
-    
-    // Preencher select de modelos
     const modeloSelect = document.getElementById('modeloSelect');
     const filtroModelo = document.getElementById('filtroModelo');
-    
-    modeloSelect.innerHTML = '<option value="">Selecione o modelo...</option>';
-    filtroModelo.innerHTML = '<option value="">Todos os modelos</option>';
-    
+    if (modeloSelect) {
+      modeloSelect.innerHTML = '<option value="">Selecione o modelo...</option>';
+    }
+    if (filtroModelo) {
+      filtroModelo.innerHTML = '<option value="">Todos os modelos</option>';
+    } else {
+      return;
+    }
+    const response = await fetch('/api/veiculos/modelos/public/all');
+    const modelos = await response.json();
     modelos.forEach(modelo => {
-      // Adicionar ao select principal
-      const option1 = document.createElement('option');
-      option1.value = modelo.id;
-      option1.textContent = `${modelo.marca?.nome || 'Sem marca'} - ${modelo.nome}`;
-      modeloSelect.appendChild(option1);
-      
-      // Adicionar ao filtro
+      if (modeloSelect) {
+        const option1 = document.createElement('option');
+        option1.value = modelo.id;
+        option1.textContent = `${modelo.marca?.nome || 'Sem marca'} - ${modelo.nome}`;
+        modeloSelect.appendChild(option1);
+      }
       const option2 = document.createElement('option');
       option2.value = modelo.id;
       option2.textContent = `${modelo.marca?.nome || 'Sem marca'} - ${modelo.nome}`;
@@ -189,7 +190,9 @@ async function carregarModelos() {
 // Funções para gerenciar associações de pinturas a modelos
 async function carregarAssociacoes() {
   try {
-    const filtroModeloId = document.getElementById('filtroModelo').value;
+    const filtroModeloElem = document.getElementById('filtroModelo');
+    if (!filtroModeloElem) return;
+    const filtroModeloId = filtroModeloElem.value;
     let url = '/configurador/modelo-pintura';
     
     if (filtroModeloId) {
@@ -199,19 +202,7 @@ async function carregarAssociacoes() {
     } else {
       // Carregar todos os modelos e suas pinturas
       const responseModelos = await fetch('/api/veiculos/modelos/public/all');
-      let modelos = await responseModelos.json();
-      
-      // Verificar se a resposta é um objeto com uma propriedade 'items'
-      if (modelos && typeof modelos === 'object' && !Array.isArray(modelos) && modelos.items) {
-        modelos = modelos.items;
-      }
-      
-      // Verificar se modelos é um array
-      if (!Array.isArray(modelos)) {
-        console.error('Resposta não é um array:', modelos);
-        modelos = []; // Definir como array vazio para evitar erros
-      }
-      
+      const modelos = await responseModelos.json();
       let todasAssociacoes = [];
       
       for (const modelo of modelos) {
@@ -226,20 +217,20 @@ async function carregarAssociacoes() {
           
           todasAssociacoes = [...todasAssociacoes, ...associacoes];
         } catch (error) {
-          console.error(`Erro ao carregar pinturas para o modelo ${modelo.id}:`, error);
+          // Silencioso
         }
       }
       
       exibirAssociacoes(todasAssociacoes);
     }
   } catch (error) {
-    console.error('Erro ao carregar associações:', error);
-    alert('Erro ao carregar associações. Verifique o console para mais detalhes.');
+    // Silencioso
   }
 }
 
 function exibirAssociacoes(associacoes, filtroModeloId = '') {
   const modeloPinturasList = document.getElementById('modeloPinturasList');
+  if (!modeloPinturasList) return;
   modeloPinturasList.innerHTML = '';
   
   if (associacoes.length === 0) {
@@ -272,19 +263,19 @@ function exibirAssociacoes(associacoes, filtroModeloId = '') {
 async function associarPintura(event) {
   event.preventDefault();
   
-  const modeloPinturaId = document.getElementById('modeloPinturaId').value;
-  const modeloId = document.getElementById('modeloSelect').value;
-  const pinturaId = document.getElementById('pinturaSelect').value;
+  const modeloPinturaId = document.getElementById('modeloPinturaId');
+  const modeloId = document.getElementById('modeloSelect');
+  const pinturaId = document.getElementById('pinturaSelect');
   const preco = converterParaNumero(document.getElementById('preco').value);
   
-  const modeloPintura = { modeloId, pinturaId, preco };
+  const modeloPintura = { modeloId: modeloId ? modeloId.value : '', pinturaId: pinturaId ? pinturaId.value : '', preco };
   
   try {
     let url = '/configurador/modelo-pintura';
     let method = 'POST';
     
-    if (modeloPinturaId) {
-      url = `${url}/${modeloPinturaId}`;
+    if (modeloPinturaId && modeloPinturaId.value) {
+      url = `${url}/${modeloPinturaId.value}`;
       method = 'PUT';
     }
     
@@ -297,7 +288,7 @@ async function associarPintura(event) {
     });
     
     if (response.ok) {
-      alert(modeloPinturaId ? 'Associação atualizada com sucesso!' : 'Associação cadastrada com sucesso!');
+      alert(modeloPinturaId && modeloPinturaId.value ? 'Associação atualizada com sucesso!' : 'Associação cadastrada com sucesso!');
       limparFormularioAssociacao();
       carregarAssociacoes();
     } else {
@@ -315,10 +306,14 @@ async function editarAssociacao(id) {
     const response = await fetch(`/configurador/modelo-pintura/${id}`);
     const modeloPintura = await response.json();
     
-    document.getElementById('modeloPinturaId').value = modeloPintura.id;
-    document.getElementById('modeloSelect').value = modeloPintura.modeloId;
-    document.getElementById('pinturaSelect').value = modeloPintura.pinturaId;
-    document.getElementById('preco').value = formatarMoeda(modeloPintura.preco);
+    const modeloPinturaId = document.getElementById('modeloPinturaId');
+    if (modeloPinturaId) modeloPinturaId.value = modeloPintura.id;
+    const modeloSelect = document.getElementById('modeloSelect');
+    if (modeloSelect) modeloSelect.value = modeloPintura.modeloId;
+    const pinturaSelect = document.getElementById('pinturaSelect');
+    if (pinturaSelect) pinturaSelect.value = modeloPintura.pinturaId;
+    const preco = document.getElementById('preco');
+    if (preco) preco.value = formatarMoeda(modeloPintura.preco);
   } catch (error) {
     console.error('Erro ao carregar associação para edição:', error);
     alert('Erro ao carregar associação para edição. Verifique o console para mais detalhes.');
@@ -349,26 +344,152 @@ async function excluirAssociacao(id) {
 }
 
 function limparFormularioAssociacao() {
-  document.getElementById('modeloPinturaId').value = '';
-  document.getElementById('modeloSelect').value = '';
-  document.getElementById('pinturaSelect').value = '';
-  document.getElementById('preco').value = '';
+  const modeloPinturaId = document.getElementById('modeloPinturaId');
+  if (modeloPinturaId) modeloPinturaId.value = '';
+  const modeloSelect = document.getElementById('modeloSelect');
+  if (modeloSelect) modeloSelect.value = '';
+  const pinturaSelect = document.getElementById('pinturaSelect');
+  if (pinturaSelect) pinturaSelect.value = '';
+  const preco = document.getElementById('preco');
+  if (preco) preco.value = '';
 }
 
 function filtrarAssociacoes() {
-  const filtroModeloId = document.getElementById('filtroModelo').value;
-  
+  const filtroModelo = document.getElementById('filtroModelo');
+  if (!filtroModelo) return;
+  const filtroModeloId = filtroModelo.value;
   if (filtroModeloId) {
     fetch(`/configurador/pinturas/modelo/${filtroModeloId}`)
       .then(response => response.json())
       .then(associacoes => {
         exibirAssociacoes(associacoes);
       })
-      .catch(error => {
-        console.error('Erro ao filtrar associações:', error);
-        alert('Erro ao filtrar associações. Verifique o console para mais detalhes.');
-      });
+      .catch(() => {});
   } else {
     carregarAssociacoes();
   }
 }
+
+// Função para buscar e exibir pinturas associadas à versão
+async function carregarPinturasAssociadas(versaoId) {
+  try {
+    const token = auth.getToken();
+    const url = `${config.apiBaseUrl}/api/veiculos/versao-pintura/public`;
+    const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+    let data = await res.json();
+    // Aceita resposta em data.items ou array direto
+    if (data && data.items && Array.isArray(data.items)) {
+      data = data.items;
+    }
+    // Filtra as pinturas para a versão selecionada
+    const pinturasAssociadas = Array.isArray(data) ? data.filter(item => item.versaoId == versaoId) : [];
+    renderizarPinturasAssociadas(pinturasAssociadas);
+  } catch (e) {
+    renderizarPinturasAssociadas([]);
+  }
+}
+
+// Função para renderizar as pinturas associadas
+function renderizarPinturasAssociadas(pinturas) {
+  const container = document.getElementById('pinturasAssociadas');
+  if (!container) return;
+  if (!pinturas || pinturas.length === 0) {
+    container.innerHTML = '<span class="text-muted">Nenhuma pintura associada para esta versão.</span>';
+    // Zera o valor da pintura no resumo usando a função centralizada
+    if (typeof window.selecionarPinturaAssociada === 'function') {
+      window.selecionarPinturaAssociada(null, { preco: 0, nome: '', imageUrl: '' });
+    }
+    if (document.getElementById('precoPinturaResumo')) {
+      document.getElementById('precoPinturaResumo').textContent = formatarMoeda(0);
+    }
+    if (typeof window.atualizarResumoValores === 'function') {
+      window.atualizarResumoValores();
+    }
+    return;
+  }
+  let html = '<ul class="list-group">';
+  let selecionou = false;
+  for (const item of pinturas) {
+    // Adiciona data-image-url e onclick para permitir visualização da imagem ao clicar
+    html += `<li class="list-group-item d-flex justify-content-between align-items-center pintura-associada-item"
+      style="cursor:pointer;"
+      data-nome="${item.pintura?.nome || ''}"
+      data-image-url="${item.imageUrl || ''}"
+      data-preco="${item.preco || 0}"
+      onclick="selecionarPinturaAssociada(this)">
+      ${item.pintura?.nome || 'Pintura desconhecida'}
+      <span class="badge bg-primary">${item.preco ? 'R$ ' + item.preco.toLocaleString('pt-BR', {minimumFractionDigits: 2}) : ''}</span>
+    </li>`;
+    if (!selecionou) {
+      // Seleciona a primeira pintura automaticamente
+      setTimeout(() => {
+        const itens = document.querySelectorAll('.pintura-associada-item');
+        if (itens.length > 0) selecionarPinturaAssociada(itens[0]);
+      }, 0);
+      selecionou = true;
+    }
+  }
+  html += '</ul>';
+  container.innerHTML = html;
+}
+
+// Função global para selecionar pintura associada e trocar imagem do card
+window.selecionarPinturaAssociada = function(element, pintura) {
+  console.log('[PINTURAS.JS] Redirecionando chamada de selecionarPinturaAssociada para a implementação unificada');
+  
+  // Extrair dados do elemento se não tiver recebido o objeto pintura
+  if (!pintura && element) {
+    const imageUrl = element.getAttribute('data-image-url');
+    const nome = element.getAttribute('data-nome');
+    let preco = element.getAttribute('data-preco');
+    
+    // Converter o preço para número
+    if (preco !== null && preco !== undefined && preco !== '') {
+      if (preco.indexOf && preco.indexOf(',') > -1) {
+        preco = preco.replace(/\./g, '').replace(',', '.');
+      } else {
+        preco = preco.replace(/[^\d.\-]/g, '');
+      }
+      preco = Number(preco);
+      if (isNaN(preco)) preco = 0;
+    } else {
+      preco = 0;
+    }
+    
+    // Criar objeto pintura com os dados extraídos
+    pintura = {
+      nome: nome || '',
+      imageUrl: imageUrl || '',
+      preco: preco
+    };
+  }
+  
+  // Chamar a implementação unificada em configurador-pinturas.js
+  if (typeof window.atualizarPinturaSelecionada === 'function') {
+    window.atualizarPinturaSelecionada(element, pintura);
+  } else {
+    console.error('Função atualizarPinturaSelecionada não encontrada. Verifique se o arquivo configurador-pinturas.js está carregado antes de pinturas.js');
+    
+    // Implementação de fallback caso a função unificada não esteja disponível
+    // Atualizar a variável global com o preço da pintura
+    if (pintura && pintura.preco !== undefined) {
+      window.valorPinturasSelecionadas = Number(pintura.preco) || 0;
+      
+      // Atualizar o elemento de resumo da pintura
+      const precoPinturaResumo = document.getElementById('precoPinturaResumo');
+      if (precoPinturaResumo) {
+        precoPinturaResumo.textContent = window.formatarMoeda ? 
+          window.formatarMoeda(window.valorPinturasSelecionadas) : 
+          `R$ ${window.valorPinturasSelecionadas.toFixed(2)}`;
+      }
+      
+      // Atualizar o resumo de valores
+      if (typeof window.atualizarResumoValores === 'function') {
+        window.atualizarResumoValores();
+      }
+    }
+  }
+};
+
+window.carregarPinturasAssociadas = carregarPinturasAssociadas;
+window.renderizarPinturasAssociadas = renderizarPinturasAssociadas;

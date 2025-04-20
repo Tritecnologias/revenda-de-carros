@@ -21,13 +21,11 @@ export declare class ConfiguradorService {
         nome: string;
         preco: number;
         modeloPinturaId: number;
-        imageUrl: string;
     }[]>;
     getPinturasParaModeloCards(modeloId: number): Promise<{
         tipo: string;
         nome: string;
         preco: number;
-        imageUrl: string;
     }[]>;
     calcularPreco(data: {
         veiculoId: number;

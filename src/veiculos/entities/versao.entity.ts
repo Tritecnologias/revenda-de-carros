@@ -1,5 +1,6 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { Modelo } from './modelo.entity';
+import { VersaoPintura } from './versao-pintura.entity';
 
 @Entity('versao')
 export class Versao {
@@ -24,4 +25,8 @@ export class Versao {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  // Relação com VersaoPintura
+  @OneToMany(() => VersaoPintura, (versaoPintura) => versaoPintura.versao)
+  versaoPinturas?: VersaoPintura[];
 }

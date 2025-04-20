@@ -12,4 +12,7 @@ export declare class OpcionaisController {
     remove(id: string, res: Response): Promise<void | Response<any, Record<string, any>>>;
     listOpcionais(): Promise<import("../entities/opcional.entity").Opcional[]>;
     getOpcional(id: string): Promise<import("../entities/opcional.entity").Opcional>;
+    createOpcionalApi(opcionalDto: OpcionalDto): Promise<import("../entities/opcional.entity").Opcional>;
+    updateOpcionalApi(id: string, updateOpcionalDto: UpdateOpcionalDto): Promise<import("../entities/opcional.entity").Opcional>;
+    removeOpcionalApi(id: string): Promise<void>;
 }

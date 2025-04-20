@@ -1,3 +1,12 @@
+// Inicializar variáveis globais para o resumo
+window.precoPublicoVeiculo = 0;
+window.valorPinturasSelecionadas = 0;
+window.valorOpcionaisSelecionados = 0;
+window.descontoReais = 0;
+window.agioReais = 0;
+window.quantidadeResumo = 1;
+window.opcionaisSelecionados = [];
+
 // Declarar variável auth global
 let auth;
 
@@ -75,9 +84,27 @@ function initApp() {
             if (this.value) {
                 console.log('Carregando modelos para marca:', this.value);
                 loadModelos(this.value);
-                loadVendasDiretas(this.value); // Adicionado evento para carregar vendas diretas
+                
+                // Carregar vendas diretas para a marca selecionada
+                if (typeof window.loadVendasDiretas === 'function') {
+                    console.log('Carregando vendas diretas para marca:', this.value);
+                    window.loadVendasDiretas(this.value);
+                } else {
+                    console.error('Função loadVendasDiretas não encontrada');
+                }
             } else if (modeloSelect) {
                 modeloSelect.innerHTML = '<option value="">Selecione um modelo</option>';
+                
+                // Resetar vendas diretas quando nenhuma marca estiver selecionada
+                const vendasDiretasSelect = document.getElementById('vendasDiretasSelect');
+                if (vendasDiretasSelect) {
+                    vendasDiretasSelect.innerHTML = '';
+                    const defaultOption = document.createElement('option');
+                    defaultOption.value = "";
+                    defaultOption.textContent = "DESCONTOS VENDA DIRETA";
+                    vendasDiretasSelect.appendChild(defaultOption);
+                    vendasDiretasSelect.disabled = true;
+                }
             }
         });
     }
@@ -98,26 +125,54 @@ function initApp() {
 
     if (versaoSelect) {
         versaoSelect.addEventListener('change', function() {
-            console.log('Select de versão alterado');
-            if (this.value) {
-                // Atualizar as informações do veículo com base na versão selecionada
-                console.log('Carregando detalhes do veículo:', this.value);
-                loadVeiculoDetails(this.value);
+            const versaoId = versaoSelect.value;
+            if (versaoId) {
+                // Buscar detalhes completos do veículo pela versão selecionada
+                const selectedOption = this.options[this.selectedIndex];
+                // Corrigir: garantir que veiculoId seja preenchido, mas se não houver, buscar pelo próprio versaoId
+                let veiculoId = selectedOption && selectedOption.dataset.veiculoId;
+                if (!veiculoId) {
+                    veiculoId = versaoId;
+                }
+                if (veiculoId && typeof window.loadVeiculoDetails === 'function') {
+                    window.loadVeiculoDetails(veiculoId, {
+                        marcaNome: marcaSelect && marcaSelect.selectedOptions.length > 0 ? marcaSelect.selectedOptions[0].textContent : '',
+                        modeloNome: modeloSelect && modeloSelect.selectedOptions.length > 0 ? modeloSelect.selectedOptions[0].textContent : '',
+                        versaoNome: this.selectedOptions.length > 0 ? this.selectedOptions[0].textContent : ''
+                    });
+                }
+                
+                // Carregar opcionais específicos para esta versão
+                if (typeof window.loadOpcionaisPorVersao === 'function') {
+                    console.log(`Carregando opcionais específicos para a versão ID: ${versaoId}`);
+                    window.loadOpcionaisPorVersao(versaoId);
+                } else {
+                    console.error('Função loadOpcionaisPorVersao não encontrada');
+                    // Fallback para carregamento por modelo se a função por versão não estiver disponível
+                    if (modeloSelect && modeloSelect.value && typeof window.loadOpcionaisModelo === 'function') {
+                        console.log('Usando fallback: carregando opcionais por modelo');
+                        window.loadOpcionaisModelo(modeloSelect.value);
+                    }
+                }
             } else {
-                // Limpar os detalhes do veículo quando nenhuma versão estiver selecionada
                 limparDetalhesVeiculo();
             }
         });
     }
     
     // Inicializar campos monetários
-    initMonetaryInputs();
+    // initMonetaryInputs();
     
     // Inicializar o card de resumo com valores zerados
     limparDetalhesVeiculo();
     
     // Adicionar event listeners aos cards de preço
-    setupPriceCardListeners();
+    if (typeof window.setupPriceCardListeners === 'function') {
+        window.setupPriceCardListeners();
+    }
+    
+    // Adicionar event listeners para os campos de input de desconto, ágio e quantidade
+    setupInputListeners();
 }
 
 // Função para limpar os detalhes do veículo quando nenhum estiver selecionado
@@ -127,58 +182,61 @@ function limparDetalhesVeiculo() {
     if (veiculoTitle) {
         veiculoTitle.textContent = 'Selecione um veículo para configurar';
     }
-    
     // Limpar o nome no card da imagem
     const carName = document.querySelector('.car-name');
     if (carName) {
         carName.textContent = 'Selecione um veículo';
     }
-    
     // Limpar a tabela de opcionais
     const opcionaisTableBody = document.querySelector('.table-striped tbody');
     if (opcionaisTableBody) {
         opcionaisTableBody.innerHTML = '<tr><td colspan="4" class="text-center">Selecione um modelo para ver os opcionais disponíveis</td></tr>';
     }
-    
     // Resetar as variáveis globais
-    window.precoPublicoVeiculo = 0;
+    window.precoPublicoVeiculo = Number(0);
     window.valorPinturasSelecionadas = 0;
     window.valorOpcionaisSelecionados = 0;
+    window.vendaDiretaSelecionada = null;
     window.percentualDesconto = 0;
     window.opcionaisSelecionados = [];
-    
     // Resetar os campos de input
-    document.getElementById('descontoReaisInput').value = '0';
-    document.getElementById('agioReaisInput').value = '0';
-    document.getElementById('quantidadeInput').value = '1';
-    
+    const descontoReaisInput = document.getElementById('descontoReaisInput');
+    if (descontoReaisInput) descontoReaisInput.value = '0';
+    const agioReaisInput = document.getElementById('agioReaisInput');
+    if (agioReaisInput) agioReaisInput.value = '0';
+    const quantidadeInput = document.getElementById('quantidadeInput');
+    if (quantidadeInput) quantidadeInput.value = '1';
     // Atualizar o resumo de valores com zeros
     if (typeof window.atualizarResumoValores === 'function') {
         window.atualizarResumoValores();
     }
-    
     // Limpar os preços na interface - cards de resumo
     const precoPublicoElement = document.getElementById('resumoPrecoPublico');
     if (precoPublicoElement) {
         precoPublicoElement.textContent = formatarMoeda(0);
     }
-    
     const precoElement = document.querySelector('.car-price strong');
     if (precoElement) {
         precoElement.textContent = formatarMoeda(0);
     }
-    
     // Limpar os cards de preços específicos
-    document.getElementById('precoPublicoCard').textContent = formatarMoeda(0);
-    document.getElementById('pcdIpiIcmsCard').textContent = formatarMoeda(0);
-    document.getElementById('pcdIpiCard').textContent = formatarMoeda(0);
-    document.getElementById('taxiIpiIcmsCard').textContent = formatarMoeda(0);
-    document.getElementById('taxiIpiCard').textContent = formatarMoeda(0);
-    
+    const precoPublicoCard = document.getElementById('precoPublicoCard');
+    if (precoPublicoCard) precoPublicoCard.textContent = formatarMoeda(0);
+    const pcdIpiIcmsCard = document.getElementById('pcdIpiIcmsCard');
+    if (pcdIpiIcmsCard) pcdIpiIcmsCard.textContent = formatarMoeda(0);
+    const pcdIpiCard = document.getElementById('pcdIpiCard');
+    if (pcdIpiCard) pcdIpiCard.textContent = formatarMoeda(0);
+    const taxiIpiIcmsCard = document.getElementById('taxiIpiIcmsCard');
+    if (taxiIpiIcmsCard) taxiIpiIcmsCard.textContent = formatarMoeda(0);
+    const taxiIpiCard = document.getElementById('taxiIpiCard');
+    if (taxiIpiCard) taxiIpiCard.textContent = formatarMoeda(0);
     // Limpar os novos cards
-    document.getElementById('resumoDescontoReais').textContent = formatarMoeda(0);
-    document.getElementById('resumoAgio').textContent = formatarMoeda(0);
-    document.getElementById('resumoQuantidade').textContent = '1';
+    const resumoDescontoReais = document.getElementById('resumoDescontoReais');
+    if (resumoDescontoReais) resumoDescontoReais.textContent = formatarMoeda(0);
+    const resumoAgio = document.getElementById('resumoAgio');
+    if (resumoAgio) resumoAgio.textContent = formatarMoeda(0);
+    const resumoQuantidade = document.getElementById('resumoQuantidade');
+    if (resumoQuantidade) resumoQuantidade.textContent = '1';
 }
 
 // Chamar a função de inicialização quando o DOM estiver carregado
@@ -260,823 +318,171 @@ function loadMarcas() {
     console.log('Requisição enviada para carregar marcas');
 }
 
-// Função para carregar modelos por marca
-async function loadModelos(marcaId) {
-    try {
-        console.log(`Carregando modelos para marca ID: ${marcaId}`);
-        
-        // Exibir mensagem de carregamento
-        const modeloSelect = document.getElementById('configuradorModelo');
-        if (modeloSelect) {
-            modeloSelect.innerHTML = '<option value="">Carregando modelos...</option>';
-        } else {
-            console.error('Elemento select de modelo não encontrado');
-            return;
-        }
-        
-        // Usar o endpoint público para teste
-        const response = await fetch(`${config.apiBaseUrl}/api/veiculos/modelos/public/by-marca/${marcaId}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        console.log('Resposta da API:', response.status, response.statusText);
-        
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Resposta de erro:', errorText);
-            throw new Error(`Falha ao carregar modelos: ${response.status} ${response.statusText}`);
-        }
-        
-        const modelos = await response.json();
-        console.log('Modelos carregados:', modelos);
-        
-        // Limpar select atual
-        modeloSelect.innerHTML = '<option value="">Selecione um modelo</option>';
-        
-        // Adicionar opções de modelos
-        if (Array.isArray(modelos)) {
-            modelos.forEach(modelo => {
-                console.log('Adicionando modelo:', modelo.id, modelo.nome);
-                const option = document.createElement('option');
-                option.value = modelo.id;
-                option.textContent = modelo.nome;
-                modeloSelect.appendChild(option);
-            });
-            
-            if (modelos.length === 0) {
-                console.log('Nenhum modelo encontrado');
-                const option = document.createElement('option');
-                option.value = "";
-                option.textContent = "Nenhum modelo disponível";
-                modeloSelect.appendChild(option);
+// Função para carregar modelos
+function loadModelos(marcaId) { 
+    console.log('Iniciando carregamento de modelos via XMLHttpRequest...');
+    const modeloSelect = document.getElementById('configuradorModelo');
+    if (modeloSelect) {
+        modeloSelect.innerHTML = '<option value="">Carregando modelos...</option>';
+        modeloSelect.disabled = true;
+    } else {
+        console.error('Elemento select de modelo não encontrado');
+        return;
+    }
+    // Usar o endpoint correto e autenticação
+    const xhr = new XMLHttpRequest();
+    const url = `${config.apiBaseUrl}/api/veiculos/modelos/public/by-marca/${marcaId}`;
+    xhr.open('GET', url, true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    if (typeof auth !== 'undefined' && auth.getToken) {
+        xhr.setRequestHeader('Authorization', 'Bearer ' + auth.getToken());
+    }
+    xhr.onload = function() {
+        console.log('Resposta da API recebida:', xhr.status);
+        if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+                const modelos = JSON.parse(xhr.responseText);
+                console.log('Modelos carregados:', modelos);
+                modeloSelect.disabled = false;
+                modeloSelect.innerHTML = '<option value="">Selecione um modelo</option>';
+                if (Array.isArray(modelos)) {
+                    modelos.forEach(modelo => {
+                        console.log('Adicionando modelo:', modelo.id, modelo.nome);
+                        const option = document.createElement('option');
+                        option.value = modelo.id;
+                        option.textContent = modelo.nome;
+                        modeloSelect.appendChild(option);
+                    });
+                    if (modelos.length === 0) {
+                        console.log('Nenhum modelo encontrado');
+                        const option = document.createElement('option');
+                        option.value = "";
+                        option.textContent = "Nenhum modelo disponível";
+                        modeloSelect.appendChild(option);
+                    }
+                } else {
+                    console.error('Resposta da API não é um array:', modelos);
+                    modeloSelect.innerHTML = '<option value="">Formato de resposta inválido</option>';
+                }
+            } catch (error) {
+                console.error('Erro ao processar resposta da API:', error);
+                modeloSelect.disabled = false;
+                modeloSelect.innerHTML = '<option value="">Erro ao processar resposta</option>';
             }
         } else {
-            console.error('Resposta da API não é um array:', modelos);
-            modeloSelect.innerHTML = '<option value="">Formato de resposta inválido</option>';
-        }
-    } catch (error) {
-        console.error('Erro ao carregar modelos:', error);
-        
-        // Adicionar mensagem de erro no select
-        const modeloSelect = document.getElementById('configuradorModelo');
-        if (modeloSelect) {
+            console.error('Erro na resposta da API:', xhr.status, xhr.statusText);
+            modeloSelect.disabled = false;
             modeloSelect.innerHTML = '<option value="">Erro ao carregar modelos</option>';
         }
-    }
+    };
+    xhr.onerror = function() {
+        console.error('Erro de rede ao carregar modelos');
+        modeloSelect.disabled = false;
+        modeloSelect.innerHTML = '<option value="">Erro de conexão</option>';
+    };
+    xhr.send();
+    console.log('Requisição enviada para carregar modelos');
 }
 
-// Função para carregar versões por modelo
-async function loadVersoes(modeloId) {
-    if (!modeloId) {
-        const versaoSelect = document.getElementById('configuradorVersao');
-        if (versaoSelect) {
-            versaoSelect.innerHTML = '<option value="">Selecione uma versão</option>';
-            versaoSelect.disabled = true;
-        }
-        return;
-    }
-    
-    try {
-        console.log('Carregando versões para o modelo ID:', modeloId);
-        
-        // Mostrar mensagem de carregamento
-        const versaoSelect = document.getElementById('configuradorVersao');
-        if (versaoSelect) {
-            versaoSelect.innerHTML = '<option value="">Carregando versões...</option>';
-            versaoSelect.disabled = true;
-        }
-        
-        // Buscar versões diretamente da API de versões por modelo
-        const response = await fetch(`${config.apiBaseUrl}/api/versoes/modelo/${modeloId}/public`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
+// Função para configurar os event listeners dos campos de input
+function setupInputListeners() {
+    // Event listener para o campo de desconto em reais
+    const descontoReaisInput = document.getElementById('descontoReaisInput');
+    if (descontoReaisInput) {
+        descontoReaisInput.addEventListener('input', function() {
+            // Atualizar o valor global de desconto
+            window.descontoReais = converterParaNumero(this.value);
+            console.log('Desconto em reais atualizado para:', window.descontoReais);
+            
+            // Atualizar o resumo de valores
+            if (typeof window.atualizarResumoValores === 'function') {
+                window.atualizarResumoValores();
             }
         });
         
-        if (!response.ok) {
-            throw new Error(`Falha ao carregar versões: ${response.status} ${response.statusText}`);
-        }
+        // Formatar o valor ao perder o foco
+        descontoReaisInput.addEventListener('blur', function() {
+            this.value = formatarMoeda(converterParaNumero(this.value)).replace('R$ ', '');
+        });
         
-        const versoes = await response.json();
-        console.log('Versões carregadas (dados brutos):', JSON.stringify(versoes));
-        
-        if (versaoSelect) {
-            // Limpar select
-            versaoSelect.innerHTML = '<option value="">Selecione uma versão</option>';
-            
-            // Adicionar versões
-            if (Array.isArray(versoes) && versoes.length > 0) {
-                console.log(`Processando ${versoes.length} versões`);
-                
-                versoes.forEach((versao, index) => {
-                    console.log(`Versão ${index + 1}:`, versao);
-                    
-                    const option = document.createElement('option');
-                    option.value = versao.id;
-                    
-                    // Usar o campo nome_versao conforme definido na entidade Versao
-                    if (versao.nome_versao) {
-                        option.textContent = versao.nome_versao;
-                        console.log(`Usando campo 'nome_versao': ${versao.nome_versao}`);
-                    } else if (versao.nome) {
-                        option.textContent = versao.nome;
-                        console.log(`Usando campo 'nome': ${versao.nome}`);
-                    } else if (versao.descricao) {
-                        option.textContent = versao.descricao;
-                        console.log(`Usando campo 'descricao': ${versao.descricao}`);
-                    } else {
-                        // Fallback para qualquer outro campo que possa conter o nome
-                        const possibleFields = ['versao', 'name', 'title', 'description'];
-                        let found = false;
-                        
-                        for (const field of possibleFields) {
-                            if (versao[field]) {
-                                option.textContent = versao[field];
-                                console.log(`Usando campo '${field}': ${versao[field]}`);
-                                found = true;
-                                break;
-                            }
-                        }
-                        
-                        if (!found) {
-                            // Se não encontrar nenhum campo adequado, usar o ID como fallback
-                            option.textContent = `Versão ${versao.id}`;
-                            console.log(`Nenhum campo de nome encontrado, usando ID: ${versao.id}`);
-                        }
-                    }
-                    
-                    // Armazenar dados adicionais como atributos de dados
-                    if (versao.preco) {
-                        option.dataset.preco = versao.preco;
-                    }
-                    
-                    versaoSelect.appendChild(option);
-                    console.log(`Opção adicionada: value=${option.value}, text=${option.textContent}`);
-                });
-                
-                // Habilitar select
-                versaoSelect.disabled = false;
-                console.log('Select de versões habilitado com', versoes.length, 'opções');
-            } else {
-                // Caso não haja versões disponíveis
-                console.log('Nenhuma versão disponível para este modelo');
-                const option = document.createElement('option');
-                option.value = "";
-                option.textContent = "Nenhuma versão disponível";
-                versaoSelect.appendChild(option);
-                versaoSelect.disabled = true;
-            }
-        }
-        
-    } catch (error) {
-        console.error('Erro ao carregar versões:', error);
-        
-        const versaoSelect = document.getElementById('configuradorVersao');
-        if (versaoSelect) {
-            versaoSelect.innerHTML = '<option value="">Erro ao carregar versões</option>';
-            versaoSelect.disabled = true;
-        }
-    }
-}
-
-// Função para carregar vendas diretas por marca
-async function loadVendasDiretas(marcaId) {
-    if (!marcaId) {
-        const vendasDiretasSelect = document.getElementById('vendasDiretasSelect');
-        if (vendasDiretasSelect) {
-            vendasDiretasSelect.innerHTML = '';
-            // Adicionar opção padrão
-            const defaultOption = document.createElement('option');
-            defaultOption.value = "";
-            defaultOption.textContent = "DESCONTOS VENDA DIRETA";
-            vendasDiretasSelect.appendChild(defaultOption);
-            vendasDiretasSelect.disabled = true;
-        }
-        return;
+        // Limpar a formatação ao ganhar o foco
+        descontoReaisInput.addEventListener('focus', function() {
+            const valor = converterParaNumero(this.value);
+            this.value = valor === 0 ? '' : valor.toString();
+        });
     }
     
-    try {
-        const response = await fetch(`${config.apiBaseUrl}/api/venda-direta/public?marcaId=${marcaId}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
+    // Event listener para o campo de ágio
+    const agioReaisInput = document.getElementById('agioReaisInput');
+    if (agioReaisInput) {
+        agioReaisInput.addEventListener('input', function() {
+            // Atualizar o valor global de ágio
+            window.agioReais = converterParaNumero(this.value);
+            console.log('Ágio atualizado para:', window.agioReais);
+            
+            // Atualizar o resumo de valores
+            if (typeof window.atualizarResumoValores === 'function') {
+                window.atualizarResumoValores();
             }
         });
         
-        if (!response.ok) {
-            throw new Error(`Falha ao carregar vendas diretas: ${response.status} ${response.statusText}`);
-        }
+        // Formatar o valor ao perder o foco
+        agioReaisInput.addEventListener('blur', function() {
+            this.value = formatarMoeda(converterParaNumero(this.value)).replace('R$ ', '');
+        });
         
-        const data = await response.json();
-        const vendasDiretas = data.items || [];
-        
-        const vendasDiretasSelect = document.getElementById('vendasDiretasSelect');
-        if (vendasDiretasSelect) {
-            // Salvar o valor selecionado atualmente (se houver)
-            const selectedValue = vendasDiretasSelect.value;
-            
-            // Limpar select
-            vendasDiretasSelect.innerHTML = '';
-            
-            // Adicionar opção padrão
-            const defaultOption = document.createElement('option');
-            defaultOption.value = "";
-            defaultOption.textContent = "DESCONTOS VENDA DIRETA";
-            vendasDiretasSelect.appendChild(defaultOption);
-            
-            // Adicionar vendas diretas
-            vendasDiretas.forEach(vendaDireta => {
-                const option = document.createElement('option');
-                option.value = vendaDireta.id;
-                option.textContent = `${vendaDireta.nome} (${vendaDireta.percentual}%)`;
-                vendasDiretasSelect.appendChild(option);
-            });
-            
-            // Habilitar select apenas se houver vendas diretas
-            vendasDiretasSelect.disabled = vendasDiretas.length === 0;
-            
-            // Remover event listeners anteriores para evitar duplicação
-            const newSelect = vendasDiretasSelect.cloneNode(true);
-            vendasDiretasSelect.parentNode.replaceChild(newSelect, vendasDiretasSelect);
-            
-            // Tentar restaurar a seleção anterior
-            if (window.vendaDiretaSelecionada) {
-                // Verificar se a venda direta selecionada anteriormente ainda existe nas opções
-                const vendaDiretaExiste = vendasDiretas.some(vd => vd.id == window.vendaDiretaSelecionada.id);
-                
-                if (vendaDiretaExiste) {
-                    newSelect.value = window.vendaDiretaSelecionada.id;
-                } else {
-                    // Se não existir mais, selecionar a opção padrão
-                    newSelect.value = "";
-                    window.vendaDiretaSelecionada = null;
-                }
-            } else if (selectedValue && selectedValue !== "") {
-                // Se não tiver uma venda direta global, tenta restaurar a seleção atual
-                newSelect.value = selectedValue;
-            } else {
-                // Caso contrário, selecionar a opção padrão
-                newSelect.value = "";
-                window.vendaDiretaSelecionada = null;
+        // Limpar a formatação ao ganhar o foco
+        agioReaisInput.addEventListener('focus', function() {
+            const valor = converterParaNumero(this.value);
+            this.value = valor === 0 ? '' : valor.toString();
+        });
+    }
+    
+    // Event listener para o campo de quantidade
+    const quantidadeInput = document.getElementById('quantidadeInput');
+    if (quantidadeInput) {
+        quantidadeInput.addEventListener('input', function() {
+            // Atualizar o valor global de quantidade
+            window.quantidadeResumo = Number(this.value) || 1;
+            // Garantir que a quantidade seja pelo menos 1
+            if (window.quantidadeResumo < 1) {
+                window.quantidadeResumo = 1;
+                this.value = '1';
             }
+            console.log('Quantidade atualizada para:', window.quantidadeResumo);
             
-            // Adicionar event listener para quando uma venda direta for selecionada
-            newSelect.addEventListener('change', function() {
-                if (this.value === "") {
-                    // Se a opção padrão for selecionada, limpar a venda direta global
-                    window.vendaDiretaSelecionada = null;
-                    
-                    // Limpar o campo de desconto
-                    const descontoInput = document.getElementById('descontoInput');
-                    if (descontoInput) {
-                        descontoInput.value = "0,0%";
-                        // Disparar o evento input para atualizar o desconto
-                        const inputEvent = new Event('input', { bubbles: true });
-                        descontoInput.dispatchEvent(inputEvent);
-                    }
-                    return;
+            // Atualizar o resumo de valores
+            if (typeof window.atualizarResumoValores === 'function') {
+                window.atualizarResumoValores();
+            }
+        });
+    }
+    
+    // Event listener para o campo de desconto percentual
+    const descontoInput = document.getElementById('descontoInput');
+    if (descontoInput) {
+        descontoInput.addEventListener('input', function() {
+            // Atualizar o valor global de desconto percentual
+            window.percentualDesconto = Number(this.value) || 0;
+            console.log('Desconto percentual atualizado para:', window.percentualDesconto);
+            
+            // Calcular o desconto em reais com base no percentual e no preço do veículo
+            if (window.precoPublicoVeiculo && window.percentualDesconto) {
+                const descontoCalculado = (window.precoPublicoVeiculo * window.percentualDesconto) / 100;
+                window.descontoReais = descontoCalculado;
+                
+                // Atualizar o campo de desconto em reais
+                if (descontoReaisInput) {
+                    descontoReaisInput.value = formatarMoeda(descontoCalculado).replace('R$ ', '');
                 }
                 
-                const selectedVendaDireta = vendasDiretas.find(vd => vd.id == this.value);
-                if (selectedVendaDireta) {
-                    // Salvar a venda direta selecionada na variável global
-                    window.vendaDiretaSelecionada = selectedVendaDireta;
-                    
-                    // Atualizar o campo de desconto com o percentual da venda direta
-                    const descontoInput = document.getElementById('descontoInput');
-                    if (descontoInput) {
-                        descontoInput.value = selectedVendaDireta.percentual;
-                        // Disparar o evento input para atualizar o desconto
-                        const inputEvent = new Event('input', { bubbles: true });
-                        descontoInput.dispatchEvent(inputEvent);
-                    }
-                }
-            });
-        }
-        
-    } catch (error) {
-        console.error('Erro ao carregar vendas diretas:', error);
-        // Não mostrar alerta para não interromper o fluxo do usuário
-        const vendasDiretasSelect = document.getElementById('vendasDiretasSelect');
-        if (vendasDiretasSelect) {
-            vendasDiretasSelect.innerHTML = '';
-            // Adicionar opção padrão mesmo em caso de erro
-            const defaultOption = document.createElement('option');
-            defaultOption.value = "";
-            defaultOption.textContent = "DESCONTOS VENDA DIRETA";
-            vendasDiretasSelect.appendChild(defaultOption);
-            vendasDiretasSelect.disabled = true;
-        }
-    }
-}
-
-// Função para carregar detalhes de um veículo específico
-async function loadVeiculoDetails(veiculoId) {
-    try {
-        console.log(`Carregando detalhes do veículo ID: ${veiculoId}`);
-        
-        // Usar o endpoint público
-        const response = await fetch(`${config.apiBaseUrl}/api/veiculos/public/${veiculoId}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
+                console.log('Desconto em reais calculado:', window.descontoReais);
+            }
+            
+            // Atualizar o resumo de valores
+            if (typeof window.atualizarResumoValores === 'function') {
+                window.atualizarResumoValores();
             }
         });
-        
-        console.log('Resposta da API:', response.status, response.statusText);
-        
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Resposta de erro:', errorText);
-            throw new Error(`Falha ao carregar detalhes do veículo: ${response.status} ${response.statusText}`);
-        }
-        
-        const veiculo = await response.json();
-        console.log('Detalhes do veículo carregados:', veiculo);
-        
-        // Formatar o título do veículo
-        let titulo = '';
-        if (veiculo.modelo && veiculo.modelo.nome) {
-            titulo += veiculo.modelo.nome + ' ';
-        }
-        titulo += veiculo.versao;
-        if (veiculo.ano) {
-            titulo += ` ${veiculo.ano}`;
-        }
-        titulo = titulo.toUpperCase();
-        
-        // Atualizar o título na seção principal
-        const veiculoTitle = document.getElementById('veiculoTitulo');
-        if (veiculoTitle) {
-            veiculoTitle.textContent = titulo;
-        }
-        
-        // Atualizar o nome do veículo no card da imagem
-        const carName = document.querySelector('.car-name');
-        if (carName) {
-            carName.textContent = titulo;
-        }
-        
-        // Atualizar os preços com base nos valores do veículo
-        updatePrices(veiculo);
-        
-        // Carregar opcionais para o modelo selecionado
-        if (veiculo.modelo && veiculo.modelo.id) {
-            loadOpcionaisModelo(veiculo.modelo.id);
-        }
-        
-        // Não recarregar vendas diretas aqui, para preservar a seleção atual
-        // Se precisar carregar vendas diretas, use a marca do veículo
-        // if (veiculo.modelo && veiculo.modelo.marca && veiculo.modelo.marca.id) {
-        //     loadVendasDiretas(veiculo.modelo.marca.id);
-        // }
-        
-        // Armazenar o preço público do veículo
-        window.precoPublicoVeiculo = veiculo.preco;
-        
-        // Resetar valores
-        window.valorPinturasSelecionadas = 0;
-        window.valorOpcionaisSelecionados = 0;
-        window.opcionaisSelecionados = [];
-        
-        // Atualizar o resumo de valores
-        window.atualizarResumoValores();
-        
-    } catch (error) {
-        console.error('Erro ao carregar detalhes do veículo:', error);
     }
-}
-
-// Função para carregar opcionais por modelo
-async function loadOpcionaisModelo(modeloId) {
-    try {
-        console.log(`Carregando opcionais para o modelo ID: ${modeloId}`);
-        
-        const response = await fetch(`${config.apiBaseUrl}/api/modelo-opcional/by-modelo/${modeloId}/public`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error(`Falha ao carregar opcionais: ${response.status} ${response.statusText}`);
-        }
-        
-        const opcionais = await response.json();
-        console.log('Opcionais carregados:', opcionais);
-        
-        // Renderizar os opcionais na tabela
-        renderOpcionais(opcionais);
-        
-    } catch (error) {
-        console.error('Erro ao carregar opcionais do modelo:', error);
-    }
-}
-
-// Função para renderizar os opcionais na tabela
-function renderOpcionais(opcionais) {
-    const opcionaisTableBody = document.querySelector('.table-striped tbody');
-    if (!opcionaisTableBody) {
-        console.error('Tabela de opcionais não encontrada');
-        return;
-    }
-    
-    // Limpar a tabela
-    opcionaisTableBody.innerHTML = '';
-    
-    if (opcionais.length === 0) {
-        const row = document.createElement('tr');
-        row.innerHTML = '<td colspan="4" class="text-center">Nenhum opcional disponível para este modelo</td>';
-        opcionaisTableBody.appendChild(row);
-        return;
-    }
-    
-    // Adicionar cada opcional à tabela
-    opcionais.forEach(opcional => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${opcional.codigo}</td>
-            <td>${opcional.descricao}</td>
-            <td>${formatarMoeda(opcional.preco)}</td>
-            <td>
-                <button class="btn btn-sm btn-primary adicionar-opcional" data-id="${opcional.id}" data-preco="${opcional.preco}">Adicionar</button>
-            </td>
-        `;
-        opcionaisTableBody.appendChild(row);
-    });
-    
-    // Adicionar event listeners para os botões de adicionar
-    document.querySelectorAll('.adicionar-opcional').forEach(button => {
-        button.addEventListener('click', function() {
-            const opcionalId = this.getAttribute('data-id');
-            const preco = parseFloat(this.getAttribute('data-preco')) || 0;
-            adicionarOpcional(opcionalId, preco);
-        });
-    });
-}
-
-// Função para adicionar um opcional ao veículo
-function adicionarOpcional(opcionalId, preco) {
-    console.log(`Adicionando opcional ID: ${opcionalId}, Preço: ${preco}`);
-    
-    // Adicionar ao array de opcionais selecionados se ainda não estiver lá
-    if (!window.opcionaisSelecionados.find(item => item.id === opcionalId)) {
-        window.opcionaisSelecionados.push({
-            id: opcionalId,
-            preco: preco
-        });
-        
-        // Atualizar o valor total dos opcionais
-        window.valorOpcionaisSelecionados += preco;
-        
-        // Atualizar o resumo de valores
-        window.atualizarResumoValores();
-    }
-    
-    // Mudar o botão para "Remover"
-    const button = document.querySelector(`.adicionar-opcional[data-id="${opcionalId}"]`);
-    if (button) {
-        button.textContent = 'Remover';
-        button.classList.remove('btn-primary');
-        button.classList.add('btn-danger');
-        button.classList.remove('adicionar-opcional');
-        button.classList.add('remover-opcional');
-        
-        // Remover o event listener antigo e adicionar o novo
-        const newButton = button.cloneNode(true);
-        button.parentNode.replaceChild(newButton, button);
-        
-        newButton.addEventListener('click', function() {
-            const opcionalId = this.getAttribute('data-id');
-            const preco = parseFloat(this.getAttribute('data-preco')) || 0;
-            removerOpcional(opcionalId, preco);
-        });
-    }
-}
-
-// Função para remover um opcional do veículo
-function removerOpcional(opcionalId, preco) {
-    console.log(`Removendo opcional ID: ${opcionalId}, Preço: ${preco}`);
-    
-    // Remover do array de opcionais selecionados
-    const index = window.opcionaisSelecionados.findIndex(item => item.id === opcionalId);
-    if (index !== -1) {
-        window.opcionaisSelecionados.splice(index, 1);
-        
-        // Atualizar o valor total dos opcionais
-        window.valorOpcionaisSelecionados -= preco;
-        
-        // Atualizar o resumo de valores
-        window.atualizarResumoValores();
-    }
-    
-    // Mudar o botão de volta para "Adicionar"
-    const button = document.querySelector(`.remover-opcional[data-id="${opcionalId}"]`);
-    if (button) {
-        button.textContent = 'Adicionar';
-        button.classList.remove('btn-danger');
-        button.classList.add('btn-primary');
-        button.classList.remove('remover-opcional');
-        button.classList.add('adicionar-opcional');
-        
-        // Remover o event listener antigo e adicionar o novo
-        const newButton = button.cloneNode(true);
-        button.parentNode.replaceChild(newButton, button);
-        
-        newButton.addEventListener('click', function() {
-            const opcionalId = this.getAttribute('data-id');
-            const preco = parseFloat(this.getAttribute('data-preco')) || 0;
-            adicionarOpcional(opcionalId, preco);
-        });
-    }
-}
-
-// Função para atualizar o resumo de valores
-window.atualizarResumoValores = function() {
-    // Garantir que os valores sejam números
-    const precoPublico = parseFloat(window.precoPublicoVeiculo) || 0;
-    const valorPinturas = parseFloat(window.valorPinturasSelecionadas) || 0;
-    const valorOpcionais = parseFloat(window.valorOpcionaisSelecionados) || 0;
-    const percentualDesconto = parseFloat(window.percentualDesconto) || 0;
-    
-    // Obter valores dos novos campos
-    const descontoReais = converterParaNumero(document.getElementById('descontoReaisInput').value) || 0;
-    const agioReais = converterParaNumero(document.getElementById('agioReaisInput').value) || 0;
-    const quantidade = parseInt(document.getElementById('quantidadeInput').value) || 1;
-    
-    // Calcular valores
-    const valorPinturaOpcionais = valorPinturas + valorOpcionais;
-    const total = precoPublico + valorPinturaOpcionais;
-    const valorDescontoPercentual = total * (percentualDesconto / 100);
-    
-    // Aplicar desconto em reais e ágio
-    const precoComDescontoPercentual = total - valorDescontoPercentual;
-    const precoComDescontoReais = precoComDescontoPercentual - descontoReais;
-    const precoComAgio = precoComDescontoReais + agioReais;
-    
-    // Preço final considerando a quantidade
-    const precoFinal = precoComAgio * quantidade;
-    
-    // Atualizar os elementos na interface
-    document.getElementById('resumoPrecoPublico').textContent = formatarMoeda(precoPublico);
-    document.getElementById('resumoPinturaOpcionais').textContent = formatarMoeda(valorPinturaOpcionais);
-    document.getElementById('resumoTotal').textContent = formatarMoeda(total);
-    document.getElementById('resumoDesconto').textContent = formatarMoeda(valorDescontoPercentual);
-    
-    // Atualizar os novos cards
-    document.getElementById('resumoDescontoReais').textContent = formatarMoeda(descontoReais);
-    document.getElementById('resumoAgio').textContent = formatarMoeda(agioReais);
-    document.getElementById('resumoQuantidade').textContent = quantidade;
-    
-    document.getElementById('resumoPrecoFinal').textContent = formatarMoeda(precoFinal);
-    
-    console.log('Resumo de valores atualizado:', {
-        precoPublico: precoPublico,
-        pinturaOpcionais: valorPinturaOpcionais,
-        total: total,
-        descontoPercentual: valorDescontoPercentual,
-        descontoReais: descontoReais,
-        agio: agioReais,
-        quantidade: quantidade,
-        precoFinal: precoFinal
-    });
-}
-
-// Variáveis globais para armazenar valores
-window.precoPublicoVeiculo = 0;
-window.valorPinturasSelecionadas = 0;
-window.valorOpcionaisSelecionados = 0;
-window.vendaDiretaSelecionada = null; // Nova variável global para armazenar a venda direta selecionada
-window.percentualDesconto = 0;
-window.opcionaisSelecionados = [];
-
-// Função para formatar valores monetários
-function formatarMoeda(valor) {
-    if (valor === null || valor === undefined) return 'N/A';
-    return new Intl.NumberFormat('pt-BR', { 
-        style: 'currency', 
-        currency: 'BRL',
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-    }).format(valor);
-}
-
-// Função para converter string formatada em valor numérico
-function converterParaNumero(valorFormatado) {
-    if (!valorFormatado) return 0;
-    return Number(valorFormatado.replace(/[^\d,-]/g, '').replace('.', '').replace(',', '.'));
-}
-
-// Função para atualizar os preços na interface
-function updatePrices(veiculo) {
-    try {
-        console.log('Atualizando preços na interface com base no veículo:', veiculo);
-        
-        // Preço público (preço normal)
-        const precoPublicoElement = document.getElementById('precoPublicoCard');
-        if (precoPublicoElement && veiculo.preco) {
-            precoPublicoElement.textContent = formatarMoeda(veiculo.preco);
-        }
-        
-        // PCD IPI/ICMS (Def. Físico IPI/ICMS)
-        const pcdIpiIcmsElement = document.getElementById('pcdIpiIcmsCard');
-        if (pcdIpiIcmsElement && veiculo.defisicoicms) {
-            pcdIpiIcmsElement.textContent = formatarMoeda(veiculo.defisicoicms);
-        }
-        
-        // PCD IPI (Def. Físico IPI)
-        const pcdIpiElement = document.getElementById('pcdIpiCard');
-        if (pcdIpiElement && veiculo.defisicoipi) {
-            pcdIpiElement.textContent = formatarMoeda(veiculo.defisicoipi);
-        }
-        
-        // TAXI IPI/ICMS
-        const taxiIpiIcmsElement = document.getElementById('taxiIpiIcmsCard');
-        if (taxiIpiIcmsElement && veiculo.taxicms) {
-            taxiIpiIcmsElement.textContent = formatarMoeda(veiculo.taxicms);
-        }
-        
-        // TAXI IPI
-        const taxiIpiElement = document.getElementById('taxiIpiCard');
-        if (taxiIpiElement && veiculo.taxipi) {
-            taxiIpiElement.textContent = formatarMoeda(veiculo.taxipi);
-        }
-        
-        // Atualizar preço no card da imagem
-        const carPriceElement = document.querySelector('.car-price strong');
-        if (carPriceElement && veiculo.preco) {
-            carPriceElement.textContent = formatarMoeda(veiculo.preco);
-        }
-        
-        console.log('Preços atualizados com sucesso');
-    } catch (error) {
-        console.error('Erro ao atualizar preços:', error);
-    }
-}
-
-// Função para inicializar campos monetários
-function initMonetaryInputs() {
-    // Selecionar todos os campos de entrada que precisam de formatação monetária
-    const monetaryInputs = document.querySelectorAll('input[type="text"].form-control');
-    
-    monetaryInputs.forEach(input => {
-        // Verificar se o input está dentro de um input-group com texto que contém R$ ou %
-        const inputGroup = input.closest('.input-group');
-        if (!inputGroup) return;
-        
-        const inputGroupText = inputGroup.querySelector('.input-group-text');
-        if (!inputGroupText) return;
-        
-        const textContent = inputGroupText.textContent;
-        
-        if (textContent.includes('R$')) {
-            // Configurar para formatação monetária
-            input.addEventListener('focus', function() {
-                // Ao focar, converter para número sem formatação
-                const rawValue = converterParaNumero(this.value);
-                this.value = rawValue === 0 ? '' : rawValue.toString().replace('.', ',');
-            });
-            
-            input.addEventListener('blur', function() {
-                // Ao perder foco, formatar como moeda
-                const rawValue = converterParaNumero(this.value);
-                this.value = formatarMoeda(rawValue).replace('R$', '').trim();
-                
-                // Atualizar o resumo de valores quando o campo perder o foco
-                window.atualizarResumoValores();
-            });
-            
-            // Adicionar event listener para input para atualização em tempo real
-            input.addEventListener('input', function() {
-                window.atualizarResumoValores();
-            });
-        } else if (textContent.includes('%')) {
-            // Configurar para formatação de percentual
-            input.addEventListener('focus', function() {
-                // Ao focar, converter para número sem formatação
-                const rawValue = this.value.replace('%', '').replace(',', '.').trim();
-                this.value = rawValue;
-            });
-            
-            input.addEventListener('blur', function() {
-                // Ao perder foco, formatar como percentual
-                let value = this.value.replace(',', '.').trim();
-                if (value === '') value = '0';
-                const numValue = parseFloat(value);
-                this.value = numValue.toLocaleString('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 1}) + '%';
-                
-                // Atualizar o resumo de valores quando o campo perder o foco
-                window.atualizarResumoValores();
-            });
-            
-            // Adicionar event listener para input para atualização em tempo real
-            input.addEventListener('input', function() {
-                window.atualizarResumoValores();
-            });
-        } else if (textContent.includes('QT:')) {
-            // Configurar para campo de quantidade
-            input.addEventListener('focus', function() {
-                // Ao focar, manter o valor como está
-            });
-            
-            input.addEventListener('blur', function() {
-                // Ao perder foco, garantir que seja um número inteiro positivo
-                let value = parseInt(this.value) || 1;
-                if (value < 1) value = 1;
-                this.value = value;
-                
-                // Atualizar o resumo de valores quando o campo perder o foco
-                window.atualizarResumoValores();
-            });
-            
-            // Adicionar event listener para input para atualização em tempo real
-            input.addEventListener('input', function() {
-                window.atualizarResumoValores();
-            });
-        }
-    });
-}
-
-// Função para adicionar event listeners aos cards de preço
-function setupPriceCardListeners() {
-    // Cards de preço
-    const precoPublicoCard = document.getElementById('precoPublicoCard');
-    const pcdIpiIcmsCard = document.getElementById('pcdIpiIcmsCard');
-    const pcdIpiCard = document.getElementById('pcdIpiCard');
-    const taxiIpiIcmsCard = document.getElementById('taxiIpiIcmsCard');
-    const taxiIpiCard = document.getElementById('taxiIpiCard');
-    
-    // Adicionar classe para indicar que os cards são clicáveis
-    [precoPublicoCard, pcdIpiIcmsCard, pcdIpiCard, taxiIpiIcmsCard, taxiIpiCard].forEach(card => {
-        if (card) {
-            card.parentElement.classList.add('clickable-card');
-        }
-    });
-    
-    // Adicionar event listeners para cada card
-    if (precoPublicoCard) {
-        precoPublicoCard.parentElement.addEventListener('click', function() {
-            const valor = parseFloat(precoPublicoCard.textContent.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-            window.precoPublicoVeiculo = valor;
-            window.atualizarResumoValores();
-            highlightCard(this);
-            // Não recarregar vendas diretas ao clicar no card
-        });
-    }
-    
-    if (pcdIpiIcmsCard) {
-        pcdIpiIcmsCard.parentElement.addEventListener('click', function() {
-            const valor = parseFloat(pcdIpiIcmsCard.textContent.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-            window.precoPublicoVeiculo = valor;
-            window.atualizarResumoValores();
-            highlightCard(this);
-            // Não recarregar vendas diretas ao clicar no card
-        });
-    }
-    
-    if (pcdIpiCard) {
-        pcdIpiCard.parentElement.addEventListener('click', function() {
-            const valor = parseFloat(pcdIpiCard.textContent.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-            window.precoPublicoVeiculo = valor;
-            window.atualizarResumoValores();
-            highlightCard(this);
-            // Não recarregar vendas diretas ao clicar no card
-        });
-    }
-    
-    if (taxiIpiIcmsCard) {
-        taxiIpiIcmsCard.parentElement.addEventListener('click', function() {
-            const valor = parseFloat(taxiIpiIcmsCard.textContent.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-            window.precoPublicoVeiculo = valor;
-            window.atualizarResumoValores();
-            highlightCard(this);
-            // Não recarregar vendas diretas ao clicar no card
-        });
-    }
-    
-    if (taxiIpiCard) {
-        taxiIpiCard.parentElement.addEventListener('click', function() {
-            const valor = parseFloat(taxiIpiCard.textContent.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-            window.precoPublicoVeiculo = valor;
-            window.atualizarResumoValores();
-            highlightCard(this);
-            // Não recarregar vendas diretas ao clicar no card
-        });
-    }
-}
-
-// Função para destacar o card selecionado
-function highlightCard(selectedCard) {
-    // Remover destaque de todos os cards
-    document.querySelectorAll('.clickable-card').forEach(card => {
-        card.classList.remove('selected-card');
-    });
-    
-    // Adicionar destaque ao card selecionado
-    selectedCard.classList.add('selected-card');
 }

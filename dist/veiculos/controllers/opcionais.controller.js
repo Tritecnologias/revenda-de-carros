@@ -89,6 +89,42 @@ let OpcionaisController = class OpcionaisController {
             throw error;
         }
     }
+    async createOpcionalApi(opcionalDto) {
+        console.log('OpcionaisController: Criando opcional via API', opcionalDto);
+        try {
+            const result = await this.opcionaisService.create(opcionalDto);
+            console.log('OpcionaisController: Opcional criado com sucesso via API');
+            return result;
+        }
+        catch (error) {
+            console.error('OpcionaisController: Erro ao criar opcional via API', error);
+            throw error;
+        }
+    }
+    async updateOpcionalApi(id, updateOpcionalDto) {
+        console.log(`OpcionaisController: Atualizando opcional ${id} via API`, updateOpcionalDto);
+        try {
+            const result = await this.opcionaisService.update(+id, updateOpcionalDto);
+            console.log(`OpcionaisController: Opcional ${id} atualizado com sucesso via API`);
+            return result;
+        }
+        catch (error) {
+            console.error(`OpcionaisController: Erro ao atualizar opcional ${id} via API`, error);
+            throw error;
+        }
+    }
+    async removeOpcionalApi(id) {
+        console.log(`OpcionaisController: Excluindo opcional ${id} via API`);
+        try {
+            const result = await this.opcionaisService.remove(+id);
+            console.log(`OpcionaisController: Opcional ${id} excluído com sucesso via API`);
+            return result;
+        }
+        catch (error) {
+            console.error(`OpcionaisController: Erro ao excluir opcional ${id} via API`, error);
+            throw error;
+        }
+    }
 };
 exports.OpcionaisController = OpcionaisController;
 __decorate([
@@ -157,6 +193,31 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], OpcionaisController.prototype, "getOpcional", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Post)('api/create'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [opcional_dto_1.OpcionalDto]),
+    __metadata("design:returntype", Promise)
+], OpcionaisController.prototype, "createOpcionalApi", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Patch)('api/:id'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, opcional_dto_1.UpdateOpcionalDto]),
+    __metadata("design:returntype", Promise)
+], OpcionaisController.prototype, "updateOpcionalApi", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Delete)('api/:id'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], OpcionaisController.prototype, "removeOpcionalApi", null);
 exports.OpcionaisController = OpcionaisController = __decorate([
     (0, common_1.Controller)('opcionais'),
     __metadata("design:paramtypes", [opcionais_service_1.OpcionaisService])
