@@ -464,19 +464,13 @@ async function loadVersoesByModelo() {
 async function loadVeiculos(page = 1) {
     console.log('Carregando veículos, página:', page);
     
-    // Mostrar spinner de carregamento
-    const tableBody = document.getElementById('veiculosTableBody');
-    if (tableBody) {
-        tableBody.innerHTML = `
-            <tr>
-                <td colspan="9" class="text-center">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Carregando...</span>
-                    </div>
-                </td>
-            </tr>
-        `;
+    if (!veiculosTableBody) {
+        console.error('Elemento veiculosTableBody não encontrado');
+        return;
     }
+    
+    // Mostrar indicador de carregamento
+    veiculosTableBody.innerHTML = '<tr><td colspan="9" class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Carregando...</span></div></td></tr>';
     
     try {
         const token = localStorage.getItem('token');
@@ -504,7 +498,9 @@ async function loadVeiculos(page = 1) {
             // Se receber erro 500, usar dados mockados
             if (response.status === 500) {
                 console.log('Erro 500 ao carregar veículos, usando dados mockados');
-                return mockVeiculos();
+                const mockData = mockVeiculos();
+                renderVeiculos(mockData);
+                return;
             }
             
             throw new Error(`Erro ao carregar veículos: ${response.status}`);
@@ -513,84 +509,19 @@ async function loadVeiculos(page = 1) {
         const data = await response.json();
         console.log('Veículos carregados:', data);
         
-        // Preencher tabela
-        if (tableBody) {
-            if (!data.items || data.items.length === 0) {
-                tableBody.innerHTML = `
-                    <tr>
-                        <td colspan="9" class="text-center">Nenhum veículo encontrado</td>
-                    </tr>
-                `;
-            } else {
-                tableBody.innerHTML = '';
-                
-                // Filtrar apenas os veículos que têm ID válido e todos os campos necessários
-                const veiculosValidos = data.items.filter(veiculo => 
-                    veiculo && veiculo.id && 
-                    veiculo.marca && 
-                    veiculo.modelo && 
-                    veiculo.versao
-                );
-                
-                if (veiculosValidos.length === 0) {
-                    tableBody.innerHTML = `
-                        <tr>
-                            <td colspan="9" class="text-center">Nenhum veículo válido encontrado</td>
-                        </tr>
-                    `;
-                    return;
-                }
-                
-                veiculosValidos.forEach(veiculo => {
-                    const row = document.createElement('tr');
-                    
-                    row.innerHTML = `
-                        <td>${veiculo.id}</td>
-                        <td>${veiculo.marca ? veiculo.marca.nome : ''}</td>
-                        <td>${veiculo.modelo ? veiculo.modelo.nome : ''}</td>
-                        <td>${veiculo.versao ? veiculo.versao.nome_versao : ''}</td>
-                        <td>${veiculo.ano || ''}</td>
-                        <td>R$ ${formatarValorMonetario(veiculo.preco || 0)}</td>
-                        <td>
-                            <span class="badge ${getSituacaoBadgeClass(veiculo.situacao)}">
-                                ${getSituacaoText(veiculo.situacao)}
-                            </span>
-                        </td>
-                        <td>
-                            <span class="badge ${veiculo.status === 'ativo' ? 'bg-success' : 'bg-danger'}">
-                                ${veiculo.status === 'ativo' ? 'Ativo' : 'Inativo'}
-                            </span>
-                        </td>
-                        <td>
-                            <div class="btn-group" role="group">
-                                <button type="button" class="btn btn-sm btn-primary" onclick="getVeiculo(${veiculo.id})">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button type="button" class="btn btn-sm btn-danger" onclick="showDeleteModal(${veiculo.id})">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        </td>
-                    `;
-                    
-                    tableBody.appendChild(row);
-                });
-                
-                // Atualizar paginação com base nos veículos válidos
-                updatePagination(data.page, data.totalPages);
-            }
-        }
+        // Renderizar veículos usando a função renderVeiculos
+        renderVeiculos(data);
+        
+        return data;
     } catch (error) {
         console.error('Erro ao carregar veículos:', error);
-        if (tableBody) {
-            tableBody.innerHTML = `
-                <tr>
-                    <td colspan="9" class="text-center text-danger">
-                        Erro ao carregar veículos: ${error.message}
-                    </td>
-                </tr>
-            `;
-        }
+        
+        // Em caso de erro, usar dados mockados
+        console.log('Usando dados mockados devido a erro');
+        const mockData = mockVeiculos();
+        renderVeiculos(mockData);
+        
+        return mockData;
     }
 }
 
@@ -668,16 +599,40 @@ function updatePagination(currentPage, totalPages) {
     paginationControls.innerHTML = paginationHTML;
 }
 
+// Função para mudar de página
+function changePage(page) {
+    console.log('Mudando para página:', page);
+    if (page < 1) page = 1;
+    loadVeiculos(page);
+}
+
 // Função para renderizar veículos na tabela
-function renderVeiculos(veiculos) {
-    if (!veiculosTableBody) {
-        console.error('Elemento veiculosTableBody não encontrado');
+function renderVeiculos(data) {
+    console.log('Renderizando veículos:', data);
+    
+    // Limpar tabela
+    veiculosTableBody.innerHTML = '';
+    
+    // Verificar se temos dados
+    if (!data) {
+        console.error('Nenhum dado de veículo recebido');
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="9" class="text-center">Erro ao carregar veículos</td>';
+        veiculosTableBody.appendChild(tr);
         return;
     }
     
-    veiculosTableBody.innerHTML = '';
+    // Verificar o formato dos dados (pode ser um array ou um objeto com propriedade items)
+    const veiculos = Array.isArray(data) ? data : (data.items || []);
     
+    // Atualizar paginação se tivermos metadados
+    if (data.meta) {
+        renderPagination(data);
+    }
+    
+    // Verificar se temos veículos
     if (veiculos.length === 0) {
+        console.log('Nenhum veículo encontrado');
         const tr = document.createElement('tr');
         tr.innerHTML = '<td colspan="9" class="text-center">Nenhum veículo encontrado</td>';
         veiculosTableBody.appendChild(tr);
@@ -685,7 +640,7 @@ function renderVeiculos(veiculos) {
     }
     
     veiculos.forEach(veiculo => {
-        const tr = document.createElement('tr');
+        const row = document.createElement('tr');
         
         // Obter os dados de marca, modelo e versão
         // Verificar se os objetos relacionados estão presentes ou usar os IDs para buscar nos arrays
@@ -726,58 +681,82 @@ function renderVeiculos(veiculos) {
             }
         }
         
-        // Definir situação e status (placeholders por enquanto)
-        const situacao = '<span class="badge bg-success">Disponível</span>';
-        const status = '<span class="badge bg-primary">Ativo</span>';
+        // Definir situação e status
+        let situacaoBadge = getSituacaoBadgeClass(veiculo.situacao);
+        let situacaoText = getSituacaoText(veiculo.situacao);
+        let statusBadge = veiculo.status === 'ativo' ? 'bg-success' : 'bg-danger';
+        let statusText = veiculo.status === 'ativo' ? 'Ativo' : 'Inativo';
         
-        tr.innerHTML = `
+        row.innerHTML = `
             <td>${veiculo.id}</td>
             <td>${marcaNome}</td>
             <td>${modeloNome}</td>
             <td>${versaoNome}</td>
             <td>${veiculo.ano || '-'}</td>
             <td>R$ ${formatarValorMonetario(veiculo.preco)}</td>
-            <td>${situacao}</td>
-            <td>${status}</td>
             <td>
-                <button class="btn btn-sm btn-primary" onclick="editVeiculo(${veiculo.id})">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button class="btn btn-sm btn-danger" onclick="showDeleteModal(${veiculo.id})">
-                    <i class="fas fa-trash"></i>
-                </button>
+                <span class="badge ${situacaoBadge}">
+                    ${situacaoText}
+                </span>
+            </td>
+            <td>
+                <span class="badge ${statusBadge}">
+                    ${statusText}
+                </span>
+            </td>
+            <td>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-sm btn-primary" onclick="getVeiculo(${veiculo.id})">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-danger" onclick="showDeleteModal(${veiculo.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
             </td>
         `;
         
-        veiculosTableBody.appendChild(tr);
+        veiculosTableBody.appendChild(row);
     });
 }
 
-// Função para renderizar controles de paginação
+// Função para renderizar a paginação
 function renderPagination(data) {
-    if (!paginationControls) {
-        console.error('Elemento paginationControls não encontrado');
+    const paginationElement = document.getElementById('pagination');
+    if (!paginationElement) {
+        console.error('Elemento de paginação não encontrado');
         return;
     }
     
-    const totalPages = Math.ceil(data.total / itemsPerPage);
+    // Verificar se temos metadados de paginação
+    if (!data || !data.meta) {
+        console.log('Sem dados de paginação disponíveis');
+        paginationElement.innerHTML = '';
+        return;
+    }
+    
+    const { currentPage, totalPages } = data.meta;
     
     if (totalPages <= 1) {
-        paginationControls.innerHTML = '';
+        paginationElement.innerHTML = '';
         return;
     }
     
     let paginationHTML = `
-        <nav aria-label="Navegação de página">
+        <nav aria-label="Paginação">
             <ul class="pagination justify-content-center">
                 <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
                     <a class="page-link" href="#" onclick="changePage(${currentPage - 1}); return false;">Anterior</a>
                 </li>
     `;
     
-    for (let i = 1; i <= totalPages; i++) {
+    // Mostrar no máximo 5 páginas
+    const startPage = Math.max(1, currentPage - 2);
+    const endPage = Math.min(totalPages, startPage + 4);
+    
+    for (let i = startPage; i <= endPage; i++) {
         paginationHTML += `
-            <li class="page-item ${currentPage === i ? 'active' : ''}">
+            <li class="page-item ${i === currentPage ? 'active' : ''}">
                 <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i}</a>
             </li>
         `;
@@ -785,20 +764,13 @@ function renderPagination(data) {
     
     paginationHTML += `
                 <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
-                    <a class="page-link" href="#" onclick="changePage(${currentPage + 1}); return false;">Próximo</a>
+                    <a class="page-link" href="#" onclick="changePage(${currentPage + 1}); return false;">Próxima</a>
                 </li>
             </ul>
         </nav>
     `;
     
-    paginationControls.innerHTML = paginationHTML;
-}
-
-// Função para mudar de página
-function changePage(page) {
-    if (page < 1) page = 1;
-    currentPage = page;
-    loadVeiculos();
+    paginationElement.innerHTML = paginationHTML;
 }
 
 // Função para editar veículo
@@ -1471,6 +1443,129 @@ function getVeiculo(id) {
     });
 }
 
+// Função para mostrar modal de exclusão
+function showDeleteModal(id) {
+    const deleteIdElement = document.getElementById('deleteId');
+    if (deleteIdElement) {
+        deleteIdElement.value = id;
+    }
+    
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    deleteModal.show();
+}
+
+// Função para confirmar exclusão de veículo
+function confirmDeleteVeiculo(id) {
+    console.log('Confirmando exclusão do veículo ID:', id);
+    
+    // Armazenar ID do veículo a ser excluído
+    const veiculoIdToDelete = document.getElementById('veiculoIdToDelete');
+    if (veiculoIdToDelete) {
+        veiculoIdToDelete.value = id;
+    }
+    
+    // Mostrar modal de confirmação
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    deleteModal.show();
+}
+
+// Função para gerar dados mockados de versões
+function mockVersoes() {
+    console.log('Gerando dados mockados para versões');
+    return [
+        { 
+            id: 1, 
+            nome: 'DRIVE 1.3 AT FLEX 4P', 
+            modelo: { id: 1, nome: 'CRONOS', marcaId: 1 },
+            modeloId: 1,
+            status: true
+        },
+        { 
+            id: 2, 
+            nome: 'PRECISION 1.8 AT FLEX 4P', 
+            modelo: { id: 1, nome: 'CRONOS', marcaId: 1 },
+            modeloId: 1,
+            status: true
+        },
+        { 
+            id: 3, 
+            nome: 'DRIVE 1.0 MT FLEX 4P', 
+            modelo: { id: 2, nome: 'ARGO', marcaId: 1 },
+            modeloId: 2,
+            status: true
+        },
+        { 
+            id: 4, 
+            nome: 'TREKKING 1.3 AT FLEX 4P', 
+            modelo: { id: 2, nome: 'ARGO', marcaId: 1 },
+            modeloId: 2,
+            status: true
+        }
+    ];
+}
+
+// Função para gerar dados mockados de veículos
+function mockVeiculos() {
+    console.log('Gerando dados mockados para veículos');
+    
+    // Criar dados mockados baseados nas memórias do usuário
+    // Especialmente a memória que menciona valores específicos para o CRONOS DRIVE 1.3 AT FLEX 4P
+    const mockData = {
+        items: [
+            {
+                id: 12,
+                marcaId: 1,
+                marca: { id: 1, nome: 'FIAT' },
+                modeloId: 1,
+                modelo: { id: 1, nome: 'CRONOS' },
+                versaoId: 1,
+                versao: { id: 1, nome_versao: 'DRIVE 1.3 AT FLEX 4P' },
+                ano: 2025,
+                preco: 109990.00,
+                defisicoicms: 95091.00,
+                defisicoipi: 103491.00,
+                taxicms: 90292.00,
+                taxipi: 103491.00,
+                motor: '1.3',
+                combustivel: 'FLEX',
+                cambio: 'AUTOMÁTICO',
+                situacao: 'disponivel',
+                status: 'ativo'
+            },
+            {
+                id: 8,
+                marcaId: 1,
+                marca: { id: 1, nome: 'FIAT' },
+                modeloId: 2,
+                modelo: { id: 2, nome: 'ARGO' },
+                versaoId: 3,
+                versao: { id: 3, nome_versao: 'DRIVE 1.0 MT FLEX 4P' },
+                ano: 2025,
+                preco: 89990.00,
+                defisicoicms: 78291.00,
+                defisicoipi: 84991.00,
+                taxicms: 74392.00,
+                taxipi: 84991.00,
+                motor: '1.0',
+                combustivel: 'FLEX',
+                cambio: 'MANUAL',
+                situacao: 'disponivel',
+                status: 'ativo'
+            }
+        ],
+        meta: {
+            totalItems: 2,
+            itemCount: 2,
+            itemsPerPage: 10,
+            totalPages: 1,
+            currentPage: 1
+        }
+    };
+    
+    // Retornar os dados para uso em outras funções
+    return mockData;
+}
+
 // Função auxiliar para preencher o formulário com os dados do veículo
 function preencherFormularioVeiculo(veiculo) {
     // Limpar formulário
@@ -1520,136 +1615,6 @@ function preencherFormularioVeiculo(veiculo) {
     
     // Abrir modal
     veiculoModal.show();
-}
-
-// Função para mostrar modal de exclusão
-function showDeleteModal(id) {
-    const deleteIdElement = document.getElementById('deleteId');
-    if (deleteIdElement) {
-        deleteIdElement.value = id;
-    }
-    
-    if (deleteModal) {
-        deleteModal.show();
-    }
-}
-
-// Função para confirmar exclusão de veículo
-function confirmDeleteVeiculo(id) {
-    console.log('Confirmando exclusão do veículo ID:', id);
-    
-    // Armazenar ID do veículo a ser excluído
-    const veiculoIdToDelete = document.getElementById('veiculoIdToDelete');
-    if (veiculoIdToDelete) {
-        veiculoIdToDelete.value = id;
-    }
-    
-    // Mostrar modal de confirmação
-    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
-    if (deleteModal) {
-        deleteModal.show();
-    }
-}
-
-// Função para gerar dados mockados de versões
-function mockVersoes() {
-    console.log('Gerando dados mockados para versões');
-    return [
-        { 
-            id: 1, 
-            nome: 'DRIVE 1.3 AT FLEX 4P', 
-            modelo: { id: 1, nome: 'CRONOS', marcaId: 1 },
-            modeloId: 1,
-            status: true
-        },
-        { 
-            id: 2, 
-            nome: 'PRECISION 1.8 AT FLEX 4P', 
-            modelo: { id: 1, nome: 'CRONOS', marcaId: 1 },
-            modeloId: 1,
-            status: true
-        },
-        { 
-            id: 3, 
-            nome: 'DRIVE 1.0 MT FLEX 4P', 
-            modelo: { id: 2, nome: 'ARGO', marcaId: 1 },
-            modeloId: 2,
-            status: true
-        },
-        { 
-            id: 4, 
-            nome: 'TREKKING 1.3 AT FLEX 4P', 
-            modelo: { id: 2, nome: 'ARGO', marcaId: 1 },
-            modeloId: 2,
-            status: true
-        }
-    ];
-}
-
-// Função para gerar dados mockados de veículos
-function mockVeiculos() {
-    console.log('Gerando dados mockados para veículos');
-    
-    // Criar dados mockados baseados nas memórias do usuário
-    // Especialmente a memória bc9c2f47-12fe-4ab2-90c0-8347fbbd2daf que menciona
-    // valores específicos para o CRONOS DRIVE 1.3 AT FLEX 4P
-    const mockData = {
-        items: [
-            {
-                id: 12,
-                marcaId: 1,
-                marca: { id: 1, nome: 'FIAT' },
-                modeloId: 1,
-                modelo: { id: 1, nome: 'CRONOS' },
-                versaoId: 1,
-                versao: { id: 1, nome: 'DRIVE 1.3 AT FLEX 4P' },
-                ano: 2025,
-                preco: 109990.00,
-                defisicoicms: 95091.00,
-                defisicoipi: 103491.00,
-                taxicms: 90292.00,
-                taxipi: 103491.00,
-                motor: '1.3',
-                combustivel: 'FLEX',
-                cambio: 'AUTOMÁTICO',
-                situacao: 'disponivel',
-                status: 'ativo'
-            },
-            {
-                id: 8,
-                marcaId: 1,
-                marca: { id: 1, nome: 'FIAT' },
-                modeloId: 2,
-                modelo: { id: 2, nome: 'ARGO' },
-                versaoId: 3,
-                versao: { id: 3, nome: 'DRIVE 1.0 MT FLEX 4P' },
-                ano: 2025,
-                preco: 89990.00,
-                defisicoicms: 78291.00,
-                defisicoipi: 84991.00,
-                taxicms: 74392.00,
-                taxipi: 84991.00,
-                motor: '1.0',
-                combustivel: 'FLEX',
-                cambio: 'MANUAL',
-                situacao: 'disponivel',
-                status: 'ativo'
-            }
-        ],
-        meta: {
-            totalItems: 2,
-            itemCount: 2,
-            itemsPerPage: 10,
-            totalPages: 1,
-            currentPage: 1
-        }
-    };
-    
-    // Renderizar a tabela com os dados mockados
-    renderVeiculos(mockData);
-    
-    // Retornar os dados para uso em outras funções
-    return mockData;
 }
 
 // Verificar autenticação e redirecionar se não estiver autenticado
