@@ -472,31 +472,59 @@ async function loadVeiculos(page = 1) {
             return;
         }
         
-        // Usar URL relativa sem prefixo de domínio
-        const response = await fetch(`/api/veiculos?page=${page}&limit=10`, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
+        // Tentar várias URLs possíveis para veículos
+        const urls = [
+            '/api/veiculos?page=' + page + '&limit=10',
+            '/api/veiculos/public?page=' + page + '&limit=10'
+        ];
         
-        if (!response.ok) {
-            if (response.status === 401) {
-                console.error('Sessão expirada ou token inválido');
-                window.location.href = '/login.html';
-                return;
+        let response = null;
+        let success = false;
+        
+        for (const url of urls) {
+            try {
+                console.log(`Tentando carregar veículos de ${url}`);
+                response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    success = true;
+                    break;
+                } else {
+                    console.log(`Falha ao carregar veículos de ${url}: ${response.status}`);
+                }
+            } catch (error) {
+                console.error(`Erro ao carregar veículos de ${url}:`, error);
             }
-            
-            throw new Error(`Erro ao carregar veículos: ${response.status}`);
+        }
+        
+        if (!success) {
+            throw new Error('Não foi possível carregar os veículos de nenhuma URL');
         }
         
         const data = await response.json();
         console.log('Veículos carregados:', data);
         
-        // Renderizar veículos usando a função renderVeiculos
-        renderVeiculos(data);
+        // Adaptar o formato dos dados para o formato esperado pelo renderVeiculos
+        const formattedData = {
+            items: data.items || [],
+            meta: {
+                totalItems: data.total || 0,
+                itemCount: (data.items || []).length,
+                itemsPerPage: data.limit || 10,
+                totalPages: data.totalPages || 1,
+                currentPage: data.page || 1
+            }
+        };
         
-        return data;
+        // Renderizar veículos
+        renderVeiculos(formattedData);
+        
+        return formattedData;
     } catch (error) {
         console.error('Erro ao carregar veículos:', error);
         
@@ -1384,35 +1412,68 @@ function getVeiculo(id) {
     
     const token = auth.getToken();
     
-    fetch(`/api/veiculos/${id}`, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${token}`
+    // Tentar várias URLs possíveis
+    const urls = [
+        `/api/veiculos/${id}`,
+        `/api/veiculos/public/${id}`
+    ];
+    
+    let attempted = 0;
+    
+    function tryNextUrl() {
+        if (attempted >= urls.length) {
+            showError('Não foi possível carregar o veículo. Verifique se o servidor está funcionando corretamente.');
+            return;
         }
-    })
-    .then(response => {
-        if (!response.ok) {
-            if (response.status === 404) {
-                throw new Error(`Veículo com ID ${id} não encontrado`);
-            }
-            throw new Error(`Falha ao carregar veículo: ${response.status} ${response.statusText}`);
-        }
-        return response.json();
-    })
-    .then(veiculo => {
-        console.log('Editando veículo:', veiculo);
-        preencherFormularioVeiculo(veiculo);
-    })
-    .catch(error => {
-        console.error('Erro ao carregar veículo para edição:', error);
         
-        // Verificar se é um erro de veículo não encontrado
-        if (error.message.includes('não encontrado')) {
-            showError(`O veículo solicitado não foi encontrado. É possível que ele tenha sido excluído.`);
-        } else {
-            showError('Não foi possível carregar o veículo para edição. Por favor, tente novamente mais tarde.');
-        }
-    });
+        const url = urls[attempted++];
+        console.log(`Tentando carregar veículo de ${url}`);
+        
+        fetch(url, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                if (response.status === 404) {
+                    throw new Error(`Veículo com ID ${id} não encontrado`);
+                }
+                if (response.status === 401) {
+                    console.error('Sessão expirada ou token inválido');
+                    window.location.href = '/login.html';
+                    return;
+                }
+                
+                console.log(`Falha ao carregar veículo de ${url}: ${response.status}`);
+                return tryNextUrl(); // Tentar próxima URL
+            }
+            return response.json();
+        })
+        .then(veiculo => {
+            if (!veiculo) return; // Já tratado ou redirecionado
+            
+            console.log('Editando veículo:', veiculo);
+            preencherFormularioVeiculo(veiculo);
+        })
+        .catch(error => {
+            console.error('Erro ao carregar veículo para edição:', error);
+            
+            // Verificar se é um erro de veículo não encontrado
+            if (error.message.includes('não encontrado')) {
+                showError(`O veículo solicitado não foi encontrado. É possível que ele tenha sido excluído.`);
+            } else if (attempted < urls.length) {
+                // Tentar próxima URL se não for erro de "não encontrado"
+                tryNextUrl();
+            } else {
+                showError('Não foi possível carregar o veículo para edição. Por favor, tente novamente mais tarde.');
+            }
+        });
+    }
+    
+    // Iniciar tentativas
+    tryNextUrl();
 }
 
 // Função para mostrar modal de exclusão

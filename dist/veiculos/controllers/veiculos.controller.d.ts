@@ -5,24 +5,18 @@ export declare class VeiculosController {
     constructor(veiculosService: VeiculosService);
     findAllPublic(page?: number, limit?: number, modeloId?: number): Promise<{
         items: import("../entities/veiculo.entity").Veiculo[];
-        meta: {
-            totalItems: number;
-            itemCount: number;
-            itemsPerPage: number;
-            totalPages: number;
-            currentPage: number;
-        };
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
     }>;
     findOnePublic(id: number): Promise<import("../entities/veiculo.entity").Veiculo>;
     findAll(page?: number, limit?: number, modeloId?: number): Promise<{
         items: import("../entities/veiculo.entity").Veiculo[];
-        meta: {
-            totalItems: number;
-            itemCount: number;
-            itemsPerPage: number;
-            totalPages: number;
-            currentPage: number;
-        };
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
     }>;
     findOne(id: number): Promise<import("../entities/veiculo.entity").Veiculo>;
     create(createVeiculoDto: CreateVeiculoDto): Promise<import("../entities/veiculo.entity").Veiculo>;

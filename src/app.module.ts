@@ -26,18 +26,13 @@ import { VersaoPintura } from './veiculos/entities/versao-pintura.entity';
     }),
     TypeOrmModule.forRoot({
       type: 'mysql',
-      host: process.env.DATABASE_HOST || '127.0.0.1',
-      port: parseInt(process.env.DATABASE_PORT) || 3306,
-      username: process.env.DATABASE_USER || 'wanderson',
-      password: process.env.DATABASE_PASSWORD || 'Flavinha@2022',
-      database: process.env.DATABASE_NAME || 'revenda_carros',
+      host: '127.0.0.1',
+      port: 3306,
+      username: 'wanderson',
+      password: 'Flavinha@2022',
+      database: 'revenda_carros',
       entities: [ConfiguradorVeiculo, Pintura, ModeloPintura, User, Marca, Modelo, Veiculo, Opcional, ModeloOpcional, VendaDireta, Versao, VersaoOpcional, VersaoPintura],
-      synchronize: process.env.NODE_ENV !== 'production', // Desabilitado em produção
-      logging: process.env.NODE_ENV !== 'production', // Habilitar logs em desenvolvimento
-      retryAttempts: 5, // Tentar reconectar 5 vezes
-      retryDelay: 3000, // Esperar 3 segundos entre tentativas
-      autoLoadEntities: false, // Não carregar entidades automaticamente
-      keepConnectionAlive: true, // Manter conexão viva
+      synchronize: true, // Disable in production
     }),
     ConfiguradorModule,
     AuthModule,

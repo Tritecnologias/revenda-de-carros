@@ -36,16 +36,7 @@ let VeiculosController = class VeiculosController {
         return result;
     }
     async findAll(page = 1, limit = 10, modeloId) {
-        try {
-            console.log(`VeiculosController: Buscando veículos - página ${page}, limite ${limit}, modeloId: ${modeloId || 'não especificado'}`);
-            const result = await this.veiculosService.findAll(page, limit, modeloId);
-            console.log(`VeiculosController: Retornando ${result.items.length} veículos`);
-            return result;
-        }
-        catch (error) {
-            console.error('VeiculosController: Erro ao buscar veículos:', error);
-            throw error;
-        }
+        return this.veiculosService.findAll(page, limit, modeloId);
     }
     async findOne(id) {
         return this.veiculosService.findOne(id);
