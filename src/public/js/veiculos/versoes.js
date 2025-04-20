@@ -249,25 +249,57 @@ function carregarVersoes() {
         versoesTableBody.innerHTML = '<tr><td colspan="6" class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Carregando...</span></div></td></tr>';
     }
     
-    // Construir URL base
-    let url = '/api/versoes/public';
+    // Gerar lista de URLs para tentar, em ordem de prioridade
+    let urlsToTry = [];
     
-    // Se tiver modeloId, usar a rota específica para modelo
-    if (modeloId) {
-        url = `/api/versoes/modelo/${modeloId}/public`;
-    }
-    
-    // Adicionar parâmetros de filtro se necessário
+    // Adicionar parâmetros de filtro
     const params = new URLSearchParams();
     if (marcaId && !modeloId) params.append('marcaId', marcaId);
     if (status) params.append('status', status);
+    const queryString = params.toString() ? `?${params.toString()}` : '';
     
-    // Adicionar parâmetros à URL se houver algum
-    if (params.toString()) {
-        url += '?' + params.toString();
+    if (modeloId) {
+        // URLs para modelo específico
+        urlsToTry = [
+            `/api/versoes/modelo/${modeloId}/public${queryString}`,
+            `/api/versoes/modelo/${modeloId}${queryString}`,
+            `/api/veiculos/versoes/by-modelo/${modeloId}${queryString}`
+        ];
+    } else {
+        // URLs para todas as versões
+        urlsToTry = [
+            `/api/versoes/public${queryString}`,
+            `/api/versoes${queryString}`,
+            `/api/veiculos/versoes/all${queryString}`
+        ];
     }
     
-    console.log(`Carregando versões com URL: ${url}`);
+    console.log('URLs a tentar:', urlsToTry);
+    
+    // Tentar cada URL sequencialmente
+    tryNextUrl(urlsToTry, 0, token, versoesTableBody);
+}
+
+// Função auxiliar para tentar URLs sequencialmente
+function tryNextUrl(urls, index, token, tableBody) {
+    if (index >= urls.length) {
+        // Todas as URLs falharam
+        console.error('Todas as URLs falharam');
+        if (tableBody) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center text-danger">
+                        Erro ao carregar versões: Não foi possível conectar a nenhuma API disponível
+                    </td>
+                </tr>
+            `;
+        }
+        exibirMensagem('Erro ao carregar versões. Por favor, tente novamente.', 'danger');
+        return;
+    }
+    
+    const url = urls[index];
+    console.log(`Tentando URL ${index + 1}/${urls.length}: ${url}`);
     
     fetch(url, {
         method: 'GET',
@@ -278,60 +310,27 @@ function carregarVersoes() {
     })
     .then(response => {
         if (!response.ok) {
-            if (response.status === 401) {
-                console.error('Sessão expirada ou token inválido');
-                window.location.href = '/login.html';
-                return;
-            }
-            
-            // Se receber erro 404, tentar URL alternativa
-            if (response.status === 404) {
-                console.log('URL primária não encontrada, tentando URL alternativa');
-                
-                // Construir URL alternativa
-                let alternativeUrl = '/api/veiculos/versoes/all';
-                if (modeloId) {
-                    alternativeUrl = `/api/veiculos/versoes/by-modelo/${modeloId}`;
-                }
-                
-                console.log(`Tentando URL alternativa: ${alternativeUrl}`);
-                
-                return fetch(alternativeUrl, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                }).then(altResponse => {
-                    if (!altResponse.ok) {
-                        throw new Error(`Erro ao carregar versões (alternativa): ${altResponse.status}`);
-                    }
-                    return altResponse.json();
-                });
-            }
-            
-            throw new Error(`Erro ao carregar versões: ${response.status}`);
+            console.log(`URL ${url} falhou com status ${response.status}`);
+            // Tentar próxima URL
+            tryNextUrl(urls, index + 1, token, tableBody);
+            return null;
         }
         return response.json();
     })
     .then(data => {
+        if (!data) return; // Já tratado acima
+        
         console.log('Versões carregadas com sucesso:', data);
+        
+        // Armazenar URL bem-sucedida para uso futuro
+        localStorage.setItem('successful_versoes_url', url);
+        
         renderizarVersoes(data);
     })
     .catch(error => {
-        console.error('Erro ao carregar versões:', error);
-        
-        if (versoesTableBody) {
-            versoesTableBody.innerHTML = `
-                <tr>
-                    <td colspan="6" class="text-center text-danger">
-                        Erro ao carregar versões: ${error.message}
-                    </td>
-                </tr>
-            `;
-        }
-        
-        exibirMensagem('Erro ao carregar versões. Por favor, tente novamente.', 'danger');
+        console.error(`Erro ao tentar URL ${url}:`, error);
+        // Tentar próxima URL
+        tryNextUrl(urls, index + 1, token, tableBody);
     });
 }
 

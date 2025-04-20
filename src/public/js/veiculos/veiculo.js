@@ -161,41 +161,51 @@ async function loadAllVersoes() {
             return;
         }
         
-        // Usar a URL correta conforme identificado na análise do backend
-        const response = await fetch('/api/versoes/public', {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
+        // Lista de URLs a tentar, em ordem de prioridade
+        const urlsToTry = [
+            '/api/versoes/public',
+            '/api/versoes',
+            '/api/veiculos/versoes/all'
+        ];
         
-        if (!response.ok) {
-            // Se receber erro 404, tentar URL alternativa
-            if (response.status === 404) {
-                console.log('URL /api/versoes/public não encontrada, tentando URL alternativa');
-                const alternativeResponse = await fetch('/api/veiculos/versoes/all', {
+        let versaoData = null;
+        let lastError = null;
+        
+        // Tentar cada URL até encontrar uma que funcione
+        for (const url of urlsToTry) {
+            try {
+                console.log(`Tentando carregar versões de: ${url}`);
+                const response = await fetch(url, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
                 });
                 
-                if (!alternativeResponse.ok) {
-                    throw new Error(`Falha ao carregar versões (alternativa): ${alternativeResponse.status}`);
+                if (response.ok) {
+                    versaoData = await response.json();
+                    console.log(`Versões carregadas com sucesso de ${url}:`, versaoData);
+                    break;
+                } else {
+                    console.log(`Falha ao carregar versões de ${url}: ${response.status}`);
                 }
-                
-                versoes = await alternativeResponse.json();
-                console.log('Versões carregadas com sucesso (URL alternativa):', versoes);
-                return;
+            } catch (err) {
+                console.log(`Erro ao tentar ${url}:`, err);
+                lastError = err;
             }
-            
-            throw new Error(`Falha ao carregar versões: ${response.status}`);
         }
         
-        versoes = await response.json();
-        console.log('Versões carregadas com sucesso:', versoes);
+        if (versaoData) {
+            versoes = versaoData;
+        } else {
+            throw new Error(lastError || 'Não foi possível carregar versões de nenhuma URL');
+        }
         
     } catch (error) {
         console.error('Erro ao carregar todas as versões:', error);
         showError('Erro ao carregar versões: ' + error.message);
+        
+        // Como fallback, usar um array vazio para evitar erros em outras partes do código
+        versoes = [];
     }
 }
 
@@ -469,31 +479,55 @@ async function loadVeiculos(page = 1) {
             return;
         }
         
-        // Usar a URL pública correta conforme identificado na análise do controlador
-        const response = await fetch(`/api/veiculos/public?page=${page}&limit=10`, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
+        // Lista de URLs a tentar, em ordem de prioridade
+        const urlsToTry = [
+            `/api/veiculos/public?page=${page}&limit=10`,
+            `/api/veiculos?page=${page}&limit=10`
+        ];
         
-        if (!response.ok) {
-            if (response.status === 401) {
-                console.error('Sessão expirada ou token inválido');
-                window.location.href = '/login.html';
-                return;
+        let veiculosData = null;
+        let lastError = null;
+        
+        // Tentar cada URL até encontrar uma que funcione
+        for (const url of urlsToTry) {
+            try {
+                console.log(`Tentando carregar veículos de: ${url}`);
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    veiculosData = await response.json();
+                    console.log(`Veículos carregados com sucesso de ${url}:`, veiculosData);
+                    
+                    // Armazenar URL bem-sucedida para uso futuro
+                    localStorage.setItem('successful_veiculos_url', url);
+                    break;
+                } else {
+                    console.log(`Falha ao carregar veículos de ${url}: ${response.status}`);
+                    
+                    if (response.status === 401) {
+                        console.error('Sessão expirada ou token inválido');
+                        window.location.href = '/login.html';
+                        return;
+                    }
+                }
+            } catch (err) {
+                console.log(`Erro ao tentar ${url}:`, err);
+                lastError = err;
             }
-            
-            throw new Error(`Erro ao carregar veículos: ${response.status}`);
         }
         
-        const data = await response.json();
-        console.log('Veículos carregados:', data);
-        
-        // Renderizar veículos
-        renderVeiculos(data);
-        
-        return data;
+        if (veiculosData) {
+            // Renderizar veículos
+            renderVeiculos(veiculosData);
+            return veiculosData;
+        } else {
+            throw new Error(lastError || 'Não foi possível carregar veículos de nenhuma URL');
+        }
     } catch (error) {
         console.error('Erro ao carregar veículos:', error);
         
@@ -505,6 +539,7 @@ async function loadVeiculos(page = 1) {
                 </td>
             </tr>
         `;
+        return null;
     }
 }
 
@@ -1381,7 +1416,40 @@ function getVeiculo(id) {
     
     const token = auth.getToken();
     
-    fetch(`/api/veiculos/public/${id}`, {
+    // Verificar se temos uma URL bem-sucedida armazenada
+    const savedUrl = localStorage.getItem('successful_veiculos_url');
+    let urlsToTry = [
+        `/api/veiculos/public/${id}`,
+        `/api/veiculos/${id}`
+    ];
+    
+    // Se temos uma URL salva, criar uma versão para detalhes com base nela
+    if (savedUrl && savedUrl.includes('?')) {
+        const baseUrl = savedUrl.split('?')[0];
+        const detailUrl = `${baseUrl.replace(/\/$/, '')}/${id}`;
+        // Adicionar no início da lista para tentar primeiro
+        urlsToTry.unshift(detailUrl);
+    }
+    
+    console.log('URLs a tentar:', urlsToTry);
+    
+    // Tentar cada URL sequencialmente
+    tryNextVeiculoUrl(urlsToTry, 0, token, id);
+}
+
+// Função auxiliar para tentar URLs sequencialmente
+function tryNextVeiculoUrl(urls, index, token, id) {
+    if (index >= urls.length) {
+        // Todas as URLs falharam
+        console.error('Todas as URLs falharam ao buscar veículo');
+        showError('Não foi possível carregar o veículo para edição. Por favor, tente novamente mais tarde.');
+        return;
+    }
+    
+    const url = urls[index];
+    console.log(`Tentando URL ${index + 1}/${urls.length}: ${url}`);
+    
+    fetch(url, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${token}`
@@ -1389,31 +1457,35 @@ function getVeiculo(id) {
     })
     .then(response => {
         if (!response.ok) {
-            if (response.status === 404) {
-                throw new Error(`Veículo com ID ${id} não encontrado`);
-            }
+            console.log(`URL ${url} falhou com status ${response.status}`);
+            
             if (response.status === 401) {
                 console.error('Sessão expirada ou token inválido');
                 window.location.href = '/login.html';
                 return;
             }
-            throw new Error(`Falha ao carregar veículo: ${response.status} ${response.statusText}`);
+            
+            // Tentar próxima URL
+            tryNextVeiculoUrl(urls, index + 1, token, id);
+            return null;
         }
         return response.json();
     })
     .then(veiculo => {
-        console.log('Editando veículo:', veiculo);
+        if (!veiculo) return; // Já tratado acima
+        
+        console.log('Veículo carregado com sucesso:', veiculo);
+        
+        // Armazenar URL bem-sucedida para uso futuro
+        localStorage.setItem('successful_veiculo_detail_url', url);
+        
+        // Preencher formulário com dados do veículo
         preencherFormularioVeiculo(veiculo);
     })
     .catch(error => {
-        console.error('Erro ao carregar veículo para edição:', error);
-        
-        // Verificar se é um erro de veículo não encontrado
-        if (error.message.includes('não encontrado')) {
-            showError(`O veículo solicitado não foi encontrado. É possível que ele tenha sido excluído.`);
-        } else {
-            showError('Não foi possível carregar o veículo para edição. Por favor, tente novamente mais tarde.');
-        }
+        console.error(`Erro ao tentar URL ${url}:`, error);
+        // Tentar próxima URL
+        tryNextVeiculoUrl(urls, index + 1, token, id);
     });
 }
 
