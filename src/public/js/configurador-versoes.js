@@ -38,11 +38,6 @@ async function loadVersoes(modeloId) {
         
         console.log('Versões carregadas com sucesso:', versoes);
         
-        // Armazenar dados como mockados para uso futuro
-        if (versoes && versoes.length > 0) {
-            config.storeMockData(`versoes_modelo_${modeloId}`, versoes);
-        }
-        
         // Agora, vamos verificar quais veículos existem
         const veiculosExistentes = new Set();
         
@@ -116,30 +111,6 @@ async function loadVersoes(modeloId) {
         if (versaoSelect) {
             versaoSelect.innerHTML = '<option value="">Erro ao carregar versões</option>';
             versaoSelect.disabled = true;
-        }
-        
-        // Tentar usar dados mockados se disponíveis
-        const mockDataKey = `mock_versoes_modelo_${modeloId}_data`;
-        const mockData = localStorage.getItem(mockDataKey);
-        
-        if (mockData) {
-            try {
-                console.warn(`Usando dados mockados para versões do modelo ${modeloId}`);
-                const versoes = JSON.parse(mockData);
-                
-                if (versaoSelect && versoes && versoes.length > 0) {
-                    versaoSelect.innerHTML = '<option value="">Selecione uma versão</option>';
-                    versoes.forEach(versao => {
-                        const option = document.createElement('option');
-                        option.value = versao.id;
-                        option.textContent = versao.nome || versao.nome_versao;
-                        versaoSelect.appendChild(option);
-                    });
-                    versaoSelect.disabled = false;
-                }
-            } catch (e) {
-                console.error('Erro ao usar dados mockados:', e);
-            }
         }
     }
 }

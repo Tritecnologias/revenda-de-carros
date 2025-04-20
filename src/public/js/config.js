@@ -39,19 +39,6 @@ const config = {
     return this.environments[env].baseUrls;
   },
   
-  // Função para armazenar dados mockados como último recurso
-  storeMockData: function(endpointType, data) {
-    if (!data) return;
-    
-    const mockDataKey = `mock_${endpointType}_data`;
-    try {
-      localStorage.setItem(mockDataKey, JSON.stringify(data));
-      console.log(`Dados mockados armazenados para ${endpointType}`);
-    } catch (error) {
-      console.error(`Erro ao armazenar dados mockados para ${endpointType}:`, error);
-    }
-  },
-  
   // Mapeamento de rotas incorretas para rotas corretas
   routeMappings: {
     // Veículos
@@ -93,18 +80,6 @@ const config = {
       // Corrigir rotas conhecidas incorretas
       urls = urls.map(url => this.fixApiUrl(url));
       
-      // Verificar se temos uma URL bem-sucedida armazenada para este tipo de endpoint
-      const endpointType = urls[0].split('/')[2]; // Ex: 'veiculos', 'versoes', etc.
-      const storedUrlKey = `successful_${endpointType}_url`;
-      const storedUrl = localStorage.getItem(storedUrlKey);
-      
-      // Se temos uma URL armazenada, tentar ela primeiro
-      let expandedUrls = [];
-      if (storedUrl) {
-        // Adicionar a URL armazenada como primeira opção
-        expandedUrls.push(storedUrl);
-      }
-      
       // Obter URLs base para o ambiente atual
       const baseUrls = this.getBaseUrls();
       
@@ -112,8 +87,8 @@ const config = {
       urls.forEach(url => {
         // Se a URL já começa com http:// ou https://, adicioná-la diretamente
         if (url.startsWith('http://') || url.startsWith('https://')) {
-          if (!expandedUrls.includes(url)) {
-            expandedUrls.push(url);
+          if (!urls.includes(url)) {
+            urls.push(url);
           }
         } else {
           // Adicionar versões com diferentes prefixos
@@ -121,22 +96,22 @@ const config = {
             // Garantir que não haja barras duplicadas
             const cleanUrl = url.startsWith('/') ? url : `/${url}`;
             const fullUrl = `${baseUrl}${cleanUrl}`;
-            if (!expandedUrls.includes(fullUrl)) {
-              expandedUrls.push(fullUrl);
+            if (!urls.includes(fullUrl)) {
+              urls.push(fullUrl);
             }
           });
         }
       });
       
       // Remover duplicatas
-      expandedUrls = [...new Set(expandedUrls)];
+      urls = [...new Set(urls)];
       
-      console.log(`Tentando URLs expandidas em sequência:`, expandedUrls);
+      console.log(`Tentando URLs expandidas em sequência:`, urls);
       
       let lastError = null;
       
       // Tentar cada URL até encontrar uma que funcione
-      for (const url of expandedUrls) {
+      for (const url of urls) {
         try {
           console.log(`Tentando URL: ${url}`);
           
@@ -159,18 +134,10 @@ const config = {
           if (response.ok) {
             console.log(`URL bem-sucedida: ${url}`);
             
-            // Armazenar URL bem-sucedida para uso futuro
-            localStorage.setItem(storedUrlKey, url); // Armazenar URL completa
-            
             const data = await response.json().catch(err => {
               console.error('Erro ao parsear resposta JSON:', err);
               throw new Error('Erro ao processar resposta do servidor');
             });
-            
-            // Armazenar dados como mockados para uso futuro
-            if (data) {
-              this.storeMockData(endpointType, data);
-            }
             
             return data;
           } else {
@@ -193,31 +160,11 @@ const config = {
           }
         } catch (error) {
           console.error(`Erro ao tentar URL ${url}:`, error);
-          
-          // Limpar a URL armazenada se for a que falhou
-          if (url === storedUrl) {
-            console.log(`Removendo URL armazenada que falhou: ${url}`);
-            localStorage.removeItem(storedUrlKey);
-          }
-          
           lastError = error;
         }
       }
       
       // Se chegamos aqui, todas as URLs falharam
-      // Verificar se temos dados mockados para usar como último recurso
-      const mockDataKey = `mock_${endpointType}_data`;
-      const mockData = localStorage.getItem(mockDataKey);
-      
-      if (mockData) {
-        console.warn(`Usando dados mockados para ${endpointType} como último recurso`);
-        try {
-          return JSON.parse(mockData);
-        } catch (e) {
-          console.error('Erro ao parsear dados mockados:', e);
-        }
-      }
-      
       throw new Error(lastError?.message || 'Não foi possível conectar a nenhuma API disponível');
     } catch (finalError) {
       console.error('Erro fatal em fetchWithFallback:', finalError);

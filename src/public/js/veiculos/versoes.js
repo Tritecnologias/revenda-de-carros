@@ -335,11 +335,6 @@ async function carregarVersoes() {
         
         console.log('Versões carregadas com sucesso:', data);
         
-        // Armazenar dados como mockados para uso futuro
-        if (data && data.length > 0) {
-            config.storeMockData('versoes', data);
-        }
-        
         // Só renderizar se estivermos na página correta
         if (versoesTableBody) {
             renderizarVersoes(data, versoesTableBody);
