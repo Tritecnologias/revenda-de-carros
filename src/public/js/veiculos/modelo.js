@@ -141,18 +141,31 @@ async function loadMarcasSelect() {
     
     try {
         const token = auth.getToken();
-        const response = await fetch(`${config.apiBaseUrl}/api/veiculos/marcas/all`, {
-            method: 'GET',
+        
+        // Usar a função fetchWithFallback do config.js para maior resiliência
+        const urls = [
+            '/api/veiculos/marcas/public',
+            '/api/veiculos/marcas/all',
+            '/api/marcas'
+        ];
+        
+        console.log('Tentando carregar marcas usando as URLs:', urls);
+        
+        const data = await config.fetchWithFallback(urls, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
         });
         
-        if (!response.ok) {
-            throw new Error('Falha ao carregar marcas');
+        // Verificar se a resposta tem o formato esperado
+        if (data && data.items && Array.isArray(data.items)) {
+            marcas = data.items;
+        } else if (Array.isArray(data)) {
+            marcas = data;
+        } else {
+            console.warn('Formato de resposta inesperado:', data);
+            throw new Error('Formato de resposta inesperado ao carregar marcas');
         }
-        
-        marcas = await response.json();
         
         // Limpar select
         marcaSelect.innerHTML = '<option value="">Selecione uma marca</option>';
