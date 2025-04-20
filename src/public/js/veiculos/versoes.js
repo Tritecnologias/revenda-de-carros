@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Event listeners
     document.getElementById('filtroMarca').addEventListener('change', function() {
-        carregarModelos(this.value, 'filtroModelo');
+        carregarModelos(this.value);
         carregarVersoes();
     });
     
@@ -127,108 +127,102 @@ function initMenu() {
     }
 }
 
-// Função para carregar as marcas
-function carregarMarcas() {
+// Função para carregar marcas
+async function carregarMarcas() {
     console.log('Carregando marcas...');
     
-    // Obter elementos dos selects
-    const filtroMarcaSelect = document.getElementById('filtroMarca');
-    const marcaSelect = document.getElementById('marcaSelect');
+    const filtroMarca = document.getElementById('filtroMarca');
+    if (!filtroMarca) return;
     
-    // Limpar opções existentes
-    filtroMarcaSelect.innerHTML = '<option value="">Todas as marcas</option>';
-    marcaSelect.innerHTML = '<option value="">Selecione uma marca</option>';
-    
-    // Fazer requisição para API
-    const token = getToken();
-    fetch('/api/veiculos/marcas/all', {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${token}`
+    try {
+        const token = getToken();
+        if (!token) {
+            console.error('Token de autenticação não encontrado');
+            return;
         }
-    })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Erro ao carregar marcas');
+        
+        // Lista de URLs a tentar, em ordem de prioridade
+        const urls = [
+            '/api/veiculos/marcas/all',
+            '/api/marcas/all',
+            '/api/marcas'
+        ];
+        
+        // Usar a função fetchWithFallback do config.js
+        const marcas = await config.fetchWithFallback(urls, {
+            headers: {
+                'Authorization': `Bearer ${token}`
             }
-            return response.json();
-        })
-        .then(data => {
-            console.log('Marcas carregadas:', data);
-            
-            // Adicionar opções aos selects
-            data.forEach(marca => {
-                // Adicionar ao filtro
-                const optionFiltro = document.createElement('option');
-                optionFiltro.value = marca.id;
-                optionFiltro.textContent = marca.nome;
-                filtroMarcaSelect.appendChild(optionFiltro);
-                
-                // Adicionar ao select do formulário
-                const optionForm = document.createElement('option');
-                optionForm.value = marca.id;
-                optionForm.textContent = marca.nome;
-                marcaSelect.appendChild(optionForm);
-            });
-        })
-        .catch(error => {
-            console.error('Erro ao carregar marcas:', error);
-            exibirMensagem('Erro ao carregar marcas. Por favor, tente novamente.', 'danger');
         });
+        
+        console.log('Marcas carregadas:', marcas);
+        
+        // Limpar opções existentes
+        filtroMarca.innerHTML = '<option value="">Todas as marcas</option>';
+        
+        // Adicionar novas opções
+        marcas.forEach(marca => {
+            const option = document.createElement('option');
+            option.value = marca.id;
+            option.textContent = marca.nome;
+            filtroMarca.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Erro ao carregar marcas:', error);
+        exibirMensagem('Erro ao carregar marcas. Por favor, tente novamente.', 'danger');
+    }
 }
 
-// Função para carregar os modelos com base na marca selecionada
-function carregarModelos(marcaId, selectId) {
-    console.log(`Carregando modelos para marca ID ${marcaId} no select ${selectId}...`);
+// Função para carregar modelos com base na marca selecionada
+async function carregarModelos(marcaId) {
+    console.log('Carregando modelos para marca ID:', marcaId);
     
-    // Obter elemento do select
-    const modeloSelect = document.getElementById(selectId);
+    const filtroModelo = document.getElementById('filtroModelo');
+    if (!filtroModelo) return;
     
     // Limpar opções existentes
-    if (selectId === 'filtroModelo') {
-        modeloSelect.innerHTML = '<option value="">Todos os modelos</option>';
-    } else {
-        modeloSelect.innerHTML = '<option value="">Selecione um modelo</option>';
-    }
+    filtroModelo.innerHTML = '<option value="">Todos os modelos</option>';
     
-    // Se não houver marca selecionada, não fazer requisição
-    if (!marcaId) {
-        return;
-    }
+    // Se não houver marca selecionada, não carrega modelos
+    if (!marcaId) return;
     
-    // Fazer requisição para API
-    const token = getToken();
-    fetch(`/api/veiculos/modelos/by-marca/${marcaId}`, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${token}`
+    try {
+        const token = getToken();
+        if (!token) {
+            console.error('Token de autenticação não encontrado');
+            return;
         }
-    })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Erro ao carregar modelos');
+        
+        // Lista de URLs a tentar, em ordem de prioridade
+        const urls = [
+            `/api/veiculos/modelos/by-marca/${marcaId}`,
+            `/api/modelos/marca/${marcaId}`
+        ];
+        
+        // Usar a função fetchWithFallback do config.js
+        const modelos = await config.fetchWithFallback(urls, {
+            headers: {
+                'Authorization': `Bearer ${token}`
             }
-            return response.json();
-        })
-        .then(data => {
-            console.log(`Modelos carregados para marca ${marcaId}:`, data);
-            
-            // Adicionar opções ao select
-            data.forEach(modelo => {
-                const option = document.createElement('option');
-                option.value = modelo.id;
-                option.textContent = modelo.nome;
-                modeloSelect.appendChild(option);
-            });
-        })
-        .catch(error => {
-            console.error('Erro ao carregar modelos:', error);
-            exibirMensagem('Erro ao carregar modelos. Por favor, tente novamente.', 'danger');
         });
+        
+        console.log('Modelos carregados:', modelos);
+        
+        // Adicionar novas opções
+        modelos.forEach(modelo => {
+            const option = document.createElement('option');
+            option.value = modelo.id;
+            option.textContent = modelo.nome;
+            filtroModelo.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Erro ao carregar modelos:', error);
+        exibirMensagem('Erro ao carregar modelos. Por favor, tente novamente.', 'danger');
+    }
 }
 
 // Função para carregar as versões com base nos filtros
-function carregarVersoes() {
+async function carregarVersoes() {
     console.log('Carregando versões...');
     
     // Obter valores dos filtros
@@ -249,100 +243,60 @@ function carregarVersoes() {
         versoesTableBody.innerHTML = '<tr><td colspan="6" class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Carregando...</span></div></td></tr>';
     }
     
-    // Gerar lista de URLs para tentar, em ordem de prioridade
-    let urlsToTry = [];
-    
-    // Adicionar parâmetros de filtro
-    const params = new URLSearchParams();
-    if (marcaId && !modeloId) params.append('marcaId', marcaId);
-    if (status) params.append('status', status);
-    const queryString = params.toString() ? `?${params.toString()}` : '';
-    
-    // Verificar se temos uma URL bem-sucedida armazenada
-    const savedUrl = localStorage.getItem('successful_versoes_url');
-    if (savedUrl) {
-        // Adicionar a URL salva como primeira opção
-        urlsToTry.push(savedUrl);
-    }
-    
-    if (modeloId) {
-        // URLs para modelo específico
-        urlsToTry = urlsToTry.concat([
-            `/api/versoes/modelo/${modeloId}/public${queryString}`,
-            `/api/versoes/modelo/${modeloId}${queryString}`,
-            `/api/veiculos/versoes/by-modelo/${modeloId}${queryString}`
-        ]);
-    } else {
-        // URLs para todas as versões
-        urlsToTry = urlsToTry.concat([
-            `/api/versoes/public${queryString}`,
-            `/api/versoes/all${queryString}`,  
-            `/api/versoes${queryString}`,
-            `/api/veiculos/versoes/all${queryString}`
-        ]);
-    }
-    
-    // Remover duplicatas
-    urlsToTry = [...new Set(urlsToTry)];
-    
-    console.log('URLs a tentar:', urlsToTry);
-    
-    // Tentar cada URL sequencialmente
-    tryNextUrl(urlsToTry, 0, token, versoesTableBody);
-}
-
-// Função auxiliar para tentar URLs sequencialmente
-function tryNextUrl(urls, index, token, tableBody) {
-    if (index >= urls.length) {
-        // Todas as URLs falharam
-        console.error('Todas as URLs falharam');
-        if (tableBody) {
-            tableBody.innerHTML = `
+    try {
+        // Construir parâmetros de filtro
+        const params = new URLSearchParams();
+        if (marcaId && !modeloId) params.append('marcaId', marcaId);
+        if (status) params.append('status', status);
+        const queryString = params.toString() ? `?${params.toString()}` : '';
+        
+        // Lista de URLs a tentar, em ordem de prioridade
+        let urls = [];
+        
+        if (modeloId) {
+            // URLs para modelo específico
+            urls = [
+                `/api/versoes/modelo/${modeloId}/public${queryString}`,
+                `/api/versoes/modelo/${modeloId}${queryString}`,
+                `/api/veiculos/versoes/by-modelo/${modeloId}${queryString}`
+            ];
+        } else {
+            // URLs para todas as versões
+            urls = [
+                `/api/versoes/public${queryString}`,
+                `/api/versoes/all${queryString}`,
+                `/api/versoes${queryString}`,
+                `/api/veiculos/versoes/all${queryString}`
+            ];
+        }
+        
+        console.log('URLs a tentar:', urls);
+        
+        // Usar a função fetchWithFallback do config.js
+        const data = await config.fetchWithFallback(urls, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        console.log('Versões carregadas com sucesso:', data);
+        renderizarVersoes(data);
+    } catch (error) {
+        console.error('Erro ao carregar versões:', error);
+        
+        if (versoesTableBody) {
+            versoesTableBody.innerHTML = `
                 <tr>
                     <td colspan="6" class="text-center text-danger">
-                        Erro ao carregar versões: Não foi possível conectar a nenhuma API disponível
+                        Erro ao carregar versões: ${error.message}
                     </td>
                 </tr>
             `;
         }
+        
         exibirMensagem('Erro ao carregar versões. Por favor, tente novamente.', 'danger');
-        return;
     }
-    
-    const url = urls[index];
-    console.log(`Tentando URL ${index + 1}/${urls.length}: ${url}`);
-    
-    fetch(url, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        }
-    })
-    .then(response => {
-        if (!response.ok) {
-            console.log(`URL ${url} falhou com status ${response.status}`);
-            // Tentar próxima URL
-            tryNextUrl(urls, index + 1, token, tableBody);
-            return null;
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (!data) return; // Já tratado acima
-        
-        console.log('Versões carregadas com sucesso:', data);
-        
-        // Armazenar URL bem-sucedida para uso futuro
-        localStorage.setItem('successful_versoes_url', url);
-        
-        renderizarVersoes(data);
-    })
-    .catch(error => {
-        console.error(`Erro ao tentar URL ${url}:`, error);
-        // Tentar próxima URL
-        tryNextUrl(urls, index + 1, token, tableBody);
-    });
 }
 
 // Função para renderizar a tabela de versões
@@ -421,146 +375,289 @@ function renderizarVersoes(versoes) {
     });
 }
 
-// Função para carregar uma versão para edição
-function carregarVersaoParaEdicao(versaoId) {
+// Função para carregar uma versão específica para edição
+async function carregarVersaoParaEdicao(versaoId) {
     console.log(`Carregando versão ${versaoId} para edição...`);
     
-    const token = getToken();
-    fetch(`/api/versoes/${versaoId}`, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${token}`
+    try {
+        const token = getToken();
+        if (!token) {
+            console.error('Token de autenticação não encontrado');
+            return;
         }
-    })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Erro ao carregar versão');
+        
+        // Lista de URLs a tentar, em ordem de prioridade
+        const urls = [
+            `/api/versoes/${versaoId}`,
+            `/api/veiculos/versoes/${versaoId}`
+        ];
+        
+        // Usar a função fetchWithFallback do config.js
+        const versao = await config.fetchWithFallback(urls, {
+            headers: {
+                'Authorization': `Bearer ${token}`
             }
-            return response.json();
-        })
-        .then(versao => {
-            console.log('Versão carregada para edição:', versao);
-            
-            // Preencher formulário
-            document.getElementById('versaoId').value = versao.id;
-            document.getElementById('nomeVersao').value = versao.nome_versao;
-            document.getElementById('statusVersao').checked = versao.status === 'ativo';
-            
-            // Selecionar marca e carregar modelos
-            const marcaSelect = document.getElementById('marcaSelect');
-            if (versao.modelo && versao.modelo.marcaId) {
-                marcaSelect.value = versao.modelo.marcaId;
-                
-                // Carregar modelos da marca e depois selecionar o modelo correto
-                carregarModelos(versao.modelo.marcaId, 'modeloSelect');
-                
-                // Aguardar um pouco para os modelos serem carregados
-                setTimeout(() => {
-                    document.getElementById('modeloSelect').value = versao.modeloId;
-                }, 500);
-            }
-            
-            // Atualizar título do modal
-            document.getElementById('modalVersaoLabel').textContent = 'Editar Versão';
-            
-            // Abrir modal
-            new bootstrap.Modal(document.getElementById('modalVersao')).show();
-        })
-        .catch(error => {
-            console.error('Erro ao carregar versão para edição:', error);
-            exibirMensagem('Erro ao carregar versão para edição. Por favor, tente novamente.', 'danger');
         });
+        
+        console.log('Versão carregada com sucesso:', versao);
+        
+        // Preencher formulário com dados da versão
+        document.getElementById('versaoId').value = versao.id;
+        document.getElementById('nome').value = versao.nome;
+        document.getElementById('descricao').value = versao.descricao || '';
+        document.getElementById('ano').value = versao.ano || '';
+        document.getElementById('preco').value = versao.preco || '';
+        document.getElementById('status').value = versao.status || 'ativo';
+        
+        // Carregar marcas e modelos
+        await carregarMarcasFormulario();
+        
+        if (versao.modelo && versao.modelo.marca) {
+            const marcaSelect = document.getElementById('marcaSelect');
+            marcaSelect.value = versao.modelo.marca.id;
+            
+            // Carregar modelos da marca e depois selecionar o modelo correto
+            await carregarModelosFormulario(versao.modelo.marca.id);
+            
+            // Selecionar o modelo correto
+            const modeloSelect = document.getElementById('modeloSelect');
+            modeloSelect.value = versao.modelo.id;
+        }
+        
+        // Mostrar botão de exclusão
+        document.getElementById('btnExcluirVersao').style.display = 'block';
+        
+        // Abrir modal
+        const versaoModal = new bootstrap.Modal(document.getElementById('versaoModal'));
+        versaoModal.show();
+    } catch (error) {
+        console.error('Erro ao carregar versão para edição:', error);
+        exibirMensagem('Erro ao carregar versão para edição: ' + error.message, 'danger');
+    }
 }
 
 // Função para salvar uma versão (criar ou atualizar)
-function salvarVersao() {
+async function salvarVersao(event) {
+    event.preventDefault();
     console.log('Salvando versão...');
     
-    // Obter dados do formulário
-    const versaoId = document.getElementById('versaoId').value;
-    const modeloId = document.getElementById('modeloSelect').value;
-    const nomeVersao = document.getElementById('nomeVersao').value;
-    const status = document.getElementById('statusVersao').checked ? 'ativo' : 'inativo';
-    
-    // Validar dados
-    if (!modeloId || !nomeVersao) {
-        exibirMensagem('Por favor, preencha todos os campos obrigatórios.', 'warning');
-        return;
-    }
-    
-    // Preparar dados para envio
-    const versaoData = {
-        nome_versao: nomeVersao,
-        modeloId: parseInt(modeloId),
-        status: status
-    };
-    
-    // Determinar método e URL com base em criação ou atualização
-    const method = versaoId ? 'PATCH' : 'POST';
-    const url = versaoId ? `/api/versoes/${versaoId}` : '/api/versoes';
-    
-    // Fazer requisição para API
-    fetch(url, {
-        method,
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${getToken()}`
-        },
-        body: JSON.stringify(versaoData)
-    })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Erro ao salvar versão');
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log('Versão salva com sucesso:', data);
-            
-            // Fechar modal
-            bootstrap.Modal.getInstance(document.getElementById('modalVersao')).hide();
-            
-            // Exibir mensagem de sucesso
-            exibirMensagem(`Versão ${versaoId ? 'atualizada' : 'criada'} com sucesso!`, 'success');
-            
-            // Recarregar versões
-            carregarVersoes();
-        })
-        .catch(error => {
-            console.error('Erro ao salvar versão:', error);
-            exibirMensagem('Erro ao salvar versão. Por favor, tente novamente.', 'danger');
+    try {
+        // Obter dados do formulário
+        const versaoId = document.getElementById('versaoId').value;
+        const nome = document.getElementById('nome').value;
+        const descricao = document.getElementById('descricao').value;
+        const ano = document.getElementById('ano').value;
+        const preco = document.getElementById('preco').value;
+        const modeloId = document.getElementById('modeloSelect').value;
+        const status = document.getElementById('status').value;
+        
+        // Validar campos obrigatórios
+        if (!nome || !modeloId) {
+            exibirMensagem('Por favor, preencha todos os campos obrigatórios.', 'warning');
+            return;
+        }
+        
+        // Criar objeto com dados da versão
+        const versaoData = {
+            nome,
+            descricao,
+            ano: ano ? parseInt(ano) : null,
+            preco: preco ? parseFloat(preco) : null,
+            modeloId: parseInt(modeloId),
+            status
+        };
+        
+        const token = getToken();
+        if (!token) {
+            console.error('Token de autenticação não encontrado');
+            return;
+        }
+        
+        let url, method;
+        
+        if (versaoId) {
+            // Atualizar versão existente
+            url = `/api/versoes/${versaoId}`;
+            method = 'PUT';
+            versaoData.id = parseInt(versaoId);
+        } else {
+            // Criar nova versão
+            url = '/api/versoes';
+            method = 'POST';
+        }
+        
+        // Fazer requisição para API
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(versaoData)
         });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Erro ao salvar versão');
+        }
+        
+        const data = await response.json();
+        console.log('Versão salva com sucesso:', data);
+        
+        // Fechar modal
+        const versaoModal = bootstrap.Modal.getInstance(document.getElementById('versaoModal'));
+        versaoModal.hide();
+        
+        // Exibir mensagem de sucesso
+        exibirMensagem('Versão salva com sucesso!', 'success');
+        
+        // Recarregar lista de versões
+        carregarVersoes();
+    } catch (error) {
+        console.error('Erro ao salvar versão:', error);
+        exibirMensagem('Erro ao salvar versão: ' + error.message, 'danger');
+    }
 }
 
 // Função para excluir uma versão
-function excluirVersao(versaoId) {
-    console.log(`Excluindo versão ${versaoId}...`);
+async function excluirVersao() {
+    console.log('Excluindo versão...');
     
-    fetch(`/api/versoes/${versaoId}`, {
-        method: 'DELETE',
-        headers: {
-            'Authorization': `Bearer ${getToken()}`
+    try {
+        const versaoId = document.getElementById('versaoId').value;
+        if (!versaoId) {
+            exibirMensagem('ID da versão não encontrado.', 'danger');
+            return;
         }
-    })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Erro ao excluir versão');
+        
+        const token = getToken();
+        if (!token) {
+            console.error('Token de autenticação não encontrado');
+            return;
+        }
+        
+        // Fazer requisição para API
+        const response = await fetch(`/api/versoes/${versaoId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
             }
-            return response.json();
-        })
-        .then(data => {
-            console.log('Versão excluída com sucesso:', data);
-            
-            // Exibir mensagem de sucesso
-            exibirMensagem('Versão excluída com sucesso!', 'success');
-            
-            // Recarregar versões
-            carregarVersoes();
-        })
-        .catch(error => {
-            console.error('Erro ao excluir versão:', error);
-            exibirMensagem('Erro ao excluir versão. Por favor, tente novamente.', 'danger');
         });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Erro ao excluir versão');
+        }
+        
+        console.log('Versão excluída com sucesso');
+        
+        // Fechar modal
+        const versaoModal = bootstrap.Modal.getInstance(document.getElementById('versaoModal'));
+        versaoModal.hide();
+        
+        // Exibir mensagem de sucesso
+        exibirMensagem('Versão excluída com sucesso!', 'success');
+        
+        // Recarregar lista de versões
+        carregarVersoes();
+    } catch (error) {
+        console.error('Erro ao excluir versão:', error);
+        exibirMensagem('Erro ao excluir versão: ' + error.message, 'danger');
+    }
+}
+
+// Função para carregar marcas no formulário
+async function carregarMarcasFormulario() {
+    console.log('Carregando marcas para formulário...');
+    
+    const marcaSelect = document.getElementById('marcaSelect');
+    if (!marcaSelect) return;
+    
+    try {
+        const token = getToken();
+        if (!token) {
+            console.error('Token de autenticação não encontrado');
+            return;
+        }
+        
+        // Lista de URLs a tentar, em ordem de prioridade
+        const urls = [
+            '/api/veiculos/marcas/all',
+            '/api/marcas/all',
+            '/api/marcas'
+        ];
+        
+        // Usar a função fetchWithFallback do config.js
+        const marcas = await config.fetchWithFallback(urls, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        console.log('Marcas carregadas para formulário:', marcas);
+        
+        // Limpar opções existentes
+        marcaSelect.innerHTML = '<option value="">Selecione uma marca</option>';
+        
+        // Adicionar novas opções
+        marcas.forEach(marca => {
+            const option = document.createElement('option');
+            option.value = marca.id;
+            option.textContent = marca.nome;
+            marcaSelect.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Erro ao carregar marcas para formulário:', error);
+        exibirMensagem('Erro ao carregar marcas. Por favor, tente novamente.', 'danger');
+    }
+}
+
+// Função para carregar modelos no formulário
+async function carregarModelosFormulario(marcaId) {
+    console.log('Carregando modelos para formulário, marca ID:', marcaId);
+    
+    const modeloSelect = document.getElementById('modeloSelect');
+    if (!modeloSelect) return;
+    
+    // Limpar opções existentes
+    modeloSelect.innerHTML = '<option value="">Selecione um modelo</option>';
+    
+    // Se não houver marca selecionada, não carrega modelos
+    if (!marcaId) return;
+    
+    try {
+        const token = getToken();
+        if (!token) {
+            console.error('Token de autenticação não encontrado');
+            return;
+        }
+        
+        // Lista de URLs a tentar, em ordem de prioridade
+        const urls = [
+            `/api/veiculos/modelos/by-marca/${marcaId}`,
+            `/api/modelos/marca/${marcaId}`
+        ];
+        
+        // Usar a função fetchWithFallback do config.js
+        const modelos = await config.fetchWithFallback(urls, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        console.log('Modelos carregados para formulário:', modelos);
+        
+        // Adicionar novas opções
+        modelos.forEach(modelo => {
+            const option = document.createElement('option');
+            option.value = modelo.id;
+            option.textContent = modelo.nome;
+            modeloSelect.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Erro ao carregar modelos para formulário:', error);
+        exibirMensagem('Erro ao carregar modelos. Por favor, tente novamente.', 'danger');
+    }
 }
 
 // Função para exibir mensagens
