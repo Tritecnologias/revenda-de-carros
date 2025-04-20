@@ -47,13 +47,25 @@ function initializeElements() {
     
     errorMessage = document.getElementById('errorMessage');
     if (!errorMessage) {
-        console.warn('Elemento errorMessage não encontrado. As mensagens de erro não serão exibidas corretamente.');
+        console.log('Elemento errorMessage não encontrado. Criando elemento...');
         // Criar um elemento para mensagens de erro se não existir
         errorMessage = document.createElement('div');
         errorMessage.id = 'errorMessage';
-        errorMessage.className = 'alert alert-danger d-none';
-        if (modeloForm && modeloForm.parentNode) {
-            modeloForm.parentNode.insertBefore(errorMessage, modeloForm);
+        errorMessage.className = 'alert alert-danger';
+        errorMessage.style.display = 'none';
+        
+        // Adicionar o elemento ao DOM em um local apropriado
+        const container = document.querySelector('.container') || document.querySelector('.content') || document.body;
+        if (container) {
+            // Inserir no início do container, antes de qualquer outro elemento
+            if (container.firstChild) {
+                container.insertBefore(errorMessage, container.firstChild);
+            } else {
+                container.appendChild(errorMessage);
+            }
+            console.log('Elemento errorMessage criado e adicionado ao DOM');
+        } else {
+            console.warn('Não foi possível encontrar um container para adicionar o errorMessage');
         }
     }
     
@@ -167,21 +179,34 @@ async function loadModelos() {
     
     try {
         const token = auth.getToken();
-        const response = await fetch(`${config.apiBaseUrl}/api/veiculos/modelos?page=${currentPage}&limit=${itemsPerPage}`, {
-            method: 'GET',
+        
+        // Usar a função fetchWithFallback do config.js para maior resiliência
+        const urls = [
+            `/api/veiculos/modelos?page=${currentPage}&limit=${itemsPerPage}`,
+            `/api/veiculos/modelos/all?page=${currentPage}&limit=${itemsPerPage}`
+        ];
+        
+        console.log('Tentando carregar modelos usando as URLs:', urls);
+        
+        const data = await config.fetchWithFallback(urls, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
         });
         
-        if (!response.ok) {
-            throw new Error('Falha ao carregar modelos');
+        // Verificar se a resposta tem o formato esperado
+        if (data && data.items && Array.isArray(data.items)) {
+            totalItems = data.total || data.items.length;
+            renderModelos(data.items);
+        } else if (Array.isArray(data)) {
+            // Se a resposta for um array direto, usá-lo
+            totalItems = data.length;
+            renderModelos(data);
+        } else {
+            console.warn('Formato de resposta inesperado:', data);
+            throw new Error('Formato de resposta inesperado ao carregar modelos');
         }
         
-        const data = await response.json();
-        totalItems = data.total;
-        
-        renderModelos(data.items);
         renderPagination();
     } catch (error) {
         console.error('Erro ao carregar modelos:', error);
@@ -334,77 +359,68 @@ function showDeleteModal(id) {
 }
 
 // Função para salvar modelo
-function saveModelo() {
-    // Validar formulário
-    if (!modeloForm.checkValidity()) {
-        modeloForm.classList.add('was-validated');
-        return;
-    }
+function saveModelo(event) {
+    event.preventDefault();
     
     // Mostrar spinner
     saveButton.disabled = true;
     saveSpinner.classList.remove('d-none');
     
     // Obter dados do formulário
-    const id = document.getElementById('modeloId').value;
+    const modeloId = document.getElementById('modeloId').value;
+    const nome = document.getElementById('nome').value;
     const marcaId = document.getElementById('marcaId').value;
-    const nome = document.getElementById('modeloNome').value;
-    const status = document.getElementById('modeloStatus').value;
+    const status = document.getElementById('status').value;
     
-    // Validar marca
-    if (!marcaId) {
-        showError('Por favor, selecione uma marca.');
+    // Validar campos obrigatórios
+    if (!nome || !marcaId) {
+        showError('Por favor, preencha todos os campos obrigatórios.');
         saveButton.disabled = false;
         saveSpinner.classList.add('d-none');
         return;
     }
     
-    // Preparar dados para envio
+    // Criar objeto com dados do modelo
     const modeloData = {
-        marcaId: parseInt(marcaId),
         nome,
+        marcaId: parseInt(marcaId),
         status
     };
     
-    console.log('Enviando dados do modelo:', modeloData);
-    
     const token = auth.getToken();
-    const method = id ? 'PUT' : 'POST';
-    const url = id ? `${config.apiBaseUrl}/api/veiculos/modelos/${id}` : `${config.apiBaseUrl}/api/veiculos/modelos`;
     
-    // Enviar requisição
-    fetch(url, {
-        method,
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(modeloData)
-    })
-    .then(response => {
-        if (!response.ok) {
-            return response.text().then(text => {
-                console.error('Resposta do servidor:', text);
-                throw new Error('Falha ao salvar modelo');
-            });
-        }
-        return response.json();
-    })
-    .then(data => {
-        console.log('Modelo salvo com sucesso:', data);
-        // Fechar modal e recarregar modelos
-        modeloModal.hide();
-        loadModelos();
-    })
-    .catch(error => {
-        console.error('Erro ao salvar modelo:', error);
-        showError('Não foi possível salvar o modelo. Por favor, tente novamente mais tarde.');
-    })
-    .finally(() => {
-        // Esconder spinner
-        saveButton.disabled = false;
-        saveSpinner.classList.add('d-none');
-    });
+    // Determinar se é criação ou atualização
+    let method, url;
+    if (modeloId) {
+        method = 'PUT';
+        url = `/api/veiculos/modelos/${modeloId}`;
+        modeloData.id = parseInt(modeloId);
+    } else {
+        method = 'POST';
+        url = '/api/veiculos/modelos';
+    }
+    
+    // Usar as funções auxiliares do config.js para maior resiliência
+    const apiCall = method === 'POST' 
+        ? config.post(url, modeloData, { headers: { 'Authorization': `Bearer ${token}` } })
+        : config.put(url, modeloData, { headers: { 'Authorization': `Bearer ${token}` } });
+    
+    apiCall
+        .then(data => {
+            console.log('Modelo salvo com sucesso:', data);
+            // Fechar modal e recarregar modelos
+            modeloModal.hide();
+            loadModelos();
+        })
+        .catch(error => {
+            console.error('Erro ao salvar modelo:', error);
+            showError('Não foi possível salvar o modelo. Por favor, tente novamente mais tarde.');
+        })
+        .finally(() => {
+            // Esconder spinner
+            saveButton.disabled = false;
+            saveSpinner.classList.add('d-none');
+        });
 }
 
 // Função para excluir modelo
@@ -418,18 +434,11 @@ function deleteModelo() {
     
     const token = auth.getToken();
     
-    // Enviar requisição
-    fetch(`${config.apiBaseUrl}/api/veiculos/modelos/${id}`, {
-        method: 'DELETE',
+    // Usar a função delete do config.js para maior resiliência
+    config.delete(`/api/veiculos/modelos/${id}`, {
         headers: {
             'Authorization': `Bearer ${token}`
         }
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Falha ao excluir modelo');
-        }
-        return response.json();
     })
     .then(() => {
         // Fechar modal e recarregar modelos
@@ -451,14 +460,25 @@ function deleteModelo() {
 function showError(message) {
     if (!errorMessage) {
         console.error('Elemento errorMessage não encontrado');
-        return;
+        // Tentar criar o elemento novamente como último recurso
+        errorMessage = document.createElement('div');
+        errorMessage.id = 'errorMessage';
+        errorMessage.className = 'alert alert-danger';
+        document.body.prepend(errorMessage);
     }
     
     errorMessage.textContent = message;
+    errorMessage.style.display = 'block';
+    
+    // Garantir que o elemento seja visível
     errorMessage.classList.remove('d-none');
+    
+    // Rolar para o topo para garantir que a mensagem seja vista
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     
     // Esconder mensagem após 5 segundos
     setTimeout(() => {
+        errorMessage.style.display = 'none';
         errorMessage.classList.add('d-none');
     }, 5000);
 }
