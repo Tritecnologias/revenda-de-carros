@@ -320,8 +320,7 @@ async function carregarVersoes() {
             urls = [
                 `/api/versoes/public${queryString}`,
                 `/api/versoes/all${queryString}`,
-                `/api/versoes${queryString}`,
-                `/api/veiculos/versoes/all${queryString}`
+                `/api/versoes${queryString}`
             ];
         }
         
@@ -503,11 +502,12 @@ async function carregarVersaoParaEdicao(versaoId) {
         }
         
         // Verificar qual campo de status está presente na página
+        let status = 'ativo';
         const statusField = document.getElementById('status');
         const statusCheckbox = document.getElementById('statusVersao');
         
         if (statusField) {
-            statusField.value = versao.status || 'ativo';
+            status = statusField.value;
         } else if (statusCheckbox) {
             // Se for um checkbox, marcar se o status for 'ativo'
             statusCheckbox.checked = versao.status === 'ativo';

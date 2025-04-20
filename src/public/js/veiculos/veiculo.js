@@ -165,8 +165,7 @@ async function loadAllVersoes() {
         const urls = [
             '/api/versoes/public',
             '/api/versoes/all',  // Endpoint alternativo que adicionamos
-            '/api/versoes',
-            '/api/veiculos/versoes/all'
+            '/api/versoes'
         ];
         
         // Usar a função fetchWithFallback do config.js
