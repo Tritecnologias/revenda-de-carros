@@ -243,134 +243,70 @@ function carregarVersoes() {
         return;
     }
     
-    // Tentar carregar versões com diferentes URLs possíveis
-    tryLoadVersoes(modeloId, marcaId, status, token);
-}
-
-// Função para tentar carregar versões com diferentes URLs
-async function tryLoadVersoes(modeloId, marcaId, status, token) {
-    // Lista de possíveis URLs para tentar, em ordem de prioridade
-    // Usar URLs relativas sem prefixo de domínio, como na página de usuários
-    let possibleUrls = [];
-    
-    // Verificar se já temos uma URL bem-sucedida armazenada
-    const savedUrl = localStorage.getItem('successful_versoes_url');
-    if (savedUrl) {
-        // Extrair apenas o caminho da URL salva (remover domínio se existir)
-        const urlPath = savedUrl.replace(/^https?:\/\/[^\/]+/, '');
-        possibleUrls.push(urlPath);
+    // Mostrar indicador de carregamento
+    const versoesTableBody = document.getElementById('versoesTableBody');
+    if (versoesTableBody) {
+        versoesTableBody.innerHTML = '<tr><td colspan="6" class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Carregando...</span></div></td></tr>';
     }
     
-    // Adicionar outras URLs possíveis (todas relativas)
-    if (modeloId) {
-        possibleUrls = possibleUrls.concat([
-            `/versoes/modelo/${modeloId}`,
-            `/api/versoes/modelo/${modeloId}`,
-            `/api/veiculos/versoes/by-modelo/${modeloId}`,
-            `/api/versoes/modelo/${modeloId}/public`,
-            `/api/veiculos/versoes/modelo/${modeloId}`
-        ]);
-    } else {
-        possibleUrls = possibleUrls.concat([
-            `/versoes`,
-            `/api/versoes`,
-            `/api/veiculos/versoes/all`,
-            `/api/versoes/public`,
-            `/api/veiculos/versoes`
-        ]);
+    // Construir URL base
+    let url = '/api/versoes/public';
+    
+    // Adicionar parâmetros de filtro se necessário
+    const params = new URLSearchParams();
+    if (modeloId) params.append('modeloId', modeloId);
+    if (marcaId) params.append('marcaId', marcaId);
+    if (status) params.append('status', status);
+    
+    // Adicionar parâmetros à URL se houver algum
+    if (params.toString()) {
+        url += '?' + params.toString();
     }
     
-    // Remover duplicatas
-    possibleUrls = [...new Set(possibleUrls)];
+    console.log(`Carregando versões com URL: ${url}`);
     
-    let success = false;
-    let versoes = [];
-    let lastError = null;
-    
-    // Tentar cada URL até encontrar uma que funcione
-    for (const url of possibleUrls) {
-        try {
-            console.log(`Tentando carregar versões com URL: ${url}`);
-            
-            // Implementar um fallback para o erro 500
-            if (url.endsWith('/api/veiculos/versoes')) {
-                console.log('URL conhecida por causar erro 500, usando dados mockados');
-                
-                // Dados mockados para versões
-                versoes = [
-                    { 
-                        id: 1, 
-                        nome: 'DRIVE 1.3 AT FLEX 4P', 
-                        modelo: { id: 1, nome: 'CRONOS', marcaId: 1 },
-                        modeloId: 1,
-                        status: true
-                    },
-                    { 
-                        id: 2, 
-                        nome: 'PRECISION 1.8 AT FLEX 4P', 
-                        modelo: { id: 1, nome: 'CRONOS', marcaId: 1 },
-                        modeloId: 1,
-                        status: true
-                    }
-                ];
-                
-                // Armazenar uma URL alternativa para uso futuro
-                localStorage.setItem('successful_versoes_url', `/api/versoes`);
-                
-                success = true;
-                break;
-            }
-            
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                console.log('Versões carregadas com sucesso usando URL:', url);
-                console.log('Dados recebidos:', data);
-                
-                // Armazenar a URL bem-sucedida para uso futuro
-                localStorage.setItem('successful_versoes_url', url);
-                
-                versoes = Array.isArray(data) ? data : (data.items || []);
-                success = true;
-                break;
-            } else {
-                console.warn(`Falha ao carregar versões com URL ${url}: ${response.status} ${response.statusText}`);
-            }
-        } catch (error) {
-            console.warn(`Erro ao tentar URL ${url}:`, error);
-            lastError = error;
+    fetch(url, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
         }
-    }
-    
-    if (success) {
-        // Filtrar por status se necessário
-        if (status) {
-            versoes = versoes.filter(versao => versao.status === (status === 'ativo'));
+    })
+    .then(response => {
+        if (!response.ok) {
+            if (response.status === 401) {
+                console.error('Sessão expirada ou token inválido');
+                window.location.href = '/login.html';
+                return;
+            }
+            throw new Error(`Erro ao carregar versões: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Versões carregadas com sucesso:', data);
+        renderizarVersoes(data);
+    })
+    .catch(error => {
+        console.error('Erro ao carregar versões:', error);
+        
+        if (versoesTableBody) {
+            versoesTableBody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center text-danger">
+                        Erro ao carregar versões: ${error.message}
+                    </td>
+                </tr>
+            `;
         }
         
-        // Filtrar por marca se necessário (quando não filtramos por modelo)
-        if (marcaId && !modeloId) {
-            versoes = versoes.filter(versao => versao.modelo && versao.modelo.marcaId == marcaId);
-        }
-        
-        // Renderizar tabela
-        renderizarTabelaVersoes(versoes);
-    } else {
-        console.error('Todas as tentativas de carregar versões falharam:', lastError);
         exibirMensagem('Erro ao carregar versões. Por favor, tente novamente.', 'danger');
-    }
+    });
 }
 
 // Função para renderizar a tabela de versões
-function renderizarTabelaVersoes(versoes) {
-    const tbody = document.getElementById('tabelaVersoes');
+function renderizarVersoes(versoes) {
+    const tbody = document.getElementById('versoesTableBody');
     tbody.innerHTML = '';
     
     if (versoes.length === 0) {
