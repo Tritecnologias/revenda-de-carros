@@ -164,7 +164,6 @@ async function loadAllVersoes() {
         // Lista de URLs a tentar, em ordem de prioridade
         const urls = [
             '/api/versoes/public',
-            '/api/versoes/all',  // Endpoint alternativo que adicionamos
             '/api/versoes'
         ];
         

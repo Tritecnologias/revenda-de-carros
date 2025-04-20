@@ -23,7 +23,7 @@
     // Lista de rotas conhecidas e suas alternativas corretas
     const routeMappings = {
         // Rotas incorretas -> Rotas corretas
-        '/api/veiculos/versoes/all': '/api/versoes/all',
+        '/api/veiculos/versoes/all': '/api/versoes/public',
         '/api/veiculos/versoes/': '/api/versoes/',
         '/api/veiculos/versoes/modelo/': '/api/versoes/modelo/',
         '/api/veiculos/versoes/by-modelo/': '/api/versoes/modelo/',
