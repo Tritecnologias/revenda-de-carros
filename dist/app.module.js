@@ -38,7 +38,7 @@ exports.AppModule = AppModule = __decorate([
             }),
             typeorm_1.TypeOrmModule.forRoot({
                 type: 'mysql',
-                host: '127.0.0.1',
+                host: '69.62.91.195',
                 port: 3306,
                 username: 'wanderson',
                 password: 'Flavinha@2022',

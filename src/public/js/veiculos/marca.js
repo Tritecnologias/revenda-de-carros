@@ -115,32 +115,68 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Função para carregar marcas
-async function loadMarcas() {
+async function loadMarcas(page = 1) {
+    currentPage = page;
+    
     if (!marcasTableBody) {
         console.error('Elemento marcasTableBody não encontrado');
         return;
     }
     
+    // Mostrar indicador de carregamento
+    marcasTableBody.innerHTML = '<tr><td colspan="5" class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Carregando...</span></div></td></tr>';
+    
     try {
         const token = auth.getToken();
-        const response = await fetch(`${config.apiBaseUrl}/api/veiculos/marcas?page=${currentPage}&limit=${itemsPerPage}`, {
-            method: 'GET',
+        if (!token) {
+            console.error('Token de autenticação não encontrado');
+            window.location.href = '/login.html';
+            return;
+        }
+        
+        // Lista de URLs a tentar, em ordem de prioridade
+        const urls = [
+            `/api/veiculos/marcas/public`,
+            `/api/veiculos/marcas/all`,
+            `/api/veiculos/marcas?page=${currentPage}&limit=${itemsPerPage}`
+        ];
+        
+        // Usar a função fetchWithFallback do config.js
+        const data = await config.fetchWithFallback(urls, {
             headers: {
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
             }
         });
         
-        if (!response.ok) {
-            throw new Error('Falha ao carregar marcas');
+        console.log('Marcas carregadas:', data);
+        
+        // Armazenar dados como mockados para uso futuro
+        if (data && (data.items || data.length > 0)) {
+            config.storeMockData('marcas', data);
         }
         
-        const data = await response.json();
-        totalItems = data.total;
+        // Verificar se a resposta é paginada ou uma lista simples
+        if (data.items && data.total) {
+            // Resposta paginada
+            totalItems = data.total;
+            renderMarcas(data.items);
+        } else {
+            // Lista simples de marcas
+            totalItems = data.length;
+            renderMarcas(data);
+        }
         
-        renderMarcas(data.items);
         renderPagination();
     } catch (error) {
         console.error('Erro ao carregar marcas:', error);
+        marcasTableBody.innerHTML = `
+            <tr>
+                <td colspan="5" class="text-center text-danger">
+                    Erro ao carregar marcas: ${error.message}
+                </td>
+            </tr>
+        `;
         showError('Não foi possível carregar as marcas. Por favor, tente novamente mais tarde.');
     }
 }

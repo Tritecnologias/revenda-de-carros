@@ -27,10 +27,18 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.setItem('user', JSON.stringify(user));
     }
     
+    // Obter usuário autenticado
+    const authUser = auth.getUser();
+    if (!authUser) {
+        console.error('Usuário não autenticado');
+        window.location.href = '/login.html';
+        return;
+    }
+    
     // Inicializar menu
     const menuManager = window.menuManager;
     if (menuManager) {
-        menuManager.init(user);
+        menuManager.init(authUser);
     } else {
         console.error('Menu Manager não encontrado!');
         // Tentar inicializar o menu usando a função global
@@ -39,33 +47,65 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Carregar marcas para os filtros e formulário
-    carregarMarcas();
-    
-    // Carregar versões
-    carregarVersoes();
-    
-    // Event listeners
-    document.getElementById('filtroMarca').addEventListener('change', function() {
-        carregarModelos(this.value);
+    // Função para inicializar a página de versões
+    function inicializarPaginaVersoes() {
+        console.log('Inicializando página de versões...');
+        
+        // Verificar se estamos na página correta que contém os elementos de versões
+        const filtroMarca = document.getElementById('filtroMarca');
+        const filtroModelo = document.getElementById('filtroModelo');
+        const filtroStatus = document.getElementById('filtroStatus');
+        
+        // Verificar tanto o ID versoesTableBody quanto tabelaVersoes (usado na página admin/versoes.html)
+        const versoesTableBody = document.getElementById('versoesTableBody') || document.getElementById('tabelaVersoes');
+        
+        const marcaSelect = document.getElementById('marcaSelect');
+        const modeloSelect = document.getElementById('modeloSelect');
+        const salvarVersaoBtn = document.getElementById('salvarVersao');
+        
+        // Se os elementos essenciais não existirem, estamos em uma página diferente
+        if (!filtroMarca || !filtroModelo || !filtroStatus || !versoesTableBody) {
+            console.log('Elementos essenciais da página de versões não encontrados. Provavelmente estamos em uma página diferente.');
+            console.log('filtroMarca:', filtroMarca);
+            console.log('filtroModelo:', filtroModelo);
+            console.log('filtroStatus:', filtroStatus);
+            console.log('versoesTableBody:', versoesTableBody);
+            return;
+        }
+        
+        console.log('Elementos essenciais encontrados, continuando inicialização...');
+        
+        // Carregar marcas para os filtros e formulário
+        carregarMarcas();
+        
+        // Carregar versões
         carregarVersoes();
-    });
+        
+        // Event listeners para filtros
+        filtroMarca.addEventListener('change', function() {
+            carregarModelos(this.value);
+            carregarVersoes();
+        });
+        
+        filtroModelo.addEventListener('change', carregarVersoes);
+        filtroStatus.addEventListener('change', carregarVersoes);
+        
+        // Event listeners para formulário (se existirem)
+        if (marcaSelect) {
+            marcaSelect.addEventListener('change', function() {
+                carregarModelosFormulario(this.value);
+            });
+        }
+        
+        if (salvarVersaoBtn) {
+            salvarVersaoBtn.addEventListener('click', salvarVersao);
+        }
+        
+        console.log('Página de versões inicializada com sucesso');
+    }
     
-    document.getElementById('filtroModelo').addEventListener('change', carregarVersoes);
-    document.getElementById('filtroStatus').addEventListener('change', carregarVersoes);
-    
-    document.getElementById('marcaSelect').addEventListener('change', function() {
-        carregarModelos(this.value, 'modeloSelect');
-    });
-    
-    document.getElementById('salvarVersao').addEventListener('click', salvarVersao);
-    
-    // Limpar formulário quando o modal for fechado
-    document.getElementById('modalVersao').addEventListener('hidden.bs.modal', function() {
-        document.getElementById('formVersao').reset();
-        document.getElementById('versaoId').value = '';
-        document.getElementById('modalVersaoLabel').textContent = 'Nova Versão';
-    });
+    // Inicializar página de versões (apenas se estivermos na página correta)
+    inicializarPaginaVersoes();
 });
 
 // Função para obter o token de autenticação
@@ -225,10 +265,24 @@ async function carregarModelos(marcaId) {
 async function carregarVersoes() {
     console.log('Carregando versões...');
     
+    // Verificar se estamos na página correta que contém os elementos de versões
+    const filtroMarca = document.getElementById('filtroMarca');
+    const filtroModelo = document.getElementById('filtroModelo');
+    const filtroStatus = document.getElementById('filtroStatus');
+    
+    // Verificar tanto o ID versoesTableBody quanto tabelaVersoes (usado na página admin/versoes.html)
+    const versoesTableBody = document.getElementById('versoesTableBody') || document.getElementById('tabelaVersoes');
+    
+    // Se os elementos essenciais não existirem, estamos em uma página diferente
+    if (!filtroMarca || !filtroModelo || !filtroStatus) {
+        console.log('Elementos de filtro não encontrados. Provavelmente estamos em uma página diferente.');
+        return;
+    }
+    
     // Obter valores dos filtros
-    const marcaId = document.getElementById('filtroMarca').value;
-    const modeloId = document.getElementById('filtroModelo').value;
-    const status = document.getElementById('filtroStatus').value;
+    const marcaId = filtroMarca.value;
+    const modeloId = filtroModelo.value;
+    const status = filtroStatus.value;
     
     // Obter token de autenticação
     const token = getToken();
@@ -238,9 +292,10 @@ async function carregarVersoes() {
     }
     
     // Mostrar indicador de carregamento
-    const versoesTableBody = document.getElementById('versoesTableBody');
     if (versoesTableBody) {
         versoesTableBody.innerHTML = '<tr><td colspan="6" class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Carregando...</span></div></td></tr>';
+    } else {
+        console.warn('Elemento da tabela de versões não encontrado. Continuando sem mostrar indicador de carregamento.');
     }
     
     try {
@@ -281,7 +336,18 @@ async function carregarVersoes() {
         });
         
         console.log('Versões carregadas com sucesso:', data);
-        renderizarVersoes(data);
+        
+        // Armazenar dados como mockados para uso futuro
+        if (data && data.length > 0) {
+            config.storeMockData('versoes', data);
+        }
+        
+        // Só renderizar se estivermos na página correta
+        if (versoesTableBody) {
+            renderizarVersoes(data, versoesTableBody);
+        } else {
+            console.warn('Elemento da tabela de versões não encontrado. Não é possível renderizar versões.');
+        }
     } catch (error) {
         console.error('Erro ao carregar versões:', error);
         
@@ -300,8 +366,16 @@ async function carregarVersoes() {
 }
 
 // Função para renderizar a tabela de versões
-function renderizarVersoes(versoes) {
-    const tbody = document.getElementById('versoesTableBody');
+function renderizarVersoes(versoes, tableBody) {
+    // Usar o tableBody passado como parâmetro ou tentar encontrar na página
+    const tbody = tableBody || document.getElementById('versoesTableBody') || document.getElementById('tabelaVersoes');
+    
+    // Verificar se o elemento tbody existe
+    if (!tbody) {
+        console.error('Elemento da tabela de versões não encontrado na página');
+        return;
+    }
+    
     tbody.innerHTML = '';
     
     if (versoes.length === 0) {
@@ -403,33 +477,75 @@ async function carregarVersaoParaEdicao(versaoId) {
         
         // Preencher formulário com dados da versão
         document.getElementById('versaoId').value = versao.id;
-        document.getElementById('nome').value = versao.nome;
-        document.getElementById('descricao').value = versao.descricao || '';
-        document.getElementById('ano').value = versao.ano || '';
-        document.getElementById('preco').value = versao.preco || '';
-        document.getElementById('status').value = versao.status || 'ativo';
+        
+        // Verificar qual ID do campo de nome está presente na página
+        const nomeField = document.getElementById('nome') || document.getElementById('nomeVersao');
+        if (nomeField) {
+            nomeField.value = versao.nome || versao.nome_versao || '';
+        } else {
+            console.warn('Campo de nome da versão não encontrado no formulário');
+        }
+        
+        // Verificar se os campos opcionais existem antes de tentar preenchê-los
+        const descricaoField = document.getElementById('descricao');
+        if (descricaoField) {
+            descricaoField.value = versao.descricao || '';
+        }
+        
+        const anoField = document.getElementById('ano');
+        if (anoField) {
+            anoField.value = versao.ano || '';
+        }
+        
+        const precoField = document.getElementById('preco');
+        if (precoField) {
+            precoField.value = versao.preco || '';
+        }
+        
+        // Verificar qual campo de status está presente na página
+        const statusField = document.getElementById('status');
+        const statusCheckbox = document.getElementById('statusVersao');
+        
+        if (statusField) {
+            statusField.value = versao.status || 'ativo';
+        } else if (statusCheckbox) {
+            // Se for um checkbox, marcar se o status for 'ativo'
+            statusCheckbox.checked = versao.status === 'ativo';
+        }
         
         // Carregar marcas e modelos
         await carregarMarcasFormulario();
         
         if (versao.modelo && versao.modelo.marca) {
             const marcaSelect = document.getElementById('marcaSelect');
-            marcaSelect.value = versao.modelo.marca.id;
-            
-            // Carregar modelos da marca e depois selecionar o modelo correto
-            await carregarModelosFormulario(versao.modelo.marca.id);
-            
-            // Selecionar o modelo correto
-            const modeloSelect = document.getElementById('modeloSelect');
-            modeloSelect.value = versao.modelo.id;
+            if (marcaSelect) {
+                marcaSelect.value = versao.modelo.marca.id;
+                
+                // Carregar modelos da marca e depois selecionar o modelo correto
+                await carregarModelosFormulario(versao.modelo.marca.id);
+                
+                // Selecionar o modelo correto
+                const modeloSelect = document.getElementById('modeloSelect');
+                if (modeloSelect) {
+                    modeloSelect.value = versao.modelo.id || versao.modeloId;
+                }
+            }
         }
         
-        // Mostrar botão de exclusão
-        document.getElementById('btnExcluirVersao').style.display = 'block';
+        // Verificar se o botão de exclusão existe antes de tentar modificá-lo
+        const btnExcluirVersao = document.getElementById('btnExcluirVersao');
+        if (btnExcluirVersao) {
+            btnExcluirVersao.style.display = 'block';
+        }
         
-        // Abrir modal
-        const versaoModal = new bootstrap.Modal(document.getElementById('versaoModal'));
-        versaoModal.show();
+        // Abrir modal - verificar qual ID do modal está presente na página
+        const versaoModal = document.getElementById('versaoModal') || document.getElementById('modalVersao');
+        if (versaoModal) {
+            const modal = new bootstrap.Modal(versaoModal);
+            modal.show();
+        } else {
+            console.error('Modal de versão não encontrado na página');
+        }
     } catch (error) {
         console.error('Erro ao carregar versão para edição:', error);
         exibirMensagem('Erro ao carregar versão para edição: ' + error.message, 'danger');
@@ -438,18 +554,59 @@ async function carregarVersaoParaEdicao(versaoId) {
 
 // Função para salvar uma versão (criar ou atualizar)
 async function salvarVersao(event) {
-    event.preventDefault();
+    if (event && event.preventDefault) {
+        event.preventDefault();
+    }
     console.log('Salvando versão...');
     
     try {
         // Obter dados do formulário
         const versaoId = document.getElementById('versaoId').value;
-        const nome = document.getElementById('nome').value;
-        const descricao = document.getElementById('descricao').value;
-        const ano = document.getElementById('ano').value;
-        const preco = document.getElementById('preco').value;
-        const modeloId = document.getElementById('modeloSelect').value;
-        const status = document.getElementById('status').value;
+        
+        // Verificar qual ID do campo de nome está presente na página
+        const nomeField = document.getElementById('nome') || document.getElementById('nomeVersao');
+        if (!nomeField) {
+            throw new Error('Campo de nome da versão não encontrado no formulário');
+        }
+        const nome = nomeField.value;
+        
+        // Obter valores dos campos opcionais se existirem
+        let descricao = '';
+        const descricaoField = document.getElementById('descricao');
+        if (descricaoField) {
+            descricao = descricaoField.value;
+        }
+        
+        let ano = null;
+        const anoField = document.getElementById('ano');
+        if (anoField) {
+            ano = anoField.value;
+        }
+        
+        let preco = null;
+        const precoField = document.getElementById('preco');
+        if (precoField) {
+            preco = precoField.value;
+        }
+        
+        // Obter modelo
+        const modeloSelect = document.getElementById('modeloSelect');
+        if (!modeloSelect) {
+            throw new Error('Campo de modelo não encontrado no formulário');
+        }
+        const modeloId = modeloSelect.value;
+        
+        // Verificar qual campo de status está presente na página
+        let status = 'ativo';
+        const statusField = document.getElementById('status');
+        const statusCheckbox = document.getElementById('statusVersao');
+        
+        if (statusField) {
+            status = statusField.value;
+        } else if (statusCheckbox) {
+            // Se for um checkbox, o status é 'ativo' se estiver marcado, senão é 'inativo'
+            status = statusCheckbox.checked ? 'ativo' : 'inativo';
+        }
         
         // Validar campos obrigatórios
         if (!nome || !modeloId) {
@@ -460,6 +617,7 @@ async function salvarVersao(event) {
         // Criar objeto com dados da versão
         const versaoData = {
             nome,
+            nome_versao: nome, // Incluir ambos os campos para compatibilidade
             descricao,
             ano: ano ? parseInt(ano) : null,
             preco: preco ? parseFloat(preco) : null,
@@ -504,9 +662,14 @@ async function salvarVersao(event) {
         const data = await response.json();
         console.log('Versão salva com sucesso:', data);
         
-        // Fechar modal
-        const versaoModal = bootstrap.Modal.getInstance(document.getElementById('versaoModal'));
-        versaoModal.hide();
+        // Fechar modal - verificar qual ID do modal está presente na página
+        const versaoModal = document.getElementById('versaoModal') || document.getElementById('modalVersao');
+        if (versaoModal) {
+            const modal = bootstrap.Modal.getInstance(versaoModal);
+            if (modal) {
+                modal.hide();
+            }
+        }
         
         // Exibir mensagem de sucesso
         exibirMensagem('Versão salva com sucesso!', 'success');
@@ -553,7 +716,9 @@ async function excluirVersao() {
         
         // Fechar modal
         const versaoModal = bootstrap.Modal.getInstance(document.getElementById('versaoModal'));
-        versaoModal.hide();
+        if (versaoModal) {
+            versaoModal.hide();
+        }
         
         // Exibir mensagem de sucesso
         exibirMensagem('Versão excluída com sucesso!', 'success');
