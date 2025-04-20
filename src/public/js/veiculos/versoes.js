@@ -249,44 +249,34 @@ function carregarVersoes() {
 
 // Função para tentar carregar versões com diferentes URLs
 async function tryLoadVersoes(modeloId, marcaId, status, token) {
-    // Verificar se já temos uma URL bem-sucedida armazenada
-    const savedUrl = localStorage.getItem('successful_versoes_url');
-    
     // Lista de possíveis URLs para tentar, em ordem de prioridade
+    // Usar URLs relativas sem prefixo de domínio, como na página de usuários
     let possibleUrls = [];
     
-    // Se temos uma URL salva, tentá-la primeiro
+    // Verificar se já temos uma URL bem-sucedida armazenada
+    const savedUrl = localStorage.getItem('successful_versoes_url');
     if (savedUrl) {
-        // Adaptar a URL salva para o caso atual (com ou sem modeloId)
-        const baseUrl = savedUrl.split('/modelo/')[0]; // Pegar a parte antes de /modelo/ se existir
-        if (modeloId) {
-            if (savedUrl.includes('/modelo/')) {
-                // Se a URL salva já tem /modelo/, substituir o ID
-                possibleUrls.push(baseUrl + '/modelo/' + modeloId);
-            } else {
-                // Se não tem, adicionar /modelo/ID
-                possibleUrls.push(baseUrl + '/modelo/' + modeloId);
-            }
-        } else {
-            // Se não temos modeloId, usar a URL base
-            possibleUrls.push(baseUrl);
-        }
+        // Extrair apenas o caminho da URL salva (remover domínio se existir)
+        const urlPath = savedUrl.replace(/^https?:\/\/[^\/]+/, '');
+        possibleUrls.push(urlPath);
     }
     
-    // Adicionar outras URLs possíveis
+    // Adicionar outras URLs possíveis (todas relativas)
     if (modeloId) {
         possibleUrls = possibleUrls.concat([
-            `${config.apiBaseUrl}/api/versoes/modelo/${modeloId}`,
-            `${config.apiBaseUrl}/api/veiculos/versoes/by-modelo/${modeloId}`,
-            `${config.apiBaseUrl}/api/versoes/modelo/${modeloId}/public`,
-            `${config.apiBaseUrl}/api/veiculos/versoes/modelo/${modeloId}`
+            `/versoes/modelo/${modeloId}`,
+            `/api/versoes/modelo/${modeloId}`,
+            `/api/veiculos/versoes/by-modelo/${modeloId}`,
+            `/api/versoes/modelo/${modeloId}/public`,
+            `/api/veiculos/versoes/modelo/${modeloId}`
         ]);
     } else {
         possibleUrls = possibleUrls.concat([
-            `${config.apiBaseUrl}/api/versoes`,
-            `${config.apiBaseUrl}/api/veiculos/versoes/all`,
-            `${config.apiBaseUrl}/api/versoes/public`,
-            `${config.apiBaseUrl}/api/veiculos/versoes`
+            `/versoes`,
+            `/api/versoes`,
+            `/api/veiculos/versoes/all`,
+            `/api/versoes/public`,
+            `/api/veiculos/versoes`
         ]);
     }
     
@@ -303,7 +293,6 @@ async function tryLoadVersoes(modeloId, marcaId, status, token) {
             console.log(`Tentando carregar versões com URL: ${url}`);
             
             // Implementar um fallback para o erro 500
-            // Se a URL for /api/veiculos/versoes, que sabemos que dá erro 500, usar dados mockados
             if (url.endsWith('/api/veiculos/versoes')) {
                 console.log('URL conhecida por causar erro 500, usando dados mockados');
                 
@@ -326,7 +315,7 @@ async function tryLoadVersoes(modeloId, marcaId, status, token) {
                 ];
                 
                 // Armazenar uma URL alternativa para uso futuro
-                localStorage.setItem('successful_versoes_url', `${config.apiBaseUrl}/api/versoes`);
+                localStorage.setItem('successful_versoes_url', `/api/versoes`);
                 
                 success = true;
                 break;
@@ -335,7 +324,8 @@ async function tryLoadVersoes(modeloId, marcaId, status, token) {
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {
-                    'Authorization': `Bearer ${token}`
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
                 }
             });
             
