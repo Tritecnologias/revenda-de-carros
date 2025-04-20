@@ -141,7 +141,7 @@ function carregarMarcas() {
     
     // Fazer requisição para API
     const token = getToken();
-    fetch(`${config.apiBaseUrl}/api/veiculos/marcas/all`, {
+    fetch('/api/veiculos/marcas/all', {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${token}`
@@ -198,7 +198,7 @@ function carregarModelos(marcaId, selectId) {
     
     // Fazer requisição para API
     const token = getToken();
-    fetch(`${config.apiBaseUrl}/api/veiculos/modelos/by-marca/${marcaId}`, {
+    fetch(`/api/veiculos/modelos/by-marca/${marcaId}`, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${token}`
@@ -252,10 +252,14 @@ function carregarVersoes() {
     // Construir URL base
     let url = '/api/versoes/public';
     
+    // Se tiver modeloId, usar a rota específica para modelo
+    if (modeloId) {
+        url = `/api/versoes/modelo/${modeloId}/public`;
+    }
+    
     // Adicionar parâmetros de filtro se necessário
     const params = new URLSearchParams();
-    if (modeloId) params.append('modeloId', modeloId);
-    if (marcaId) params.append('marcaId', marcaId);
+    if (marcaId && !modeloId) params.append('marcaId', marcaId);
     if (status) params.append('status', status);
     
     // Adicionar parâmetros à URL se houver algum
@@ -279,6 +283,33 @@ function carregarVersoes() {
                 window.location.href = '/login.html';
                 return;
             }
+            
+            // Se receber erro 404, tentar URL alternativa
+            if (response.status === 404) {
+                console.log('URL primária não encontrada, tentando URL alternativa');
+                
+                // Construir URL alternativa
+                let alternativeUrl = '/api/veiculos/versoes/all';
+                if (modeloId) {
+                    alternativeUrl = `/api/veiculos/versoes/by-modelo/${modeloId}`;
+                }
+                
+                console.log(`Tentando URL alternativa: ${alternativeUrl}`);
+                
+                return fetch(alternativeUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }).then(altResponse => {
+                    if (!altResponse.ok) {
+                        throw new Error(`Erro ao carregar versões (alternativa): ${altResponse.status}`);
+                    }
+                    return altResponse.json();
+                });
+            }
+            
             throw new Error(`Erro ao carregar versões: ${response.status}`);
         }
         return response.json();
@@ -385,7 +416,7 @@ function carregarVersaoParaEdicao(versaoId) {
     console.log(`Carregando versão ${versaoId} para edição...`);
     
     const token = getToken();
-    fetch(`${config.apiBaseUrl}/api/versoes/${versaoId}`, {
+    fetch(`/api/versoes/${versaoId}`, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${token}`
@@ -456,7 +487,7 @@ function salvarVersao() {
     
     // Determinar método e URL com base em criação ou atualização
     const method = versaoId ? 'PATCH' : 'POST';
-    const url = versaoId ? `${config.apiBaseUrl}/api/versoes/${versaoId}` : `${config.apiBaseUrl}/api/versoes`;
+    const url = versaoId ? `/api/versoes/${versaoId}` : '/api/versoes';
     
     // Fazer requisição para API
     fetch(url, {
@@ -495,7 +526,7 @@ function salvarVersao() {
 function excluirVersao(versaoId) {
     console.log(`Excluindo versão ${versaoId}...`);
     
-    fetch(`${config.apiBaseUrl}/api/versoes/${versaoId}`, {
+    fetch(`/api/versoes/${versaoId}`, {
         method: 'DELETE',
         headers: {
             'Authorization': `Bearer ${getToken()}`

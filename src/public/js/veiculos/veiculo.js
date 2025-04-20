@@ -169,6 +169,24 @@ async function loadAllVersoes() {
         });
         
         if (!response.ok) {
+            // Se receber erro 404, tentar URL alternativa
+            if (response.status === 404) {
+                console.log('URL /api/versoes/public não encontrada, tentando URL alternativa');
+                const alternativeResponse = await fetch('/api/veiculos/versoes/all', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!alternativeResponse.ok) {
+                    throw new Error(`Falha ao carregar versões (alternativa): ${alternativeResponse.status}`);
+                }
+                
+                versoes = await alternativeResponse.json();
+                console.log('Versões carregadas com sucesso (URL alternativa):', versoes);
+                return;
+            }
+            
             throw new Error(`Falha ao carregar versões: ${response.status}`);
         }
         
@@ -451,8 +469,8 @@ async function loadVeiculos(page = 1) {
             return;
         }
         
-        // Usar URL relativa sem prefixo de domínio, seguindo o padrão da página de usuários
-        const response = await fetch(`/api/veiculos?page=${page}&limit=10`, {
+        // Usar a URL pública correta conforme identificado na análise do controlador
+        const response = await fetch(`/api/veiculos/public?page=${page}&limit=10`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
@@ -1363,7 +1381,7 @@ function getVeiculo(id) {
     
     const token = auth.getToken();
     
-    fetch(`/api/veiculos/${id}`, {
+    fetch(`/api/veiculos/public/${id}`, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${token}`
