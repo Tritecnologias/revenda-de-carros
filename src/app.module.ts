@@ -26,7 +26,7 @@ import { VersaoPintura } from './veiculos/entities/versao-pintura.entity';
     }),
     TypeOrmModule.forRoot({
       type: 'mysql',
-      host: '69.62.91.195',
+      host: 'localhost',
       port: 3306,
       username: 'wanderson',
       password: 'Flavinha@2022',

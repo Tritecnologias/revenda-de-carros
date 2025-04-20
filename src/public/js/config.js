@@ -12,10 +12,18 @@ const config = {
   // Configurações de ambiente
   environments: {
     development: {
-      baseUrls: ['', 'http://localhost:3000', 'http://127.0.0.1:3000']
+      baseUrls: ['', 'http://localhost:3000', 'http://127.0.0.1:3000'],
+      dbConfig: {
+        host: 'localhost',
+        port: 3306
+      }
     },
     production: {
-      baseUrls: ['', window.location.origin, 'http://69.62.91.195:3000']
+      baseUrls: ['', window.location.origin, 'http://69.62.91.195:3000'],
+      dbConfig: {
+        host: '69.62.91.195',
+        port: 3306
+      }
     }
   },
   
