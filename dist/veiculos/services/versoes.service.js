@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var VersoesService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.VersoesService = exports.UpdateVersaoDto = exports.CreateVersaoDto = void 0;
 const common_1 = require("@nestjs/common");
@@ -25,68 +26,134 @@ exports.CreateVersaoDto = CreateVersaoDto;
 class UpdateVersaoDto {
 }
 exports.UpdateVersaoDto = UpdateVersaoDto;
-let VersoesService = class VersoesService {
+let VersoesService = VersoesService_1 = class VersoesService {
     constructor(versaoRepository, veiculosRepository, modelosService) {
         this.versaoRepository = versaoRepository;
         this.veiculosRepository = veiculosRepository;
         this.modelosService = modelosService;
+        this.logger = new common_1.Logger(VersoesService_1.name);
     }
     async findAll() {
-        return this.versaoRepository.find({
-            relations: ['modelo', 'modelo.marca'],
-        });
+        try {
+            this.logger.log('Buscando todas as versões');
+            const versoes = await this.versaoRepository.find({
+                relations: ['modelo', 'modelo.marca'],
+            });
+            this.logger.log(`Encontradas ${versoes.length} versões`);
+            return versoes;
+        }
+        catch (error) {
+            this.logger.error(`Erro ao buscar versões: ${error.message}`, error.stack);
+            throw new common_1.InternalServerErrorException(`Erro ao buscar versões: ${error.message}`);
+        }
     }
     async findOne(id) {
-        const versao = await this.versaoRepository.findOne({
-            where: { id },
-            relations: ['modelo', 'modelo.marca'],
-        });
-        if (!versao) {
-            throw new common_1.NotFoundException(`Versão com ID ${id} não encontrada`);
+        try {
+            this.logger.log(`Buscando versão com ID: ${id}`);
+            const versao = await this.versaoRepository.findOne({
+                where: { id },
+                relations: ['modelo', 'modelo.marca'],
+            });
+            if (!versao) {
+                this.logger.warn(`Versão com ID ${id} não encontrada`);
+                throw new common_1.NotFoundException(`Versão com ID ${id} não encontrada`);
+            }
+            this.logger.log(`Versão com ID ${id} encontrada`);
+            return versao;
         }
-        return versao;
+        catch (error) {
+            if (error instanceof common_1.NotFoundException) {
+                throw error;
+            }
+            this.logger.error(`Erro ao buscar versão com ID ${id}: ${error.message}`, error.stack);
+            throw new common_1.InternalServerErrorException(`Erro ao buscar versão: ${error.message}`);
+        }
     }
     async findByModelo(modeloId) {
-        const versoes = await this.versaoRepository.find({
-            where: { modeloId },
-            relations: ['modelo', 'modelo.marca'],
-        });
-        const result = await Promise.all(versoes.map(async (versao) => {
-            console.log('Buscando veiculo por versaoId:', versao.id, 'modeloId:', versao.modeloId);
-            const veiculo = await this.veiculosRepository
-                .createQueryBuilder('veiculo')
-                .where('veiculo.versaoId = :versaoId', { versaoId: versao.id })
-                .andWhere('veiculo.modeloId = :modeloId', { modeloId: versao.modeloId })
-                .orderBy('veiculo.ano', 'DESC')
-                .getOne();
-            return {
-                ...versao,
-                veiculoId: veiculo ? veiculo.id : null,
-                veiculo: veiculo || null,
-            };
-        }));
-        return result;
+        try {
+            this.logger.log(`Buscando versões para o modelo com ID: ${modeloId}`);
+            const versoes = await this.versaoRepository.find({
+                where: { modeloId },
+                relations: ['modelo', 'modelo.marca'],
+            });
+            this.logger.log(`Encontradas ${versoes.length} versões para o modelo ${modeloId}`);
+            const result = await Promise.all(versoes.map(async (versao) => {
+                try {
+                    this.logger.log(`Buscando veículo por versaoId: ${versao.id}, modeloId: ${versao.modeloId}`);
+                    const veiculo = await this.veiculosRepository
+                        .createQueryBuilder('veiculo')
+                        .where('veiculo.versaoId = :versaoId', { versaoId: versao.id })
+                        .andWhere('veiculo.modeloId = :modeloId', { modeloId: versao.modeloId })
+                        .orderBy('veiculo.ano', 'DESC')
+                        .getOne();
+                    return {
+                        ...versao,
+                        veiculoId: veiculo ? veiculo.id : null,
+                        veiculo: veiculo || null,
+                    };
+                }
+                catch (error) {
+                    this.logger.error(`Erro ao buscar veículo para versão ${versao.id}: ${error.message}`, error.stack);
+                    return {
+                        ...versao,
+                        veiculoId: null,
+                        veiculo: null,
+                    };
+                }
+            }));
+            return result;
+        }
+        catch (error) {
+            this.logger.error(`Erro ao buscar versões para o modelo ${modeloId}: ${error.message}`, error.stack);
+            throw new common_1.InternalServerErrorException(`Erro ao buscar versões para o modelo: ${error.message}`);
+        }
     }
     async create(createVersaoDto) {
-        await this.modelosService.findOne(createVersaoDto.modeloId);
-        const versao = this.versaoRepository.create(createVersaoDto);
-        return this.versaoRepository.save(versao);
+        try {
+            this.logger.log(`Criando nova versão: ${JSON.stringify(createVersaoDto)}`);
+            await this.modelosService.findOne(createVersaoDto.modeloId);
+            const versao = this.versaoRepository.create(createVersaoDto);
+            const result = await this.versaoRepository.save(versao);
+            this.logger.log(`Versão criada com sucesso, ID: ${result.id}`);
+            return result;
+        }
+        catch (error) {
+            this.logger.error(`Erro ao criar versão: ${error.message}`, error.stack);
+            throw error;
+        }
     }
     async update(id, updateVersaoDto) {
-        const versao = await this.findOne(id);
-        if (updateVersaoDto.modeloId) {
-            await this.modelosService.findOne(updateVersaoDto.modeloId);
+        try {
+            this.logger.log(`Atualizando versão com ID ${id}: ${JSON.stringify(updateVersaoDto)}`);
+            const versao = await this.findOne(id);
+            if (updateVersaoDto.modeloId) {
+                await this.modelosService.findOne(updateVersaoDto.modeloId);
+            }
+            this.versaoRepository.merge(versao, updateVersaoDto);
+            const result = await this.versaoRepository.save(versao);
+            this.logger.log(`Versão com ID ${id} atualizada com sucesso`);
+            return result;
         }
-        this.versaoRepository.merge(versao, updateVersaoDto);
-        return this.versaoRepository.save(versao);
+        catch (error) {
+            this.logger.error(`Erro ao atualizar versão com ID ${id}: ${error.message}`, error.stack);
+            throw error;
+        }
     }
     async remove(id) {
-        const versao = await this.findOne(id);
-        await this.versaoRepository.remove(versao);
+        try {
+            this.logger.log(`Removendo versão com ID ${id}`);
+            const versao = await this.findOne(id);
+            await this.versaoRepository.remove(versao);
+            this.logger.log(`Versão com ID ${id} removida com sucesso`);
+        }
+        catch (error) {
+            this.logger.error(`Erro ao remover versão com ID ${id}: ${error.message}`, error.stack);
+            throw error;
+        }
     }
 };
 exports.VersoesService = VersoesService;
-exports.VersoesService = VersoesService = __decorate([
+exports.VersoesService = VersoesService = VersoesService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(versao_entity_1.Versao)),
     __param(1, (0, typeorm_1.InjectRepository)(veiculo_entity_1.Veiculo)),

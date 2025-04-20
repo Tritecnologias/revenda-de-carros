@@ -22,41 +22,105 @@ let VersoesController = class VersoesController {
     constructor(versoesService) {
         this.versoesService = versoesService;
     }
-    create(createVersaoDto) {
-        console.log('VersoesController: Criando nova versão', createVersaoDto);
-        return this.versoesService.create(createVersaoDto);
+    async create(createVersaoDto) {
+        try {
+            console.log('VersoesController: Criando nova versão', createVersaoDto);
+            return await this.versoesService.create(createVersaoDto);
+        }
+        catch (error) {
+            console.error('VersoesController: Erro ao criar versão:', error.message);
+            throw new common_1.HttpException(error.message || 'Erro ao criar versão', error.status || common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
-    findAll() {
-        console.log('VersoesController: Buscando todas as versões');
-        return this.versoesService.findAll();
+    async findAll() {
+        try {
+            console.log('VersoesController: Buscando todas as versões');
+            return await this.versoesService.findAll();
+        }
+        catch (error) {
+            console.error('VersoesController: Erro ao buscar versões:', error.message);
+            throw new common_1.HttpException(error.message || 'Erro ao buscar versões', error.status || common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
-    findAllPublic() {
-        console.log('VersoesController: Buscando todas as versões (público)');
-        return this.versoesService.findAll();
+    async findAllPublic() {
+        try {
+            console.log('VersoesController: Buscando todas as versões (público)');
+            return await this.versoesService.findAll();
+        }
+        catch (error) {
+            console.error('VersoesController: Erro ao buscar versões (público):', error.message);
+            throw new common_1.HttpException(error.message || 'Erro ao buscar versões', error.status || common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
-    findByModelo(modeloId) {
-        console.log(`VersoesController: Buscando versões para o modelo ${modeloId}`);
-        return this.versoesService.findByModelo(+modeloId);
+    async findAllAlternative() {
+        try {
+            console.log('VersoesController: Buscando todas as versões (endpoint alternativo)');
+            return await this.versoesService.findAll();
+        }
+        catch (error) {
+            console.error('VersoesController: Erro ao buscar versões (endpoint alternativo):', error.message);
+            throw new common_1.HttpException(error.message || 'Erro ao buscar versões', error.status || common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
-    findByModeloPublic(modeloId) {
-        console.log(`VersoesController: Buscando versões para o modelo ${modeloId} (público)`);
-        return this.versoesService.findByModelo(+modeloId);
+    async findByModelo(modeloId) {
+        try {
+            console.log(`VersoesController: Buscando versões para o modelo ${modeloId}`);
+            return await this.versoesService.findByModelo(+modeloId);
+        }
+        catch (error) {
+            console.error(`VersoesController: Erro ao buscar versões para o modelo ${modeloId}:`, error.message);
+            throw new common_1.HttpException(error.message || `Erro ao buscar versões para o modelo ${modeloId}`, error.status || common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
-    findOne(id) {
-        console.log(`VersoesController: Buscando versão ${id}`);
-        return this.versoesService.findOne(+id);
+    async findByModeloPublic(modeloId) {
+        try {
+            console.log(`VersoesController: Buscando versões para o modelo ${modeloId} (público)`);
+            return await this.versoesService.findByModelo(+modeloId);
+        }
+        catch (error) {
+            console.error(`VersoesController: Erro ao buscar versões para o modelo ${modeloId} (público):`, error.message);
+            throw new common_1.HttpException(error.message || `Erro ao buscar versões para o modelo ${modeloId}`, error.status || common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
-    findOnePublic(id) {
-        console.log(`VersoesController: Buscando versão ${id} (público)`);
-        return this.versoesService.findOne(+id);
+    async findOne(id) {
+        try {
+            console.log(`VersoesController: Buscando versão ${id}`);
+            return await this.versoesService.findOne(+id);
+        }
+        catch (error) {
+            console.error(`VersoesController: Erro ao buscar versão ${id}:`, error.message);
+            throw new common_1.HttpException(error.message || `Erro ao buscar versão com ID ${id}`, error.status || common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
-    update(id, updateVersaoDto) {
-        console.log(`VersoesController: Atualizando versão ${id}`, updateVersaoDto);
-        return this.versoesService.update(+id, updateVersaoDto);
+    async findOnePublic(id) {
+        try {
+            console.log(`VersoesController: Buscando versão ${id} (público)`);
+            return await this.versoesService.findOne(+id);
+        }
+        catch (error) {
+            console.error(`VersoesController: Erro ao buscar versão ${id} (público):`, error.message);
+            throw new common_1.HttpException(error.message || `Erro ao buscar versão com ID ${id}`, error.status || common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
-    remove(id) {
-        console.log(`VersoesController: Removendo versão ${id}`);
-        return this.versoesService.remove(+id);
+    async update(id, updateVersaoDto) {
+        try {
+            console.log(`VersoesController: Atualizando versão ${id}`, updateVersaoDto);
+            return await this.versoesService.update(+id, updateVersaoDto);
+        }
+        catch (error) {
+            console.error(`VersoesController: Erro ao atualizar versão ${id}:`, error.message);
+            throw new common_1.HttpException(error.message || `Erro ao atualizar versão com ID ${id}`, error.status || common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+    async remove(id) {
+        try {
+            console.log(`VersoesController: Removendo versão ${id}`);
+            return await this.versoesService.remove(+id);
+        }
+        catch (error) {
+            console.error(`VersoesController: Erro ao remover versão ${id}:`, error.message);
+            throw new common_1.HttpException(error.message || `Erro ao remover versão com ID ${id}`, error.status || common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 };
 exports.VersoesController = VersoesController;
@@ -66,27 +130,34 @@ __decorate([
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [versoes_service_1.CreateVersaoDto]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], VersoesController.prototype, "create", null);
 __decorate([
     (0, common_1.Get)(),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], VersoesController.prototype, "findAll", null);
 __decorate([
     (0, common_1.Get)('public'),
     (0, common_1.SetMetadata)('isPublic', true),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], VersoesController.prototype, "findAllPublic", null);
+__decorate([
+    (0, common_1.Get)('all'),
+    (0, common_1.SetMetadata)('isPublic', true),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], VersoesController.prototype, "findAllAlternative", null);
 __decorate([
     (0, common_1.Get)('modelo/:modeloId'),
     __param(0, (0, common_1.Param)('modeloId')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], VersoesController.prototype, "findByModelo", null);
 __decorate([
     (0, common_1.Get)('modelo/:modeloId/public'),
@@ -94,14 +165,14 @@ __decorate([
     __param(0, (0, common_1.Param)('modeloId')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], VersoesController.prototype, "findByModeloPublic", null);
 __decorate([
     (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], VersoesController.prototype, "findOne", null);
 __decorate([
     (0, common_1.Get)(':id/public'),
@@ -109,7 +180,7 @@ __decorate([
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], VersoesController.prototype, "findOnePublic", null);
 __decorate([
     (0, common_1.Patch)(':id'),
@@ -118,7 +189,7 @@ __decorate([
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, versoes_service_1.UpdateVersaoDto]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], VersoesController.prototype, "update", null);
 __decorate([
     (0, common_1.Delete)(':id'),
@@ -126,7 +197,7 @@ __decorate([
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], VersoesController.prototype, "remove", null);
 exports.VersoesController = VersoesController = __decorate([
     (0, common_1.Controller)('api/versoes'),

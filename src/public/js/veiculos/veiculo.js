@@ -164,6 +164,7 @@ async function loadAllVersoes() {
         // Lista de URLs a tentar, em ordem de prioridade
         const urlsToTry = [
             '/api/versoes/public',
+            '/api/versoes/all',  // Novo endpoint alternativo
             '/api/versoes',
             '/api/veiculos/versoes/all'
         ];
@@ -184,6 +185,9 @@ async function loadAllVersoes() {
                 if (response.ok) {
                     versaoData = await response.json();
                     console.log(`Versões carregadas com sucesso de ${url}:`, versaoData);
+                    
+                    // Armazenar URL bem-sucedida para uso futuro
+                    localStorage.setItem('successful_versoes_url', url);
                     break;
                 } else {
                     console.log(`Falha ao carregar versões de ${url}: ${response.status}`);

@@ -258,21 +258,32 @@ function carregarVersoes() {
     if (status) params.append('status', status);
     const queryString = params.toString() ? `?${params.toString()}` : '';
     
+    // Verificar se temos uma URL bem-sucedida armazenada
+    const savedUrl = localStorage.getItem('successful_versoes_url');
+    if (savedUrl) {
+        // Adicionar a URL salva como primeira opção
+        urlsToTry.push(savedUrl);
+    }
+    
     if (modeloId) {
         // URLs para modelo específico
-        urlsToTry = [
+        urlsToTry = urlsToTry.concat([
             `/api/versoes/modelo/${modeloId}/public${queryString}`,
             `/api/versoes/modelo/${modeloId}${queryString}`,
             `/api/veiculos/versoes/by-modelo/${modeloId}${queryString}`
-        ];
+        ]);
     } else {
         // URLs para todas as versões
-        urlsToTry = [
+        urlsToTry = urlsToTry.concat([
             `/api/versoes/public${queryString}`,
+            `/api/versoes/all${queryString}`,  
             `/api/versoes${queryString}`,
             `/api/veiculos/versoes/all${queryString}`
-        ];
+        ]);
     }
+    
+    // Remover duplicatas
+    urlsToTry = [...new Set(urlsToTry)];
     
     console.log('URLs a tentar:', urlsToTry);
     
