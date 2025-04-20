@@ -25,6 +25,7 @@ const opcionais_controller_1 = require("./controllers/opcionais.controller");
 const modelo_opcional_controller_1 = require("./controllers/modelo-opcional.controller");
 const venda_direta_controller_1 = require("./controllers/venda-direta.controller");
 const versoes_controller_1 = require("./controllers/versoes.controller");
+const versoes_public_controller_1 = require("./controllers/versoes-public.controller");
 const versao_opcional_controller_1 = require("./controllers/versao-opcional.controller");
 const versao_pintura_controller_1 = require("./controllers/versao-pintura.controller");
 const marcas_service_1 = require("./services/marcas.service");
@@ -52,6 +53,7 @@ exports.VeiculosModule = VeiculosModule = __decorate([
             modelo_opcional_controller_1.ModeloOpcionalController,
             venda_direta_controller_1.VendaDiretaController,
             versoes_controller_1.VersoesController,
+            versoes_public_controller_1.VersoesPublicController,
             versao_opcional_controller_1.VersaoOpcionalController,
             versao_pintura_controller_1.VersaoPinturaController,
         ],

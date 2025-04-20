@@ -35,14 +35,15 @@ exports.AppModule = AppModule = __decorate([
         imports: [
             config_1.ConfigModule.forRoot({
                 isGlobal: true,
+                envFilePath: '.env',
             }),
             typeorm_1.TypeOrmModule.forRoot({
                 type: 'mysql',
-                host: 'localhost',
-                port: 3306,
-                username: 'wanderson',
-                password: 'Flavinha@2022',
-                database: 'revenda_carros',
+                host: process.env.DB_HOST || 'localhost',
+                port: parseInt(process.env.DB_PORT || '3306'),
+                username: process.env.DB_USERNAME || 'wanderson',
+                password: process.env.DB_PASSWORD || 'Flavinha@2022',
+                database: process.env.DB_DATABASE || 'revenda_carros',
                 entities: [veiculo_entity_1.Veiculo, pintura_entity_1.Pintura, modelo_pintura_entity_1.ModeloPintura, user_entity_1.User, marca_entity_1.Marca, modelo_entity_1.Modelo, veiculo_entity_2.Veiculo, opcional_entity_1.Opcional, modelo_opcional_entity_1.ModeloOpcional, venda_direta_entity_1.VendaDireta, versao_entity_1.Versao, versao_opcional_entity_1.VersaoOpcional, versao_pintura_entity_1.VersaoPintura],
                 synchronize: true,
             }),

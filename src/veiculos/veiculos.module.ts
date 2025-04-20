@@ -16,6 +16,7 @@ import { OpcionaisController } from './controllers/opcionais.controller';
 import { ModeloOpcionalController } from './controllers/modelo-opcional.controller';
 import { VendaDiretaController } from './controllers/venda-direta.controller';
 import { VersoesController } from './controllers/versoes.controller';
+import { VersoesPublicController } from './controllers/versoes-public.controller';
 import { VersaoOpcionalController } from './controllers/versao-opcional.controller';
 import { VersaoPinturaController } from './controllers/versao-pintura.controller';
 import { MarcasService } from './services/marcas.service';
@@ -40,6 +41,7 @@ import { VersaoPinturaService } from './services/versao-pintura.service';
     ModeloOpcionalController,
     VendaDiretaController,
     VersoesController,
+    VersoesPublicController,
     VersaoOpcionalController,
     VersaoPinturaController,
   ],

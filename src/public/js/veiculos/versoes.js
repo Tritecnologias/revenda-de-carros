@@ -311,16 +311,18 @@ async function carregarVersoes() {
         if (modeloId) {
             // URLs para modelo específico
             urls = [
-                `/api/versoes/modelo/${modeloId}/public${queryString}`,
+                `/api/veiculos/versoes/modelo/${modeloId}${queryString}`,
                 `/api/versoes/modelo/${modeloId}${queryString}`,
+                `/api/versoes/modelo/${modeloId}/public${queryString}`,
                 `/api/veiculos/versoes/by-modelo/${modeloId}${queryString}`
             ];
         } else {
             // URLs para todas as versões
             urls = [
-                `/api/versoes/public${queryString}`,
+                `/api/veiculos/versoes${queryString}`,
                 `/api/versoes${queryString}`,
-                `/api/veiculos/versoes${queryString}`
+                `/api/versoes/public${queryString}`,
+                `/api/veiculos/versoes/all${queryString}`
             ];
         }
         
