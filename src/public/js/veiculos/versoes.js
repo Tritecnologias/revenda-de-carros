@@ -362,7 +362,7 @@ async function carregarVersoes() {
 }
 
 // Função para renderizar a tabela de versões
-function renderizarVersoes(versoes, tableBody) {
+function renderizarVersoes(data, tableBody) {
     // Usar o tableBody passado como parâmetro ou tentar encontrar na página
     const tbody = tableBody || document.getElementById('versoesTableBody') || document.getElementById('tabelaVersoes');
     
@@ -374,18 +374,22 @@ function renderizarVersoes(versoes, tableBody) {
     
     tbody.innerHTML = '';
     
-    if (versoes.length === 0) {
-        const tr = document.createElement('tr');
-        const td = document.createElement('td');
-        td.colSpan = 6;
-        td.textContent = 'Nenhuma versão encontrada';
-        td.className = 'text-center';
-        tr.appendChild(td);
-        tbody.appendChild(tr);
+    // Se não houver dados ou se data for undefined, mostrar mensagem
+    if (!data || !Array.isArray(data) || data.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center">
+                    <div class="alert alert-warning">
+                        Nenhuma versão encontrada. 
+                        <a href="versao-form.html" class="alert-link">Adicionar nova versão</a>
+                    </div>
+                </td>
+            </tr>
+        `;
         return;
     }
     
-    versoes.forEach(versao => {
+    data.forEach(versao => {
         const tr = document.createElement('tr');
         
         // Coluna ID

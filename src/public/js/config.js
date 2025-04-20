@@ -71,106 +71,49 @@ const config = {
   },
   
   // Função para tentar múltiplas URLs em sequência até encontrar uma que funcione
-  fetchWithFallback: async function(urls, options = {}) {
-    try {
-      // Se urls for uma string única, convertê-la para array
-      if (typeof urls === 'string') {
-        urls = [urls];
-      }
-      
-      // Corrigir rotas conhecidas incorretas
-      urls = urls.map(url => this.fixApiUrl(url));
-      
-      // Obter URLs base para o ambiente atual
-      const baseUrls = this.getBaseUrls();
-      
-      // Para cada URL original, criar versões com diferentes prefixos
-      urls.forEach(url => {
-        // Se a URL já começa com http:// ou https://, adicioná-la diretamente
-        if (url.startsWith('http://') || url.startsWith('https://')) {
-          if (!urls.includes(url)) {
-            urls.push(url);
-          }
-        } else {
-          // Adicionar versões com diferentes prefixos
-          baseUrls.forEach(baseUrl => {
-            // Garantir que não haja barras duplicadas
-            const cleanUrl = url.startsWith('/') ? url : `/${url}`;
-            const fullUrl = `${baseUrl}${cleanUrl}`;
-            if (!urls.includes(fullUrl)) {
-              urls.push(fullUrl);
-            }
-          });
-        }
-      });
-      
-      // Remover duplicatas
-      urls = [...new Set(urls)];
-      
-      console.log(`Tentando URLs expandidas em sequência:`, urls);
-      
-      let lastError = null;
-      
-      // Tentar cada URL até encontrar uma que funcione
-      for (const url of urls) {
-        try {
-          console.log(`Tentando URL: ${url}`);
-          
-          // Configurar timeout para evitar esperas muito longas
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 segundos de timeout
-          
-          const fetchOptions = {
-            ...options,
-            signal: controller.signal
-          };
-          
-          const response = await fetch(url, fetchOptions).catch(err => {
-            clearTimeout(timeoutId);
-            throw err;
-          });
-          
-          clearTimeout(timeoutId); // Limpar o timeout se a requisição for bem-sucedida
-          
-          if (response.ok) {
-            console.log(`URL bem-sucedida: ${url}`);
-            
-            const data = await response.json().catch(err => {
-              console.error('Erro ao parsear resposta JSON:', err);
-              throw new Error('Erro ao processar resposta do servidor');
-            });
-            
-            return data;
-          } else {
-            console.log(`Falha na URL ${url}: ${response.status} - ${response.statusText}`);
-            
-            // Se for erro de autenticação, redirecionar para login
-            if (response.status === 401) {
-              console.error('Sessão expirada ou token inválido');
-              window.location.href = '/login.html';
-              return null;
-            }
-            
-            // Para outros erros, tentar ler a mensagem de erro
-            try {
-              const errorData = await response.json().catch(() => ({}));
-              console.error('Detalhes do erro:', errorData);
-            } catch (e) {
-              console.error('Não foi possível ler detalhes do erro');
-            }
-          }
-        } catch (error) {
-          console.error(`Erro ao tentar URL ${url}:`, error);
-          lastError = error;
-        }
-      }
-      
-      // Se chegamos aqui, todas as URLs falharam
-      throw new Error(lastError?.message || 'Não foi possível conectar a nenhuma API disponível');
-    } catch (finalError) {
-      console.error('Erro fatal em fetchWithFallback:', finalError);
-      throw finalError;
+  async fetchWithFallback(urls, options = {}) {
+    if (!Array.isArray(urls)) {
+      urls = [urls];
     }
+    
+    let lastError = null;
+    
+    // Tentar cada URL em sequência
+    for (const url of urls) {
+      try {
+        console.log('Tentando URL:', url);
+        const response = await fetch(url, options);
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({
+            message: `${response.status} - ${response.statusText}`
+          }));
+          
+          console.log(`Falha na URL ${url}: ${response.status} - ${response.statusText}`);
+          lastError = errorData;
+          continue; // Tentar próxima URL
+        }
+        
+        // Se chegou aqui, a resposta foi bem-sucedida
+        console.log('URL bem-sucedida:', url);
+        return await response.json();
+      } catch (error) {
+        console.log(`Erro ao acessar ${url}:`, error.message);
+        lastError = error;
+      }
+    }
+    
+    // Se chegou aqui, todas as URLs falharam
+    console.log('Detalhes do erro:', lastError);
+    
+    // Se estamos buscando versões e todas as URLs falharam, retornar um array vazio
+    // para evitar quebrar a interface do usuário
+    if (urls.some(url => url.includes('/versoes'))) {
+      console.log('Retornando array vazio para versões como fallback');
+      return [];
+    }
+    
+    throw new Error(`Não foi possível acessar nenhuma das URLs: ${lastError?.message || 'Erro desconhecido'}`);
   },
   
   // Função auxiliar para fazer requisições GET
