@@ -12,10 +12,13 @@ export declare class VeiculosService {
     constructor(veiculosRepository: Repository<Veiculo>, marcasService: MarcasService, modelosService: ModelosService, versoesService: VersoesService);
     findAll(page?: number, limit?: number, modeloId?: number): Promise<{
         items: Veiculo[];
-        total: number;
-        page: number;
-        limit: number;
-        totalPages: number;
+        meta: {
+            totalItems: number;
+            itemCount: number;
+            itemsPerPage: number;
+            totalPages: number;
+            currentPage: number;
+        };
     }>;
     findOne(id: number): Promise<Veiculo>;
     create(createVeiculoDto: CreateVeiculoDto): Promise<Veiculo>;

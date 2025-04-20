@@ -18,29 +18,42 @@ export class VeiculosService {
   ) {}
 
   async findAll(page = 1, limit = 10, modeloId?: number) {
-    const queryBuilder = this.veiculosRepository.createQueryBuilder('veiculo')
-      .leftJoinAndSelect('veiculo.marca', 'marca')
-      .leftJoinAndSelect('veiculo.modelo', 'modelo')
-      .leftJoinAndSelect('veiculo.versao', 'versao')
-      .orderBy('veiculo.createdAt', 'DESC');
+    try {
+      console.log(`VeiculosService: Buscando veículos - página ${page}, limite ${limit}, modeloId: ${modeloId || 'não especificado'}`);
+      
+      const queryBuilder = this.veiculosRepository.createQueryBuilder('veiculo')
+        .leftJoinAndSelect('veiculo.marca', 'marca')
+        .leftJoinAndSelect('veiculo.modelo', 'modelo')
+        .leftJoinAndSelect('veiculo.versao', 'versao')
+        .orderBy('veiculo.createdAt', 'DESC');
 
-    // Filtrar por modelo se fornecido
-    if (modeloId) {
-      queryBuilder.where('veiculo.modeloId = :modeloId', { modeloId });
+      // Filtrar por modelo se fornecido
+      if (modeloId) {
+        queryBuilder.where('veiculo.modeloId = :modeloId', { modeloId });
+      }
+
+      const [items, total] = await queryBuilder
+        .skip((page - 1) * limit)
+        .take(limit)
+        .getManyAndCount();
+
+      console.log(`VeiculosService: Encontrados ${items.length} veículos de um total de ${total}`);
+
+      // Retornar no formato esperado pelo frontend (com meta)
+      return {
+        items,
+        meta: {
+          totalItems: total,
+          itemCount: items.length,
+          itemsPerPage: limit,
+          totalPages: Math.ceil(total / limit),
+          currentPage: page
+        }
+      };
+    } catch (error) {
+      console.error('VeiculosService: Erro ao buscar veículos:', error);
+      throw error;
     }
-
-    const [items, total] = await queryBuilder
-      .skip((page - 1) * limit)
-      .take(limit)
-      .getManyAndCount();
-
-    return {
-      items,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-    };
   }
 
   async findOne(id: number) {

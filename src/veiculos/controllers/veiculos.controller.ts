@@ -37,7 +37,15 @@ export class VeiculosController {
     @Query('limit') limit: number = 10,
     @Query('modeloId') modeloId?: number,
   ) {
-    return this.veiculosService.findAll(page, limit, modeloId);
+    try {
+      console.log(`VeiculosController: Buscando veículos - página ${page}, limite ${limit}, modeloId: ${modeloId || 'não especificado'}`);
+      const result = await this.veiculosService.findAll(page, limit, modeloId);
+      console.log(`VeiculosController: Retornando ${result.items.length} veículos`);
+      return result;
+    } catch (error) {
+      console.error('VeiculosController: Erro ao buscar veículos:', error);
+      throw error;
+    }
   }
 
   @Get(':id')

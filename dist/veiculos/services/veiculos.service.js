@@ -28,25 +28,36 @@ let VeiculosService = class VeiculosService {
         this.versoesService = versoesService;
     }
     async findAll(page = 1, limit = 10, modeloId) {
-        const queryBuilder = this.veiculosRepository.createQueryBuilder('veiculo')
-            .leftJoinAndSelect('veiculo.marca', 'marca')
-            .leftJoinAndSelect('veiculo.modelo', 'modelo')
-            .leftJoinAndSelect('veiculo.versao', 'versao')
-            .orderBy('veiculo.createdAt', 'DESC');
-        if (modeloId) {
-            queryBuilder.where('veiculo.modeloId = :modeloId', { modeloId });
+        try {
+            console.log(`VeiculosService: Buscando veículos - página ${page}, limite ${limit}, modeloId: ${modeloId || 'não especificado'}`);
+            const queryBuilder = this.veiculosRepository.createQueryBuilder('veiculo')
+                .leftJoinAndSelect('veiculo.marca', 'marca')
+                .leftJoinAndSelect('veiculo.modelo', 'modelo')
+                .leftJoinAndSelect('veiculo.versao', 'versao')
+                .orderBy('veiculo.createdAt', 'DESC');
+            if (modeloId) {
+                queryBuilder.where('veiculo.modeloId = :modeloId', { modeloId });
+            }
+            const [items, total] = await queryBuilder
+                .skip((page - 1) * limit)
+                .take(limit)
+                .getManyAndCount();
+            console.log(`VeiculosService: Encontrados ${items.length} veículos de um total de ${total}`);
+            return {
+                items,
+                meta: {
+                    totalItems: total,
+                    itemCount: items.length,
+                    itemsPerPage: limit,
+                    totalPages: Math.ceil(total / limit),
+                    currentPage: page
+                }
+            };
         }
-        const [items, total] = await queryBuilder
-            .skip((page - 1) * limit)
-            .take(limit)
-            .getManyAndCount();
-        return {
-            items,
-            total,
-            page,
-            limit,
-            totalPages: Math.ceil(total / limit),
-        };
+        catch (error) {
+            console.error('VeiculosService: Erro ao buscar veículos:', error);
+            throw error;
+        }
     }
     async findOne(id) {
         const veiculo = await this.veiculosRepository.findOne({
