@@ -151,11 +151,6 @@ async function loadMarcas(page = 1) {
         
         console.log('Marcas carregadas:', data);
         
-        // Armazenar dados como mockados para uso futuro
-        if (data && (data.items || data.length > 0)) {
-            config.storeMockData('marcas', data);
-        }
-        
         // Verificar se a resposta é paginada ou uma lista simples
         if (data.items && data.total) {
             // Resposta paginada

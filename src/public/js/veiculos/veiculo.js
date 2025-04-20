@@ -176,11 +176,6 @@ async function loadAllVersoes() {
         
         console.log('Versões carregadas com sucesso:', data);
         
-        // Armazenar dados como mockados para uso futuro
-        if (data && data.length > 0) {
-            config.storeMockData('versoes', data);
-        }
-        
         versoes = data;
         
     } catch (error) {
@@ -477,11 +472,6 @@ async function loadVeiculos(page = 1) {
         });
         
         console.log('Veículos carregados:', data);
-        
-        // Armazenar dados como mockados para uso futuro
-        if (data && data.items && data.items.length > 0) {
-            config.storeMockData('veiculos', data);
-        }
         
         // Renderizar veículos
         renderVeiculos(data);
