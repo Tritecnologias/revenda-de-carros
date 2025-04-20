@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Put, Delete, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Put, Delete, Query, UseGuards, HttpException, HttpStatus } from '@nestjs/common';
 import { VeiculosService } from '../services/veiculos.service';
 import { CreateVeiculoDto, UpdateVeiculoDto } from '../dto/veiculo.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
@@ -15,18 +15,34 @@ export class VeiculosController {
     @Query('limit') limit: number = 10,
     @Query('modeloId') modeloId?: number,
   ) {
-    console.log(`VeiculosController: Acessando rota pública para buscar veículos. ModeloId: ${modeloId || 'não especificado'}`);
-    const result = await this.veiculosService.findAll(page, limit, modeloId);
-    console.log(`VeiculosController: Retornando ${result.items.length} veículos (público)`);
-    return result;
+    try {
+      console.log(`VeiculosController: Acessando rota pública para buscar veículos. ModeloId: ${modeloId || 'não especificado'}`);
+      const result = await this.veiculosService.findAll(page, limit, modeloId);
+      console.log(`VeiculosController: Retornando ${result.items.length} veículos (público)`);
+      return result;
+    } catch (error) {
+      console.error('VeiculosController: Erro ao buscar veículos:', error.message);
+      throw new HttpException(
+        error.message || 'Erro ao buscar veículos',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
   }
 
   @Get('public/:id')
   async findOnePublic(@Param('id') id: number) {
-    console.log(`VeiculosController: Acessando rota pública para buscar veículo ID: ${id}`);
-    const result = await this.veiculosService.findOne(id);
-    console.log(`VeiculosController: Retornando veículo ID: ${id} (público)`);
-    return result;
+    try {
+      console.log(`VeiculosController: Acessando rota pública para buscar veículo ID: ${id}`);
+      const result = await this.veiculosService.findOne(id);
+      console.log(`VeiculosController: Retornando veículo ID: ${id} (público)`);
+      return result;
+    } catch (error) {
+      console.error(`VeiculosController: Erro ao buscar veículo ID ${id}:`, error.message);
+      throw new HttpException(
+        error.message || `Erro ao buscar veículo com ID ${id}`,
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
   }
 
   @Get()
@@ -37,14 +53,30 @@ export class VeiculosController {
     @Query('limit') limit: number = 10,
     @Query('modeloId') modeloId?: number,
   ) {
-    return this.veiculosService.findAll(page, limit, modeloId);
+    try {
+      return await this.veiculosService.findAll(page, limit, modeloId);
+    } catch (error) {
+      console.error('VeiculosController: Erro ao buscar veículos:', error.message);
+      throw new HttpException(
+        error.message || 'Erro ao buscar veículos',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
   }
 
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'cadastrador')
   async findOne(@Param('id') id: number) {
-    return this.veiculosService.findOne(id);
+    try {
+      return await this.veiculosService.findOne(id);
+    } catch (error) {
+      console.error(`VeiculosController: Erro ao buscar veículo ID ${id}:`, error.message);
+      throw new HttpException(
+        error.message || `Erro ao buscar veículo com ID ${id}`,
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
   }
 
   @Post()
@@ -58,7 +90,10 @@ export class VeiculosController {
       return result;
     } catch (error) {
       console.error('VeiculosController: Erro ao criar veículo:', error.message);
-      throw error;
+      throw new HttpException(
+        error.message || 'Erro ao criar veículo',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR
+      );
     }
   }
 
@@ -76,7 +111,10 @@ export class VeiculosController {
       return result;
     } catch (error) {
       console.error(`VeiculosController: Erro ao atualizar veículo ID ${id}:`, error.message);
-      throw error;
+      throw new HttpException(
+        error.message || `Erro ao atualizar veículo com ID ${id}`,
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR
+      );
     }
   }
 
@@ -84,6 +122,14 @@ export class VeiculosController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'cadastrador')
   async remove(@Param('id') id: number) {
-    return this.veiculosService.remove(id);
+    try {
+      return await this.veiculosService.remove(id);
+    } catch (error) {
+      console.error(`VeiculosController: Erro ao remover veículo ID ${id}:`, error.message);
+      throw new HttpException(
+        error.message || `Erro ao remover veículo com ID ${id}`,
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
   }
 }

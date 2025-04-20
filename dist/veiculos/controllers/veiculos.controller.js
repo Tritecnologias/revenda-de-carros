@@ -24,22 +24,46 @@ let VeiculosController = class VeiculosController {
         this.veiculosService = veiculosService;
     }
     async findAllPublic(page = 1, limit = 10, modeloId) {
-        console.log(`VeiculosController: Acessando rota pública para buscar veículos. ModeloId: ${modeloId || 'não especificado'}`);
-        const result = await this.veiculosService.findAll(page, limit, modeloId);
-        console.log(`VeiculosController: Retornando ${result.items.length} veículos (público)`);
-        return result;
+        try {
+            console.log(`VeiculosController: Acessando rota pública para buscar veículos. ModeloId: ${modeloId || 'não especificado'}`);
+            const result = await this.veiculosService.findAll(page, limit, modeloId);
+            console.log(`VeiculosController: Retornando ${result.items.length} veículos (público)`);
+            return result;
+        }
+        catch (error) {
+            console.error('VeiculosController: Erro ao buscar veículos:', error.message);
+            throw new common_1.HttpException(error.message || 'Erro ao buscar veículos', error.status || common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
     async findOnePublic(id) {
-        console.log(`VeiculosController: Acessando rota pública para buscar veículo ID: ${id}`);
-        const result = await this.veiculosService.findOne(id);
-        console.log(`VeiculosController: Retornando veículo ID: ${id} (público)`);
-        return result;
+        try {
+            console.log(`VeiculosController: Acessando rota pública para buscar veículo ID: ${id}`);
+            const result = await this.veiculosService.findOne(id);
+            console.log(`VeiculosController: Retornando veículo ID: ${id} (público)`);
+            return result;
+        }
+        catch (error) {
+            console.error(`VeiculosController: Erro ao buscar veículo ID ${id}:`, error.message);
+            throw new common_1.HttpException(error.message || `Erro ao buscar veículo com ID ${id}`, error.status || common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
     async findAll(page = 1, limit = 10, modeloId) {
-        return this.veiculosService.findAll(page, limit, modeloId);
+        try {
+            return await this.veiculosService.findAll(page, limit, modeloId);
+        }
+        catch (error) {
+            console.error('VeiculosController: Erro ao buscar veículos:', error.message);
+            throw new common_1.HttpException(error.message || 'Erro ao buscar veículos', error.status || common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
     async findOne(id) {
-        return this.veiculosService.findOne(id);
+        try {
+            return await this.veiculosService.findOne(id);
+        }
+        catch (error) {
+            console.error(`VeiculosController: Erro ao buscar veículo ID ${id}:`, error.message);
+            throw new common_1.HttpException(error.message || `Erro ao buscar veículo com ID ${id}`, error.status || common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
     async create(createVeiculoDto) {
         console.log('VeiculosController: Criando veículo com dados:', JSON.stringify(createVeiculoDto));
@@ -50,7 +74,7 @@ let VeiculosController = class VeiculosController {
         }
         catch (error) {
             console.error('VeiculosController: Erro ao criar veículo:', error.message);
-            throw error;
+            throw new common_1.HttpException(error.message || 'Erro ao criar veículo', error.status || common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     async update(id, updateVeiculoDto) {
@@ -62,11 +86,17 @@ let VeiculosController = class VeiculosController {
         }
         catch (error) {
             console.error(`VeiculosController: Erro ao atualizar veículo ID ${id}:`, error.message);
-            throw error;
+            throw new common_1.HttpException(error.message || `Erro ao atualizar veículo com ID ${id}`, error.status || common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     async remove(id) {
-        return this.veiculosService.remove(id);
+        try {
+            return await this.veiculosService.remove(id);
+        }
+        catch (error) {
+            console.error(`VeiculosController: Erro ao remover veículo ID ${id}:`, error.message);
+            throw new common_1.HttpException(error.message || `Erro ao remover veículo com ID ${id}`, error.status || common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 };
 exports.VeiculosController = VeiculosController;

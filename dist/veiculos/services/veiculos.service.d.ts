@@ -9,6 +9,7 @@ export declare class VeiculosService {
     private marcasService;
     private modelosService;
     private versoesService;
+    private readonly logger;
     constructor(veiculosRepository: Repository<Veiculo>, marcasService: MarcasService, modelosService: ModelosService, versoesService: VersoesService);
     findAll(page?: number, limit?: number, modeloId?: number): Promise<{
         items: Veiculo[];
