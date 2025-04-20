@@ -323,8 +323,8 @@ async function loadVersaoOpcionais() {
         
         const filtroVersaoId = document.getElementById('filtroVersaoId').value;
         
-        // Usando a rota pública que não requer autenticação com roles específicos
-        let url = `${config.apiBaseUrl}/api/veiculos/versao-opcional/public?page=${currentPage}&limit=${itemsPerPage}`;
+        // Usando a função getApiUrl para garantir URLs corretas em qualquer ambiente
+        let url = config.getApiUrl(`api/veiculos/versao-opcional/public?page=${currentPage}&limit=${itemsPerPage}`);
         if (filtroVersaoId) {
             url += `&versaoId=${filtroVersaoId}`;
         }

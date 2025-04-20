@@ -1387,7 +1387,7 @@ function getVeiculo(id) {
     
     const token = auth.getToken();
     
-    fetch(`${config.apiBaseUrl}/api/veiculos/${id}`, {
+    fetch(config.getApiUrl(`api/veiculos/${id}`), {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${token}`
