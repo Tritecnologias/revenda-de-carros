@@ -236,12 +236,13 @@ function carregarVersoes() {
     const modeloId = document.getElementById('filtroModelo').value;
     const status = document.getElementById('filtroStatus').value;
     
-    // Construir URL da requisição
-    let url = `${config.apiBaseUrl}/api/versoes`;
-    
-    // Adicionar parâmetros de filtro se necessário
+    // Construir URL da requisição usando config.getApiUrl para garantir URLs corretas
+    // Usar os endpoints corretos conforme definidos no backend
+    let url;
     if (modeloId) {
-        url = `${config.apiBaseUrl}/api/versoes/modelo/${modeloId}`;
+        url = config.getApiUrl(`api/versoes/modelo/${modeloId}/public`);
+    } else {
+        url = config.getApiUrl('api/versoes/public');
     }
     
     console.log('URL da requisição:', url);
