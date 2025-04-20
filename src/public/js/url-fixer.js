@@ -20,33 +20,6 @@
     const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
     console.log('URL Fixer: Ambiente detectado:', isProduction ? 'Produção' : 'Desenvolvimento');
     
-    // Lista de rotas conhecidas e suas alternativas corretas
-    const routeMappings = {
-        // Rotas incorretas -> Rotas corretas
-        '/api/veiculos/versoes/all': '/api/versoes/public',
-        '/api/veiculos/versoes/': '/api/versoes/',
-        '/api/veiculos/versoes/modelo/': '/api/versoes/modelo/',
-        '/api/veiculos/versoes/by-modelo/': '/api/versoes/modelo/',
-        '/api/marcas': '/api/veiculos/marcas/all',
-        '/api/modelos/marca/': '/api/veiculos/modelos/by-marca/'
-    };
-    
-    // Função para corrigir uma URL com base nos mapeamentos conhecidos
-    function fixApiUrl(url) {
-        if (typeof url !== 'string') return url;
-        
-        // Verificar cada mapeamento
-        for (const [incorrectPath, correctPath] of Object.entries(routeMappings)) {
-            if (url.includes(incorrectPath)) {
-                const fixedUrl = url.replace(incorrectPath, correctPath);
-                console.log(`URL Fixer: Corrigindo rota: ${url} -> ${fixedUrl}`);
-                return fixedUrl;
-            }
-        }
-        
-        return url;
-    }
-    
     // Salvar a implementação original do fetch
     const originalFetch = window.fetch;
     
@@ -61,8 +34,10 @@
             console.log(`URL Fixer: Convertendo URL absoluta para relativa: ${url} -> ${fixedUrl}`);
         }
         
-        // Corrigir rotas conhecidas incorretas
-        fixedUrl = fixApiUrl(fixedUrl);
+        // Corrigir rotas conhecidas incorretas usando a função do config.js
+        if (typeof config.fixApiUrl === 'function') {
+            fixedUrl = config.fixApiUrl(fixedUrl);
+        }
         
         // Chamar o fetch original com a URL corrigida
         return originalFetch(fixedUrl, options);

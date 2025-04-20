@@ -9,16 +9,26 @@ console.log('Carregando config.js...');
  */
 
 const config = {
-  // Sempre usar URLs relativas, independentemente do ambiente
-  apiBaseUrl: '',
+  // Configurações de ambiente
+  environments: {
+    development: {
+      baseUrls: ['', 'http://localhost:3000', 'http://127.0.0.1:3000']
+    },
+    production: {
+      baseUrls: ['', window.location.origin, 'http://69.62.91.195:3000']
+    }
+  },
   
-  // Função para obter a URL da API com fallback
-  getApiUrl: function(endpoint, fallbacks = []) {
-    // Remover barras iniciais duplicadas se o endpoint já começar com barra
-    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    
-    // Retornar a URL relativa principal
-    return cleanEndpoint;
+  // Detectar ambiente atual
+  getCurrentEnvironment: function() {
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    return isLocalhost ? 'development' : 'production';
+  },
+  
+  // Obter URLs base para o ambiente atual
+  getBaseUrls: function() {
+    const env = this.getCurrentEnvironment();
+    return this.environments[env].baseUrls;
   },
   
   // Função para armazenar dados mockados como último recurso
@@ -34,38 +44,78 @@ const config = {
     }
   },
   
+  // Mapeamento de rotas incorretas para rotas corretas
+  routeMappings: {
+    // Veículos
+    '/api/veiculos/versoes/all': '/api/versoes/public',
+    '/api/veiculos/versoes/': '/api/versoes/',
+    '/api/veiculos/versoes/modelo/': '/api/versoes/modelo/',
+    '/api/veiculos/versoes/by-modelo/': '/api/versoes/modelo/',
+    
+    // Marcas e Modelos
+    '/api/marcas': '/api/veiculos/marcas/public',
+    '/api/marcas/': '/api/veiculos/marcas/public',
+    '/api/modelos/marca/': '/api/veiculos/modelos/by-marca/'
+  },
+  
+  // Função para corrigir uma URL com base nos mapeamentos conhecidos
+  fixApiUrl: function(url) {
+    if (typeof url !== 'string') return url;
+    
+    // Verificar cada mapeamento
+    for (const [incorrectPath, correctPath] of Object.entries(this.routeMappings)) {
+      if (url.includes(incorrectPath)) {
+        const fixedUrl = url.replace(incorrectPath, correctPath);
+        console.log(`URL Fixer: Corrigindo rota: ${url} -> ${fixedUrl}`);
+        return fixedUrl;
+      }
+    }
+    
+    return url;
+  },
+  
   // Função para tentar múltiplas URLs em sequência até encontrar uma que funcione
   fetchWithFallback: async function(urls, options = {}) {
     try {
+      // Se urls for uma string única, convertê-la para array
+      if (typeof urls === 'string') {
+        urls = [urls];
+      }
+      
+      // Corrigir rotas conhecidas incorretas
+      urls = urls.map(url => this.fixApiUrl(url));
+      
       // Verificar se temos uma URL bem-sucedida armazenada para este tipo de endpoint
       const endpointType = urls[0].split('/')[2]; // Ex: 'veiculos', 'versoes', etc.
       const storedUrlKey = `successful_${endpointType}_url`;
       const storedUrl = localStorage.getItem(storedUrlKey);
       
       // Se temos uma URL armazenada, tentar ela primeiro
+      let expandedUrls = [];
       if (storedUrl) {
-        const storedUrlWithParams = urls[0].includes('?') && !storedUrl.includes('?') 
-          ? `${storedUrl}${urls[0].substring(urls[0].indexOf('?'))}` 
-          : storedUrl;
-        
-        urls = [storedUrlWithParams, ...urls.filter(url => url !== storedUrlWithParams)];
+        // Adicionar a URL armazenada como primeira opção
+        expandedUrls.push(storedUrl);
       }
       
-      // Adicionar URLs com prefixo de domínio para tentar também
-      const baseUrls = ['', 'http://localhost:3000', window.location.origin];
-      let expandedUrls = [];
+      // Obter URLs base para o ambiente atual
+      const baseUrls = this.getBaseUrls();
       
       // Para cada URL original, criar versões com diferentes prefixos
       urls.forEach(url => {
-        // Se a URL já começa com http:// ou https://, não adicionar prefixos
+        // Se a URL já começa com http:// ou https://, adicioná-la diretamente
         if (url.startsWith('http://') || url.startsWith('https://')) {
-          expandedUrls.push(url);
+          if (!expandedUrls.includes(url)) {
+            expandedUrls.push(url);
+          }
         } else {
           // Adicionar versões com diferentes prefixos
           baseUrls.forEach(baseUrl => {
             // Garantir que não haja barras duplicadas
             const cleanUrl = url.startsWith('/') ? url : `/${url}`;
-            expandedUrls.push(`${baseUrl}${cleanUrl}`);
+            const fullUrl = `${baseUrl}${cleanUrl}`;
+            if (!expandedUrls.includes(fullUrl)) {
+              expandedUrls.push(fullUrl);
+            }
           });
         }
       });
@@ -108,6 +158,11 @@ const config = {
               console.error('Erro ao parsear resposta JSON:', err);
               throw new Error('Erro ao processar resposta do servidor');
             });
+            
+            // Armazenar dados como mockados para uso futuro
+            if (data) {
+              this.storeMockData(endpointType, data);
+            }
             
             return data;
           } else {
@@ -160,10 +215,52 @@ const config = {
       console.error('Erro fatal em fetchWithFallback:', finalError);
       throw finalError;
     }
+  },
+  
+  // Função auxiliar para fazer requisições GET
+  get: async function(endpoint, options = {}) {
+    return this.fetchWithFallback(endpoint, {
+      method: 'GET',
+      ...options
+    });
+  },
+  
+  // Função auxiliar para fazer requisições POST
+  post: async function(endpoint, data, options = {}) {
+    return this.fetchWithFallback(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+      },
+      body: JSON.stringify(data),
+      ...options
+    });
+  },
+  
+  // Função auxiliar para fazer requisições PUT
+  put: async function(endpoint, data, options = {}) {
+    return this.fetchWithFallback(endpoint, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+      },
+      body: JSON.stringify(data),
+      ...options
+    });
+  },
+  
+  // Função auxiliar para fazer requisições DELETE
+  delete: async function(endpoint, options = {}) {
+    return this.fetchWithFallback(endpoint, {
+      method: 'DELETE',
+      ...options
+    });
   }
 };
 
-console.log('Usando URLs relativas para todas as chamadas à API');
+console.log('Usando sistema de fallback resiliente para todas as chamadas à API');
 
 // Verificar se o objeto config está disponível globalmente
 if (typeof window !== 'undefined') {
