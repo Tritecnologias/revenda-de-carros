@@ -236,52 +236,87 @@ function carregarVersoes() {
     const modeloId = document.getElementById('filtroModelo').value;
     const status = document.getElementById('filtroStatus').value;
     
-    // Construir URL da requisição usando config.getApiUrl para garantir URLs corretas
-    // Tentar com prefixo api/veiculos/versoes conforme mencionado nas memórias
-    let url;
-    if (modeloId) {
-        url = config.getApiUrl(`api/veiculos/versoes/modelo/${modeloId}/public`);
-    } else {
-        url = config.getApiUrl('api/veiculos/versoes/all');
+    // Obter token de autenticação
+    const token = getToken();
+    if (!token) {
+        console.error('Token de autenticação não encontrado');
+        return;
     }
     
-    console.log('URL da requisição:', url);
+    // Tentar carregar versões com diferentes URLs possíveis
+    tryLoadVersoes(modeloId, marcaId, status, token);
+}
+
+// Função para tentar carregar versões com diferentes URLs
+async function tryLoadVersoes(modeloId, marcaId, status, token) {
+    // Lista de possíveis URLs para tentar, em ordem de prioridade
+    const possibleUrls = modeloId 
+        ? [
+            `${config.apiBaseUrl}/api/versoes/modelo/${modeloId}`,
+            `${config.apiBaseUrl}/api/veiculos/versoes/modelo/${modeloId}`,
+            `${config.apiBaseUrl}/api/versoes/modelo/${modeloId}/public`,
+            `${config.apiBaseUrl}/api/veiculos/versoes/by-modelo/${modeloId}`
+          ]
+        : [
+            `${config.apiBaseUrl}/api/versoes`,
+            `${config.apiBaseUrl}/api/veiculos/versoes/all`,
+            `${config.apiBaseUrl}/api/versoes/public`,
+            `${config.apiBaseUrl}/api/veiculos/versoes`
+          ];
     
-    // Fazer requisição para API
-    const token = getToken();
-    fetch(url, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${token}`
+    let success = false;
+    let versoes = [];
+    let lastError = null;
+    
+    // Tentar cada URL até encontrar uma que funcione
+    for (const url of possibleUrls) {
+        try {
+            console.log(`Tentando carregar versões com URL: ${url}`);
+            
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                console.log('Versões carregadas com sucesso usando URL:', url);
+                console.log('Dados recebidos:', data);
+                
+                // Armazenar a URL bem-sucedida para uso futuro
+                localStorage.setItem('successful_versoes_url', url);
+                
+                versoes = Array.isArray(data) ? data : (data.items || []);
+                success = true;
+                break;
+            } else {
+                console.warn(`Falha ao carregar versões com URL ${url}: ${response.status} ${response.statusText}`);
+            }
+        } catch (error) {
+            console.warn(`Erro ao tentar URL ${url}:`, error);
+            lastError = error;
         }
-    })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Erro ao carregar versões');
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log('Versões carregadas:', data);
-            
-            // Filtrar por status se necessário
-            let versoes = data;
-            if (status) {
-                versoes = versoes.filter(versao => versao.status === (status === 'ativo'));
-            }
-            
-            // Filtrar por marca se necessário (quando não filtramos por modelo)
-            if (marcaId && !modeloId) {
-                versoes = versoes.filter(versao => versao.modelo && versao.modelo.marcaId == marcaId);
-            }
-            
-            // Renderizar tabela
-            renderizarTabelaVersoes(versoes);
-        })
-        .catch(error => {
-            console.error('Erro ao carregar versões:', error);
-            exibirMensagem('Erro ao carregar versões. Por favor, tente novamente.', 'danger');
-        });
+    }
+    
+    if (success) {
+        // Filtrar por status se necessário
+        if (status) {
+            versoes = versoes.filter(versao => versao.status === (status === 'ativo'));
+        }
+        
+        // Filtrar por marca se necessário (quando não filtramos por modelo)
+        if (marcaId && !modeloId) {
+            versoes = versoes.filter(versao => versao.modelo && versao.modelo.marcaId == marcaId);
+        }
+        
+        // Renderizar tabela
+        renderizarTabelaVersoes(versoes);
+    } else {
+        console.error('Todas as tentativas de carregar versões falharam:', lastError);
+        exibirMensagem('Erro ao carregar versões. Por favor, tente novamente.', 'danger');
+    }
 }
 
 // Função para renderizar a tabela de versões
