@@ -19,126 +19,127 @@ async function loadVersoes(modeloId) {
             versaoSelect.disabled = true;
         }
         
-        // Fazer requisição para API pública de versões
-        const response = await fetch(`${config.apiBaseUrl}/api/versoes/modelo/${modeloId}/public`, {
-            method: 'GET',
-            headers: { 
+        // Lista de URLs a tentar, em ordem de prioridade
+        const urls = [
+            `/api/versoes/modelo/${modeloId}/public`,
+            `/api/versoes/by-modelo/${modeloId}/public`,
+            `/api/veiculos/versoes/by-modelo/${modeloId}`,
+            `/api/versoes/modelo/${modeloId}`
+        ];
+        
+        console.log('Tentando carregar versões usando múltiplas URLs:', urls);
+        
+        // Usar a função fetchWithFallback do config.js
+        const versoes = await config.fetchWithFallback(urls, {
+            headers: {
                 'Content-Type': 'application/json'
             }
         });
         
-        if (!response.ok) {
-            throw new Error(`Falha ao carregar versões: ${response.status} ${response.statusText}`);
-        }
+        console.log('Versões carregadas com sucesso:', versoes);
         
-        const versoes = await response.json();
-        console.log('Versões carregadas:', versoes);
+        // Armazenar dados como mockados para uso futuro
+        if (versoes && versoes.length > 0) {
+            config.storeMockData(`versoes_modelo_${modeloId}`, versoes);
+        }
         
         // Agora, vamos verificar quais veículos existem
         const veiculosExistentes = new Set();
         
-        // Obter todos os veículos disponíveis usando o endpoint público
-        const veiculosResponse = await fetch(`${config.apiBaseUrl}/api/veiculos/public`, {
-            method: 'GET',
-            headers: { 
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        if (veiculosResponse.ok) {
-            const veiculosData = await veiculosResponse.json();
+        try {
+            // Lista de URLs a tentar para veículos, em ordem de prioridade
+            const veiculosUrls = [
+                `/api/veiculos/public`,
+                `/api/veiculos`
+            ];
+            
+            // Usar a função fetchWithFallback do config.js
+            const veiculosData = await config.fetchWithFallback(veiculosUrls, {
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
             console.log('Veículos disponíveis:', veiculosData);
             
-            // Adicionar IDs de veículos existentes ao Set
-            if (veiculosData.items && Array.isArray(veiculosData.items)) {
+            // Extrair os IDs das versões que têm veículos associados
+            if (veiculosData.items) {
+                // Resposta paginada
                 veiculosData.items.forEach(veiculo => {
-                    if (veiculo && veiculo.id) {
-                        veiculosExistentes.add(veiculo.id);
+                    if (veiculo.versaoId) {
+                        veiculosExistentes.add(veiculo.versaoId);
+                    }
+                });
+            } else if (Array.isArray(veiculosData)) {
+                // Lista simples
+                veiculosData.forEach(veiculo => {
+                    if (veiculo.versaoId) {
+                        veiculosExistentes.add(veiculo.versaoId);
                     }
                 });
             }
-            console.log('IDs de veículos existentes:', [...veiculosExistentes]);
-        } else {
-            console.error('Erro ao verificar veículos existentes:', veiculosResponse.status);
+        } catch (veiculosError) {
+            console.warn('Erro ao carregar veículos:', veiculosError);
+            // Continuar mesmo se não conseguir carregar os veículos
         }
         
+        // Preencher o select de versões
         if (versaoSelect) {
             versaoSelect.innerHTML = '<option value="">Selecione uma versão</option>';
             
-            // Filtrar apenas versões que têm veículos existentes
-            const versoesValidas = Array.isArray(versoes) ? versoes.filter(versao => {
-                // Determinar o ID do veículo
-                let veiculoId = null;
-                if (versao.veiculo && versao.veiculo.id) {
-                    veiculoId = versao.veiculo.id;
-                } else if (versao.veiculoId) {
-                    veiculoId = versao.veiculoId;
-                } else if (versao.id_veiculo) {
-                    veiculoId = versao.id_veiculo;
-                }
-                
-                // Verificar se o veículo existe
-                return veiculoId && veiculosExistentes.has(veiculoId);
-            }) : [];
-            
-            console.log('Versões válidas (com veículos existentes):', versoesValidas);
-            
-            if (versoesValidas.length > 0) {
-                // Adiciona as versões ao select, garantindo que o value seja o ID da versão
-                versoesValidas.forEach(versao => {
-                    // Obter o ID do veículo
-                    let veiculoId = null;
-                    if (versao.veiculo && versao.veiculo.id) {
-                        veiculoId = versao.veiculo.id;
-                    } else if (versao.veiculoId) {
-                        veiculoId = versao.veiculoId;
-                    } else if (versao.id_veiculo) {
-                        veiculoId = versao.id_veiculo;
-                    }
-                    
-                    // Verificar se o veículoId corresponde ao modelo correto
-                    // Isso é uma verificação adicional para garantir que o ID do veículo está correto
-                    if (versao.modelo && versao.modelo.id && versao.modelo.id !== parseInt(modeloId)) {
-                        console.warn(`Inconsistência detectada: Versão ${versao.id} (${versao.nome_versao}) 
-                                     está associada ao modelo ${versao.modelo.id}, mas foi carregada para o modelo ${modeloId}`);
-                    }
-                    
+            if (versoes.length === 0) {
+                versaoSelect.innerHTML += '<option value="" disabled>Nenhuma versão disponível</option>';
+            } else {
+                versoes.forEach(versao => {
+                    // Verificar se a versão tem veículos associados
+                    const temVeiculos = veiculosExistentes.has(versao.id);
                     const option = document.createElement('option');
-                    option.value = versao.id; // ID da versão
-                    option.textContent = versao.nome_versao || versao.nome || versao.descricao || `Versão ${versao.id}`;
-                    option.dataset.veiculoId = veiculoId; // ID do veículo como atributo data
+                    option.value = versao.id;
+                    option.textContent = versao.nome || versao.nome_versao;
                     
-                    // Para depuração, inclua atributos extras
-                    option.dataset.versaoId = versao.id;
-                    if (versao.modelo && versao.modelo.id) option.dataset.modeloId = versao.modelo.id;
-                    if (versao.modelo && versao.modelo.nome) option.dataset.modeloNome = versao.modelo.nome;
-                    if (versao.modelo && versao.modelo.marca && versao.modelo.marca.nome) option.dataset.marcaNome = versao.modelo.marca.nome;
+                    // Se não tiver veículos, desabilitar a opção
+                    if (!temVeiculos) {
+                        option.disabled = true;
+                        option.textContent += ' (Indisponível)';
+                    }
                     
                     versaoSelect.appendChild(option);
                 });
-                
-                versaoSelect.disabled = false;
-                
-                // Seleção automática se só houver uma
-                if (versoesValidas.length === 1) {
-                    versaoSelect.value = versoesValidas[0].id;
-                    const changeEvent = new Event('change');
-                    versaoSelect.dispatchEvent(changeEvent);
-                }
-            } else {
-                const option = document.createElement('option');
-                option.value = "";
-                option.textContent = "Nenhuma versão disponível com veículo cadastrado";
-                versaoSelect.appendChild(option);
-                versaoSelect.disabled = true;
             }
+            
+            versaoSelect.disabled = false;
         }
     } catch (error) {
         console.error('Erro ao carregar versões:', error);
+        
         const versaoSelect = document.getElementById('configuradorVersao');
         if (versaoSelect) {
             versaoSelect.innerHTML = '<option value="">Erro ao carregar versões</option>';
             versaoSelect.disabled = true;
+        }
+        
+        // Tentar usar dados mockados se disponíveis
+        const mockDataKey = `mock_versoes_modelo_${modeloId}_data`;
+        const mockData = localStorage.getItem(mockDataKey);
+        
+        if (mockData) {
+            try {
+                console.warn(`Usando dados mockados para versões do modelo ${modeloId}`);
+                const versoes = JSON.parse(mockData);
+                
+                if (versaoSelect && versoes && versoes.length > 0) {
+                    versaoSelect.innerHTML = '<option value="">Selecione uma versão</option>';
+                    versoes.forEach(versao => {
+                        const option = document.createElement('option');
+                        option.value = versao.id;
+                        option.textContent = versao.nome || versao.nome_versao;
+                        versaoSelect.appendChild(option);
+                    });
+                    versaoSelect.disabled = false;
+                }
+            } catch (e) {
+                console.error('Erro ao usar dados mockados:', e);
+            }
         }
     }
 }
