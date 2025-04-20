@@ -42,10 +42,11 @@ const config = {
   // Mapeamento de rotas incorretas para rotas corretas
   routeMappings: {
     // Veículos
-    '/api/veiculos/versoes/all': '/api/versoes/public',
+    '/api/veiculos/versoes/all': '/api/versoes',
     '/api/veiculos/versoes/': '/api/versoes/',
     '/api/veiculos/versoes/modelo/': '/api/versoes/modelo/',
     '/api/veiculos/versoes/by-modelo/': '/api/versoes/modelo/',
+    '/api/versoes/public': '/api/versoes',
     
     // Marcas e Modelos
     '/api/marcas': '/api/veiculos/marcas/public',

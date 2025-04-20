@@ -319,7 +319,8 @@ async function carregarVersoes() {
             // URLs para todas as versões
             urls = [
                 `/api/versoes/public${queryString}`,
-                `/api/versoes${queryString}`
+                `/api/versoes${queryString}`,
+                `/api/veiculos/versoes${queryString}`
             ];
         }
         

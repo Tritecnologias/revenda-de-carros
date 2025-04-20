@@ -39,6 +39,12 @@
             fixedUrl = config.fixApiUrl(fixedUrl);
         }
         
+        // Correção adicional para rotas de versões que podem estar retornando 404
+        if (typeof fixedUrl === 'string' && fixedUrl.includes('/api/versoes/public')) {
+            console.log(`URL Fixer: Detectada rota problemática: ${fixedUrl}`);
+            // Não modificar a URL aqui, deixar o sistema de fallback lidar com isso
+        }
+        
         // Chamar o fetch original com a URL corrigida
         return originalFetch(fixedUrl, options);
     };
