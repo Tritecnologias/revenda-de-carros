@@ -237,12 +237,12 @@ function carregarVersoes() {
     const status = document.getElementById('filtroStatus').value;
     
     // Construir URL da requisição usando config.getApiUrl para garantir URLs corretas
-    // Usar os endpoints corretos conforme definidos no backend
+    // Tentar com prefixo api/veiculos/versoes conforme mencionado nas memórias
     let url;
     if (modeloId) {
-        url = config.getApiUrl(`api/versoes/modelo/${modeloId}/public`);
+        url = config.getApiUrl(`api/veiculos/versoes/modelo/${modeloId}/public`);
     } else {
-        url = config.getApiUrl('api/versoes/public');
+        url = config.getApiUrl('api/veiculos/versoes/all');
     }
     
     console.log('URL da requisição:', url);
