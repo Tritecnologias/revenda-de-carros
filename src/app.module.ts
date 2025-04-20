@@ -23,14 +23,15 @@ import { VersaoPintura } from './veiculos/entities/versao-pintura.entity';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: '.env',
     }),
     TypeOrmModule.forRoot({
       type: 'mysql',
-      host: 'localhost',
-      port: 3306,
-      username: 'wanderson',
-      password: 'Flavinha@2022',
-      database: 'revenda_carros',
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '3306'),
+      username: process.env.DB_USERNAME || 'wanderson',
+      password: process.env.DB_PASSWORD || 'Flavinha@2022',
+      database: process.env.DB_DATABASE || 'revenda_carros',
       entities: [ConfiguradorVeiculo, Pintura, ModeloPintura, User, Marca, Modelo, Veiculo, Opcional, ModeloOpcional, VendaDireta, Versao, VersaoOpcional, VersaoPintura],
       synchronize: true, // Disable in production
     }),
