@@ -636,26 +636,26 @@ async function carregarVersaoParaEdicao(versaoId) {
         console.log('Versão carregada:', versao);
         
         // Verificar se o modal existe
-        let modalVersao = document.getElementById('modalVersao');
+        let modalVersao = document.getElementById('versaoModal');
         if (!modalVersao) {
             console.log('Modal de versão não encontrado. Criando...');
             criarModalVersao();
-            modalVersao = document.getElementById('modalVersao');
+            modalVersao = document.getElementById('versaoModal');
         }
         
         // Verificar se os elementos do formulário existem antes de definir seus valores
         const versaoIdInput = document.getElementById('versaoId');
-        const nomeVersaoInput = document.getElementById('nomeVersao');
-        const modeloIdSelect = document.getElementById('modeloId');
+        const nomeInput = document.getElementById('nome'); 
+        const modeloSelect = document.getElementById('modeloSelect'); 
         const statusSelect = document.getElementById('status');
         
         if (versaoIdInput) versaoIdInput.value = versao.id;
-        if (nomeVersaoInput) nomeVersaoInput.value = versao.nome_versao; // Usar nome_versao, não nome
-        if (modeloIdSelect) modeloIdSelect.value = versao.modeloId;
+        if (nomeInput) nomeInput.value = versao.nome_versao; 
+        if (modeloSelect) modeloSelect.value = versao.modeloId;
         if (statusSelect) statusSelect.value = versao.status || 'ativo';
         
         // Atualizar o título do modal
-        const modalTitle = document.querySelector('#modalVersao .modal-title');
+        const modalTitle = document.querySelector('#versaoModal .modal-title'); 
         if (modalTitle) {
             modalTitle.textContent = 'Editar Versão';
         }
@@ -838,8 +838,8 @@ async function salvarVersao() {
     // Obter dados do formulário
     const form = document.getElementById('formVersao');
     const versaoId = document.getElementById('versaoId').value;
-    const nomeVersao = document.getElementById('nomeVersao').value;
-    const modeloId = document.getElementById('modeloId').value;
+    const nomeVersao = document.getElementById('nome').value; 
+    const modeloId = document.getElementById('modeloSelect').value; 
     const status = document.getElementById('status').value;
     
     // Validar dados
@@ -933,7 +933,7 @@ async function salvarVersao() {
         // Verificar se a operação foi bem-sucedida
         if (resultado) {
             // Fechar o modal
-            const modalVersao = bootstrap.Modal.getInstance(document.getElementById('modalVersao'));
+            const modalVersao = bootstrap.Modal.getInstance(document.getElementById('versaoModal')); 
             if (modalVersao) {
                 modalVersao.hide();
             }
@@ -960,7 +960,7 @@ async function salvarVersao() {
                 };
                 
                 // Fechar o modal
-                const modalVersao = bootstrap.Modal.getInstance(document.getElementById('modalVersao'));
+                const modalVersao = bootstrap.Modal.getInstance(document.getElementById('versaoModal')); 
                 if (modalVersao) {
                     modalVersao.hide();
                 }
@@ -1032,7 +1032,7 @@ async function carregarMarcasFormulario() {
 async function carregarModelosFormulario(marcaId) {
     console.log('Carregando modelos para formulário, marca ID:', marcaId);
     
-    const modeloSelect = document.getElementById('modeloSelect');
+    const modeloSelect = document.getElementById('modeloSelect'); 
     if (!modeloSelect) return;
     
     // Limpar opções existentes
