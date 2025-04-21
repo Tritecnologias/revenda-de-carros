@@ -6,6 +6,8 @@ export declare class VersoesController {
     findAll(): Promise<import("../entities/versao.entity").Versao[]>;
     findAllPublic(): Promise<import("../entities/versao.entity").Versao[]>;
     findAllAlternative(): Promise<import("../entities/versao.entity").Versao[]>;
+    findAllRaw(): Promise<any[]>;
+    findByModeloRaw(modeloId: string): Promise<any[]>;
     findByModelo(modeloId: string): Promise<any[]>;
     findByModeloPublic(modeloId: string): Promise<any[]>;
     findOne(id: string): Promise<import("../entities/versao.entity").Versao>;

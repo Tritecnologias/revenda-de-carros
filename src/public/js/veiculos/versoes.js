@@ -342,80 +342,125 @@ async function carregarVersoes() {
         const currentUrl = window.location.href;
         const baseUrl = currentUrl.includes('69.62.91.195') ? 'http://69.62.91.195:3000' : '';
         
-        // Lista de todas as possíveis URLs para tentar, em ordem de prioridade
-        const urls = [];
-        
+        // Determinar a URL correta com base nos filtros
+        let url;
         if (modeloId) {
-            // URLs para modelo específico
-            urls.push(
-                `${baseUrl}/api/veiculos/versoes/modelo/${modeloId}${queryString}`,
-                `${baseUrl}/api/versoes/modelo/${modeloId}/public${queryString}`,
-                `${baseUrl}/api/versoes/modelo/${modeloId}${queryString}`
-            );
+            // Se temos um modelo selecionado, usar a rota SQL direta para versões por modelo
+            url = `${baseUrl}/api/versoes/raw/modelo/${modeloId}${queryString}`;
         } else {
-            // URLs para todas as versões
-            urls.push(
-                `${baseUrl}/api/veiculos/versoes${queryString}`,
-                `${baseUrl}/api/versoes/public${queryString}`,
-                `${baseUrl}/api/versoes${queryString}`
-            );
+            // Caso contrário, usar a rota SQL direta para todas as versões
+            url = `${baseUrl}/api/versoes/raw${queryString}`;
         }
         
-        console.log('Tentando URLs para buscar versões:', urls);
+        console.log(`Tentando carregar versões com SQL direto: ${url}`);
         
-        // Tentar cada URL em sequência até encontrar uma que funcione
-        let versoes = null;
-        let lastError = null;
+        // Fazer a requisição para a URL que usa SQL direto
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            signal: AbortSignal.timeout(5000) // 5 segundos de timeout
+        });
         
-        for (const url of urls) {
-            try {
-                console.log(`Tentando carregar versões de: ${url}`);
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    signal: AbortSignal.timeout(5000) // 5 segundos de timeout
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log(`URL bem-sucedida: ${url}, dados recebidos:`, data);
-                    
-                    // Verificar se a resposta é um array
-                    if (Array.isArray(data) && data.length > 0) {
-                        versoes = data;
-                        break; // Sair do loop se a resposta for bem-sucedida
-                    } 
-                    // Verificar se a resposta é um objeto com uma propriedade items (paginação)
-                    else if (data && data.items && Array.isArray(data.items) && data.items.length > 0) {
-                        versoes = data.items;
-                        break; // Sair do loop se a resposta for bem-sucedida
-                    }
-                    
-                    // Se chegou aqui, a resposta foi bem-sucedida mas não contém dados utilizáveis
-                    console.warn(`A URL ${url} retornou uma resposta vazia ou em formato inesperado:`, data);
-                } else {
-                    const errorText = await response.text();
-                    console.error(`Falha na URL ${url}:`, errorText);
-                    lastError = `${response.status} ${response.statusText}`;
-                }
-            } catch (error) {
-                console.error(`Erro ao acessar ${url}:`, error.message);
-                lastError = error.message;
+        // Se a consulta SQL direta falhar, tentar as outras URLs
+        if (!response.ok) {
+            console.error(`Falha na consulta SQL direta: ${response.status} ${response.statusText}`);
+            
+            // Lista de todas as possíveis URLs para tentar, em ordem de prioridade
+            const fallbackUrls = [];
+            
+            if (modeloId) {
+                // URLs para modelo específico
+                fallbackUrls.push(
+                    `${baseUrl}/api/veiculos/versoes/modelo/${modeloId}${queryString}`,
+                    `${baseUrl}/api/versoes/modelo/${modeloId}/public${queryString}`,
+                    `${baseUrl}/api/versoes/modelo/${modeloId}${queryString}`
+                );
+            } else {
+                // URLs para todas as versões
+                fallbackUrls.push(
+                    `${baseUrl}/api/veiculos/versoes${queryString}`,
+                    `${baseUrl}/api/versoes/public${queryString}`,
+                    `${baseUrl}/api/versoes${queryString}`
+                );
             }
-        }
-        
-        // Se encontramos versões, renderizá-las
-        if (versoes && versoes.length > 0) {
-            console.log('Versões carregadas com sucesso:', versoes);
+            
+            console.log('Tentando URLs de fallback:', fallbackUrls);
+            
+            // Tentar cada URL em sequência até encontrar uma que funcione
+            let versoes = null;
+            let lastError = null;
+            
+            for (const url of fallbackUrls) {
+                try {
+                    console.log(`Tentando carregar versões de: ${url}`);
+                    const response = await fetch(url, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        signal: AbortSignal.timeout(5000) // 5 segundos de timeout
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        console.log(`URL bem-sucedida: ${url}, dados recebidos:`, data);
+                        
+                        // Verificar se a resposta é um array
+                        if (Array.isArray(data) && data.length > 0) {
+                            versoes = data;
+                            break; // Sair do loop se a resposta for bem-sucedida
+                        } 
+                        // Verificar se a resposta é um objeto com uma propriedade items (paginação)
+                        else if (data && data.items && Array.isArray(data.items) && data.items.length > 0) {
+                            versoes = data.items;
+                            break; // Sair do loop se a resposta for bem-sucedida
+                        }
+                        
+                        // Se chegou aqui, a resposta foi bem-sucedida mas não contém dados utilizáveis
+                        console.warn(`A URL ${url} retornou uma resposta vazia ou em formato inesperado:`, data);
+                    } else {
+                        const errorText = await response.text();
+                        console.error(`Falha na URL ${url}:`, errorText);
+                        lastError = `${response.status} ${response.statusText}`;
+                    }
+                } catch (error) {
+                    console.error(`Erro ao acessar ${url}:`, error.message);
+                    lastError = error.message;
+                }
+            }
+            
+            // Se não encontramos versões em nenhuma URL, mostrar mensagem de erro
+            if (!versoes || versoes.length === 0) {
+                console.error('Não foi possível carregar versões de nenhuma URL. Último erro:', lastError);
+                versoesTableBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Não foi possível carregar as versões do banco de dados. Erro: ${lastError || 'Desconhecido'}</td></tr>`;
+                exibirMensagem(`Erro ao carregar versões: ${lastError || 'Desconhecido'}`, 'danger');
+                return;
+            }
+            
+            // Renderizar as versões encontradas
             renderizarVersoes(versoes, versoesTableBody);
         } else {
-            // Se não conseguimos carregar versões de nenhuma URL, mostrar mensagem de erro
-            console.error('Não foi possível carregar versões de nenhuma URL. Último erro:', lastError);
-            versoesTableBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Não foi possível carregar as versões do banco de dados. Erro: ${lastError || 'Desconhecido'}</td></tr>`;
-            exibirMensagem(`Erro ao carregar versões: ${lastError || 'Desconhecido'}`, 'danger');
+            // Se a consulta SQL direta funcionou, usar os dados retornados
+            const data = await response.json();
+            console.log(`Dados carregados com sucesso da consulta SQL direta:`, data);
+            
+            // Verificar se a resposta é um array
+            if (Array.isArray(data) && data.length > 0) {
+                // Renderizar os dados
+                renderizarVersoes(data, versoesTableBody);
+            } 
+            // Verificar se a resposta é um objeto com uma propriedade items (paginação)
+            else if (data && data.items && Array.isArray(data.items) && data.items.length > 0) {
+                // Renderizar os items
+                renderizarVersoes(data.items, versoesTableBody);
+            } else {
+                console.warn(`A resposta não está no formato esperado ou está vazia:`, data);
+                versoesTableBody.innerHTML = '<tr><td colspan="6" class="text-center">Nenhuma versão encontrada.</td></tr>';
+            }
         }
     } catch (error) {
         console.error('Erro ao carregar versões:', error);
@@ -873,7 +918,7 @@ function criarModalVersao() {
         return;
     }
     
-    // Criar o elemento do modal
+    // Criar elemento do modal
     const modalHTML = `
     <div class="modal fade" id="versaoModal" tabindex="-1" aria-labelledby="versaoModalLabel" aria-hidden="true">
         <div class="modal-dialog">

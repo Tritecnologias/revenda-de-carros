@@ -47,6 +47,54 @@ let VersoesService = VersoesService_1 = class VersoesService {
             throw new common_1.InternalServerErrorException(`Erro ao buscar versões: ${error.message}`);
         }
     }
+    async findAllRaw() {
+        try {
+            this.logger.log('Buscando todas as versões com SQL direto');
+            const versoes = await this.versaoRepository.query(`
+        SELECT 
+          v.id, 
+          v.nome_versao, 
+          v.status, 
+          v.modeloId,
+          v.createdAt,
+          v.updatedAt,
+          m.id as modelo_id,
+          m.nome as modelo_nome,
+          ma.id as marca_id,
+          ma.nome as marca_nome
+        FROM 
+          versao v
+        LEFT JOIN 
+          modelo m ON v.modeloId = m.id
+        LEFT JOIN 
+          marca ma ON m.marcaId = ma.id
+        ORDER BY 
+          v.id DESC
+      `);
+            const result = versoes.map(v => ({
+                id: v.id,
+                nome_versao: v.nome_versao,
+                status: v.status,
+                modeloId: v.modeloId,
+                createdAt: v.createdAt,
+                updatedAt: v.updatedAt,
+                modelo: {
+                    id: v.modelo_id,
+                    nome: v.modelo_nome,
+                    marca: {
+                        id: v.marca_id,
+                        nome: v.marca_nome
+                    }
+                }
+            }));
+            this.logger.log(`Encontradas ${result.length} versões com SQL direto`);
+            return result;
+        }
+        catch (error) {
+            this.logger.error(`Erro ao buscar versões com SQL direto: ${error.message}`, error.stack);
+            throw new common_1.InternalServerErrorException(`Erro ao buscar versões: ${error.message}`);
+        }
+    }
     async findOne(id) {
         try {
             this.logger.log(`Buscando versão com ID: ${id}`);
@@ -106,6 +154,56 @@ let VersoesService = VersoesService_1 = class VersoesService {
         catch (error) {
             this.logger.error(`Erro ao buscar versões para o modelo ${modeloId}: ${error.message}`, error.stack);
             throw new common_1.InternalServerErrorException(`Erro ao buscar versões para o modelo: ${error.message}`);
+        }
+    }
+    async findByModeloRaw(modeloId) {
+        try {
+            this.logger.log(`Buscando versões para o modelo ${modeloId} com SQL direto`);
+            const versoes = await this.versaoRepository.query(`
+        SELECT 
+          v.id, 
+          v.nome_versao, 
+          v.status, 
+          v.modeloId,
+          v.createdAt,
+          v.updatedAt,
+          m.id as modelo_id,
+          m.nome as modelo_nome,
+          ma.id as marca_id,
+          ma.nome as marca_nome
+        FROM 
+          versao v
+        LEFT JOIN 
+          modelo m ON v.modeloId = m.id
+        LEFT JOIN 
+          marca ma ON m.marcaId = ma.id
+        WHERE
+          v.modeloId = ?
+        ORDER BY 
+          v.id DESC
+      `, [modeloId]);
+            const result = versoes.map(v => ({
+                id: v.id,
+                nome_versao: v.nome_versao,
+                status: v.status,
+                modeloId: v.modeloId,
+                createdAt: v.createdAt,
+                updatedAt: v.updatedAt,
+                modelo: {
+                    id: v.modelo_id,
+                    nome: v.modelo_nome,
+                    marca: {
+                        id: v.marca_id,
+                        nome: v.marca_nome
+                    }
+                }
+            }));
+            this.logger.log(`Encontradas ${result.length} versões para o modelo ${modeloId} com SQL direto`);
+            return result;
+        }
+        catch (error) {
+            this.logger.error(`Erro ao buscar versões para o modelo ${modeloId} com SQL direto: ${error.message}`, error.stack);
+            throw new common_1.InternalServerErrorException(`Erro ao buscar versões para o modelo ${modeloId}: ${error.message}`);
         }
     }
     async create(createVersaoDto) {

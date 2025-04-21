@@ -19,8 +19,10 @@ export declare class VersoesService {
     private readonly logger;
     constructor(versaoRepository: Repository<Versao>, veiculosRepository: Repository<Veiculo>, modelosService: ModelosService);
     findAll(): Promise<Versao[]>;
+    findAllRaw(): Promise<any[]>;
     findOne(id: number): Promise<Versao>;
     findByModelo(modeloId: number): Promise<any[]>;
+    findByModeloRaw(modeloId: number): Promise<any[]>;
     create(createVersaoDto: CreateVersaoDto): Promise<Versao>;
     update(id: number, updateVersaoDto: UpdateVersaoDto): Promise<Versao>;
     remove(id: number): Promise<void>;

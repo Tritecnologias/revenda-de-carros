@@ -62,6 +62,28 @@ let VersoesController = class VersoesController {
             throw new common_1.HttpException(error.message || 'Erro ao buscar versões', error.status || common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+    async findAllRaw() {
+        try {
+            console.log('VersoesController: Buscando todas as versões com SQL direto (público)');
+            const versoes = await this.versoesService.findAllRaw();
+            return versoes;
+        }
+        catch (error) {
+            console.error('VersoesController: Erro ao buscar versões com SQL direto (público):', error.message);
+            throw new common_1.HttpException(error.message || 'Erro ao buscar versões', error.status || common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+    async findByModeloRaw(modeloId) {
+        try {
+            console.log(`VersoesController: Buscando versões para o modelo ${modeloId} com SQL direto (público)`);
+            const versoes = await this.versoesService.findByModeloRaw(+modeloId);
+            return versoes;
+        }
+        catch (error) {
+            console.error(`VersoesController: Erro ao buscar versões para o modelo ${modeloId} com SQL direto (público):`, error.message);
+            throw new common_1.HttpException(error.message || `Erro ao buscar versões para o modelo ${modeloId}`, error.status || common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
     async findByModelo(modeloId) {
         try {
             console.log(`VersoesController: Buscando versões para o modelo ${modeloId}`);
@@ -152,6 +174,21 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], VersoesController.prototype, "findAllAlternative", null);
+__decorate([
+    (0, common_1.Get)('raw'),
+    (0, common_1.SetMetadata)('isPublic', true),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], VersoesController.prototype, "findAllRaw", null);
+__decorate([
+    (0, common_1.Get)('raw/modelo/:modeloId'),
+    (0, common_1.SetMetadata)('isPublic', true),
+    __param(0, (0, common_1.Param)('modeloId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], VersoesController.prototype, "findByModeloRaw", null);
 __decorate([
     (0, common_1.Get)('modelo/:modeloId'),
     __param(0, (0, common_1.Param)('modeloId')),

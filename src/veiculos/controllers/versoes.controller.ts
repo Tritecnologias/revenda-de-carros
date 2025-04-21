@@ -68,6 +68,44 @@ export class VersoesController {
     }
   }
 
+  @Get('raw')
+  @SetMetadata('isPublic', true)
+  async findAllRaw() {
+    try {
+      console.log('VersoesController: Buscando todas as versões com SQL direto (público)');
+      
+      // Usar o EntityManager para executar SQL direto
+      const versoes = await this.versoesService.findAllRaw();
+      
+      return versoes;
+    } catch (error) {
+      console.error('VersoesController: Erro ao buscar versões com SQL direto (público):', error.message);
+      throw new HttpException(
+        error.message || 'Erro ao buscar versões',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Get('raw/modelo/:modeloId')
+  @SetMetadata('isPublic', true)
+  async findByModeloRaw(@Param('modeloId') modeloId: string) {
+    try {
+      console.log(`VersoesController: Buscando versões para o modelo ${modeloId} com SQL direto (público)`);
+      
+      // Usar o método do serviço para buscar versões por modelo com SQL direto
+      const versoes = await this.versoesService.findByModeloRaw(+modeloId);
+      
+      return versoes;
+    } catch (error) {
+      console.error(`VersoesController: Erro ao buscar versões para o modelo ${modeloId} com SQL direto (público):`, error.message);
+      throw new HttpException(
+        error.message || `Erro ao buscar versões para o modelo ${modeloId}`,
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
   @Get('modelo/:modeloId')
   async findByModelo(@Param('modeloId') modeloId: string) {
     try {
