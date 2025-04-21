@@ -11,15 +11,47 @@ async function loadModelos(marcaId) {
             console.error('Elemento select de modelo não encontrado');
             return;
         }
-        const response = await fetch(`${config.apiBaseUrl}/api/veiculos/modelos/public/by-marca/${marcaId}`, {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' }
-        });
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Resposta de erro:', errorText);
-            throw new Error(`Falha ao carregar modelos: ${response.status} ${response.statusText}`);
+        
+        // URLs para tentar carregar modelos
+        const apiUrls = [
+            `/api/veiculos/modelos/public/by-marca/${marcaId}`,
+            `http://localhost:3000/api/veiculos/modelos/public/by-marca/${marcaId}`,
+            `http://69.62.91.195:3000/api/veiculos/modelos/public/by-marca/${marcaId}`
+        ];
+        
+        // Tentar cada URL em sequência
+        let response = null;
+        let lastError = null;
+        
+        for (const url of apiUrls) {
+            try {
+                console.log(`Tentando carregar modelos de: ${url}`);
+                response = await fetch(url, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (response.ok) {
+                    console.log(`URL bem-sucedida: ${url}`);
+                    break; // Sair do loop se a resposta for bem-sucedida
+                } else {
+                    const errorText = await response.text();
+                    console.error(`Falha na URL ${url}:`, errorText);
+                    lastError = `${response.status} ${response.statusText}`;
+                    response = null; // Resetar resposta para tentar próxima URL
+                }
+            } catch (error) {
+                console.error(`Erro ao acessar ${url}:`, error.message);
+                lastError = error.message;
+            }
         }
+        
+        // Se todas as URLs falharam
+        if (!response || !response.ok) {
+            throw new Error(`Falha ao carregar modelos: ${lastError}`);
+        }
+        
+        // Processar resposta bem-sucedida
         const modelos = await response.json();
         modeloSelect.innerHTML = '<option value="">Selecione um modelo</option>';
         if (Array.isArray(modelos)) {

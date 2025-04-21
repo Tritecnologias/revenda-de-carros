@@ -4,16 +4,49 @@
 async function loadOpcionaisModelo(modeloId) {
     try {
         console.log(`Carregando opcionais para o modelo ID: ${modeloId}`);
-        const response = await fetch(`${config.apiBaseUrl}/api/modelo-opcional/by-modelo/${modeloId}/public`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
+        
+        // URLs para tentar carregar opcionais do modelo
+        const apiUrls = [
+            `/api/modelo-opcional/by-modelo/${modeloId}/public`,
+            `http://localhost:3000/api/modelo-opcional/by-modelo/${modeloId}/public`,
+            `http://69.62.91.195:3000/api/modelo-opcional/by-modelo/${modeloId}/public`
+        ];
+        
+        // Tentar cada URL em sequência
+        let response = null;
+        let lastError = null;
+        let opcionais = null;
+        
+        for (const url of apiUrls) {
+            try {
+                console.log(`Tentando carregar opcionais de: ${url}`);
+                response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    opcionais = await response.json();
+                    console.log(`URL bem-sucedida: ${url}`);
+                    break; // Sair do loop se a resposta for bem-sucedida
+                } else {
+                    const errorText = await response.text();
+                    console.error(`Falha na URL ${url}:`, errorText);
+                    lastError = `${response.status} ${response.statusText}`;
+                }
+            } catch (error) {
+                console.error(`Erro ao acessar ${url}:`, error.message);
+                lastError = error.message;
             }
-        });
-        if (!response.ok) {
-            throw new Error(`Falha ao carregar opcionais: ${response.status} ${response.statusText}`);
         }
-        const opcionais = await response.json();
+        
+        // Se todas as URLs falharam
+        if (!opcionais) {
+            throw new Error(`Falha ao carregar opcionais do modelo: ${lastError}`);
+        }
+        
         console.log('Opcionais carregados:', opcionais);
         // Renderizar os opcionais na tabela
         renderOpcionais(opcionais);
@@ -26,16 +59,49 @@ async function loadOpcionaisModelo(modeloId) {
 async function loadOpcionaisPorVersao(versaoId) {
     try {
         console.log(`Carregando opcionais para a versão ID: ${versaoId}`);
-        const response = await fetch(`${config.apiBaseUrl}/api/veiculos/versao-opcional/public/versao/${versaoId}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
+        
+        // URLs para tentar carregar opcionais da versão
+        const apiUrls = [
+            `/api/veiculos/versao-opcional/public/versao/${versaoId}`,
+            `http://localhost:3000/api/veiculos/versao-opcional/public/versao/${versaoId}`,
+            `http://69.62.91.195:3000/api/veiculos/versao-opcional/public/versao/${versaoId}`
+        ];
+        
+        // Tentar cada URL em sequência
+        let response = null;
+        let lastError = null;
+        let versaoOpcionais = null;
+        
+        for (const url of apiUrls) {
+            try {
+                console.log(`Tentando carregar opcionais de: ${url}`);
+                response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    versaoOpcionais = await response.json();
+                    console.log(`URL bem-sucedida: ${url}`);
+                    break; // Sair do loop se a resposta for bem-sucedida
+                } else {
+                    const errorText = await response.text();
+                    console.error(`Falha na URL ${url}:`, errorText);
+                    lastError = `${response.status} ${response.statusText}`;
+                }
+            } catch (error) {
+                console.error(`Erro ao acessar ${url}:`, error.message);
+                lastError = error.message;
             }
-        });
-        if (!response.ok) {
-            throw new Error(`Falha ao carregar opcionais por versão: ${response.status} ${response.statusText}`);
         }
-        const versaoOpcionais = await response.json();
+        
+        // Se todas as URLs falharam
+        if (!versaoOpcionais) {
+            throw new Error(`Falha ao carregar opcionais por versão: ${lastError}`);
+        }
+        
         console.log('Opcionais da versão carregados:', versaoOpcionais);
         
         // Transformar os dados para o formato esperado pela função renderOpcionais

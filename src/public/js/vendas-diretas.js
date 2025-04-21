@@ -7,14 +7,45 @@ async function loadVendasDiretas(marcaId) {
         if (!vendasDiretasSelect) return;
         vendasDiretasSelect.innerHTML = '<option value="">Carregando descontos...</option>';
         
-        // URL corrigida: usando 'venda-direta' (singular) em vez de 'vendas-diretas' (plural)
-        const response = await fetch(`${config.apiBaseUrl}/api/venda-direta/public?marcaId=${marcaId}`, {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' }
-        });
+        // URLs para tentar carregar vendas diretas
+        const apiUrls = [
+            `/api/venda-direta/public?marcaId=${marcaId}`,
+            `http://localhost:3000/api/venda-direta/public?marcaId=${marcaId}`,
+            `http://69.62.91.195:3000/api/venda-direta/public?marcaId=${marcaId}`
+        ];
         
-        if (!response.ok) throw new Error(`Falha ao carregar vendas diretas: ${response.status}`);
-        const data = await response.json();
+        // Tentar cada URL em sequência
+        let response = null;
+        let lastError = null;
+        let data = null;
+        
+        for (const url of apiUrls) {
+            try {
+                console.log(`Tentando carregar vendas diretas de: ${url}`);
+                response = await fetch(url, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (response.ok) {
+                    data = await response.json();
+                    console.log(`URL bem-sucedida: ${url}`);
+                    break; // Sair do loop se a resposta for bem-sucedida
+                } else {
+                    const errorText = await response.text();
+                    console.error(`Falha na URL ${url}:`, errorText);
+                    lastError = `${response.status} ${response.statusText}`;
+                }
+            } catch (error) {
+                console.error(`Erro ao acessar ${url}:`, error.message);
+                lastError = error.message;
+            }
+        }
+        
+        // Se todas as URLs falharam
+        if (!data) {
+            throw new Error(`Falha ao carregar vendas diretas: ${lastError}`);
+        }
         
         // Extrair as vendas diretas do objeto de resposta paginada
         const vendasDiretas = data.items || data;

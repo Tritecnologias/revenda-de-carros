@@ -183,27 +183,51 @@ window.selecionarPinturaAssociada = function(element, pintura) {
 
 // Função para carregar pinturas associadas a uma versão específica
 async function carregarPinturasAssociadas(versaoId) {
-  if (!versaoId) {
-    console.error('ID da versão não fornecido');
-    return;
-  }
-  
   try {
     console.log('Carregando pinturas associadas à versão ID:', versaoId);
     
-    // Fazer requisição para obter as pinturas associadas à versão usando o endpoint correto
-    const response = await fetch(`${config.apiBaseUrl}/api/veiculos/versao-pintura/versao/${versaoId}/public`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
+    // URLs para tentar carregar pinturas associadas
+    const apiUrls = [
+      `/api/veiculos/versao-pintura/versao/${versaoId}/public`,
+      `http://localhost:3000/api/veiculos/versao-pintura/versao/${versaoId}/public`,
+      `http://69.62.91.195:3000/api/veiculos/versao-pintura/versao/${versaoId}/public`
+    ];
     
-    if (!response.ok) {
-      throw new Error(`Falha ao carregar pinturas associadas: ${response.status} ${response.statusText}`);
+    // Tentar cada URL em sequência
+    let response = null;
+    let lastError = null;
+    let pinturas = null;
+    
+    for (const url of apiUrls) {
+      try {
+        console.log(`Tentando carregar pinturas de: ${url}`);
+        response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          pinturas = await response.json();
+          console.log(`URL bem-sucedida: ${url}`);
+          break; // Sair do loop se a resposta for bem-sucedida
+        } else {
+          const errorText = await response.text();
+          console.error(`Falha na URL ${url}:`, errorText);
+          lastError = `${response.status} ${response.statusText}`;
+        }
+      } catch (error) {
+        console.error(`Erro ao acessar ${url}:`, error.message);
+        lastError = error.message;
+      }
     }
     
-    const pinturas = await response.json();
+    // Se todas as URLs falharam
+    if (!pinturas) {
+      throw new Error(`Falha ao carregar pinturas associadas: ${lastError}`);
+    }
+    
     console.log('Pinturas associadas carregadas:', pinturas);
     
     // Renderizar as pinturas associadas

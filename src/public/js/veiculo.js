@@ -3,32 +3,72 @@ async function loadVeiculoDetails(veiculoId, dadosSelecionados) {
     try {
         console.log(`Carregando detalhes do veículo ID: ${veiculoId}`);
         console.log('Dados selecionados pelo usuário:', dadosSelecionados);
-        // Usar o endpoint público com a URL correta conforme identificado nas memórias
-        const response = await fetch(`${config.apiBaseUrl}/api/veiculos/${veiculoId}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
-        });
-        console.log('Resposta da API:', response.status, response.statusText);
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Resposta de erro:', errorText);
-            // Verificar se é um erro 404 (Not Found)
-            if (response.status === 404) {
-                // Tentar extrair a mensagem de erro do JSON retornado
-                try {
-                    const errorJson = JSON.parse(errorText);
-                    throw new Error(`Veículo não encontrado: ${errorJson.message || 'O veículo solicitado não existe ou foi excluído'}`);
-                } catch (jsonError) {
-                    // Se não conseguir parsear o JSON, usar a mensagem genérica
-                    throw new Error(`Veículo com ID ${veiculoId} não encontrado`);
-                }
-            }
-            throw new Error(`Falha ao carregar detalhes do veículo: ${response.status} ${response.statusText}`);
+        
+        // URLs para tentar carregar detalhes do veículo
+        const apiUrls = [
+            `/api/veiculos/${veiculoId}`,
+            `http://localhost:3000/api/veiculos/${veiculoId}`,
+            `http://69.62.91.195:3000/api/veiculos/${veiculoId}`
+        ];
+        
+        // Obter token de autenticação
+        const token = localStorage.getItem('token');
+        if (!token) {
+            console.error('Token de autenticação não encontrado');
+            throw new Error('Falha na autenticação. Por favor, faça login novamente.');
         }
-        const veiculo = await response.json();
+        
+        // Tentar cada URL em sequência
+        let response = null;
+        let lastError = null;
+        let veiculo = null;
+        
+        for (const url of apiUrls) {
+            try {
+                console.log(`Tentando carregar veículo de: ${url}`);
+                response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                console.log('Resposta da API:', response.status, response.statusText);
+                
+                if (response.ok) {
+                    veiculo = await response.json();
+                    console.log(`URL bem-sucedida: ${url}`);
+                    break; // Sair do loop se a resposta for bem-sucedida
+                } else {
+                    const errorText = await response.text();
+                    console.error(`Falha na URL ${url}:`, errorText);
+                    
+                    // Verificar se é um erro 404 (Not Found)
+                    if (response.status === 404) {
+                        // Tentar extrair a mensagem de erro do JSON retornado
+                        try {
+                            const errorJson = JSON.parse(errorText);
+                            lastError = `Veículo não encontrado: ${errorJson.message || 'O veículo solicitado não existe ou foi excluído'}`;
+                        } catch (jsonError) {
+                            // Se não conseguir parsear o JSON, usar a mensagem genérica
+                            lastError = `Veículo com ID ${veiculoId} não encontrado`;
+                        }
+                    } else {
+                        lastError = `${response.status} ${response.statusText}`;
+                    }
+                }
+            } catch (error) {
+                console.error(`Erro ao acessar ${url}:`, error.message);
+                lastError = error.message;
+            }
+        }
+        
+        // Se todas as URLs falharam
+        if (!veiculo) {
+            throw new Error(`Falha ao carregar detalhes do veículo: ${lastError}`);
+        }
+        
         console.log('Detalhes do veículo carregados:', veiculo);
         // Corrigir: garantir que os campos de preço sejam tratados como número
         veiculo.preco = Number(veiculo.preco);
@@ -206,18 +246,49 @@ async function fetchVeiculoPrecos(veiculoId) {
             throw new Error('Falha na autenticação. Por favor, faça login novamente.');
         }
         
-        // Usar a URL correta conforme identificado nas memórias
-        const response = await fetch(`${config.apiBaseUrl}/api/veiculos/${veiculoId}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+        // URLs para tentar carregar detalhes do veículo
+        const apiUrls = [
+            `/api/veiculos/${veiculoId}`,
+            `http://localhost:3000/api/veiculos/${veiculoId}`,
+            `http://69.62.91.195:3000/api/veiculos/${veiculoId}`
+        ];
+        
+        // Tentar cada URL em sequência
+        let response = null;
+        let lastError = null;
+        let veiculo = null;
+        
+        for (const url of apiUrls) {
+            try {
+                console.log(`Tentando buscar preços de: ${url}`);
+                response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    veiculo = await response.json();
+                    console.log(`URL bem-sucedida: ${url}`);
+                    break; // Sair do loop se a resposta for bem-sucedida
+                } else {
+                    const errorText = await response.text();
+                    console.error(`Falha na URL ${url}:`, errorText);
+                    lastError = `${response.status} ${response.statusText}`;
+                }
+            } catch (error) {
+                console.error(`Erro ao acessar ${url}:`, error.message);
+                lastError = error.message;
             }
-        });
-        if (!response.ok) {
-            throw new Error(`Falha ao buscar preços: ${response.status} ${response.statusText}`);
         }
-        const veiculo = await response.json();
+        
+        // Se todas as URLs falharam
+        if (!veiculo) {
+            throw new Error(`Falha ao buscar preços: ${lastError}`);
+        }
+        
         console.log('Dados do veículo obtidos:', veiculo);
         // Extrair apenas os preços do veículo
         const precos = {
