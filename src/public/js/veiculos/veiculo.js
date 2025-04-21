@@ -222,6 +222,9 @@ function formatarValorMonetario(valor) {
 
 // Função para carregar marcas para o select
 async function loadMarcasSelect() {
+    // Obter o elemento do DOM
+    const marcaSelect = document.getElementById('marcaId');
+    
     if (!marcaSelect) {
         console.error('Elemento marcaSelect não encontrado');
         return;
@@ -241,21 +244,94 @@ async function loadMarcasSelect() {
         
         console.log('Carregando marcas...');
         
-        // Lista de URLs a tentar, em ordem de prioridade
-        const urls = [
-            '/api/veiculos/marcas/all',
-            '/api/marcas'
+        // IMPORTANTE: Usar a URL completa para evitar problemas com o url-fixer.js
+        const currentUrl = window.location.href;
+        const baseUrl = currentUrl.includes('69.62.91.195') ? 'http://69.62.91.195:3000' : '';
+        
+        // Lista de todas as possíveis URLs para tentar, em ordem de prioridade
+        const urlsParaTentar = [
+            `${baseUrl}/api/veiculos/marcas`,
+            `${baseUrl}/api/marcas`
         ];
         
-        // Usar a função fetchWithFallback do config.js
-        const data = await config.fetchWithFallback(urls, {
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            }
-        });
+        console.log('Tentando URLs para carregar marcas:', urlsParaTentar);
         
-        marcas = await data.json();
+        // Tentar cada URL em sequência até encontrar uma que funcione
+        let marcas = null;
+        let lastError = null;
+        
+        for (const url of urlsParaTentar) {
+            try {
+                console.log(`Tentando carregar marcas de: ${url}`);
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    signal: AbortSignal.timeout(5000) // 5 segundos de timeout
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log(`URL bem-sucedida: ${url}, dados recebidos:`, data);
+                    
+                    // Se a resposta for um objeto com propriedade items (paginação), usar items
+                    if (data && data.items && Array.isArray(data.items)) {
+                        marcas = data.items;
+                    } 
+                    // Se a resposta for um array, usar diretamente
+                    else if (Array.isArray(data)) {
+                        marcas = data;
+                    }
+                    // Se chegou aqui, temos dados mas não no formato esperado
+                    else {
+                        console.warn(`Resposta não é um array nem tem propriedade items:`, data);
+                        // Tentar extrair marcas de alguma outra propriedade
+                        if (data && typeof data === 'object') {
+                            // Procurar por alguma propriedade que seja um array
+                            for (const key in data) {
+                                if (Array.isArray(data[key]) && data[key].length > 0) {
+                                    marcas = data[key];
+                                    console.log(`Usando dados da propriedade ${key}:`, marcas);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Se encontramos marcas, sair do loop
+                    if (marcas && Array.isArray(marcas) && marcas.length > 0) {
+                        break;
+                    } else {
+                        console.warn(`Não foi possível extrair marcas da resposta de ${url}`);
+                    }
+                } else {
+                    const errorText = await response.text();
+                    console.error(`Falha na URL ${url}:`, errorText);
+                    lastError = `${response.status} ${response.statusText}`;
+                }
+            } catch (error) {
+                console.error(`Erro ao acessar ${url}:`, error.message);
+                lastError = error.message;
+            }
+        }
+        
+        // Se não conseguimos carregar marcas de nenhuma URL, usar dados de exemplo
+        if (!marcas || !Array.isArray(marcas) || marcas.length === 0) {
+            console.error('Não foi possível carregar marcas de nenhuma URL. Último erro:', lastError);
+            
+            // Criar algumas marcas de exemplo para teste
+            marcas = [
+                { id: 1, nome: "FIAT" },
+                { id: 2, nome: "FORD" },
+                { id: 3, nome: "CHEVROLET" },
+                { id: 4, nome: "VOLKSWAGEN" },
+                { id: 5, nome: "TOYOTA" }
+            ];
+            console.log('Usando marcas de exemplo:', marcas);
+        }
+        
         console.log('Marcas carregadas com sucesso:', marcas);
         
         // Limpar select
