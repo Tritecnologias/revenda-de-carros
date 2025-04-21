@@ -52,7 +52,7 @@ function getSituacaoBadgeClass(situacao) {
         case 'disponivel':
         case 'disponível para venda':
         case 'disponivel para venda':
-            return 'badge-success';
+            return 'badge-success text-dark';
         case 'vendido':
         case 'vendido ao cliente':
             return 'badge-danger';
