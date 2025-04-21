@@ -241,31 +241,21 @@ async function loadMarcasSelect() {
         
         console.log('Carregando marcas...');
         
-        // Usar a URL correta conforme identificado na análise do backend
-        const response = await fetch('/api/veiculos/marcas/all', {
-            method: 'GET',
+        // Lista de URLs a tentar, em ordem de prioridade
+        const urls = [
+            '/api/veiculos/marcas/all',
+            '/api/marcas'
+        ];
+        
+        // Usar a função fetchWithFallback do config.js
+        const data = await config.fetchWithFallback(urls, {
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             }
         });
         
-        if (!response.ok) {
-            console.error('Falha ao carregar marcas. Status:', response.status, response.statusText);
-            
-            // Se o erro for 401 (Unauthorized), tentar reautenticar
-            if (response.status === 401) {
-                console.log('Erro de autenticação. Redirecionando para login...');
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                window.location.href = '/login.html';
-                return;
-            }
-            
-            throw new Error('Falha ao carregar marcas');
-        }
-        
-        marcas = await response.json();
+        marcas = await data.json();
         console.log('Marcas carregadas com sucesso:', marcas);
         
         // Limpar select
@@ -1127,7 +1117,7 @@ function resetForm() {
 }
 
 // Função para carregar marcas
-function loadMarcas() {
+async function loadMarcas() {
     console.log('Carregando marcas...');
     return new Promise((resolve, reject) => {
         // Obter token diretamente do localStorage para garantir que estamos usando o token mais recente
@@ -1138,224 +1128,95 @@ function loadMarcas() {
             return;
         }
         
-        console.log('Tentando carregar marcas de:', `${config.apiBaseUrl}/api/veiculos/marcas/all`);
-        console.log('Token utilizado:', token ? 'Token presente' : 'Token ausente');
+        // IMPORTANTE: Usar a URL completa para evitar problemas com o url-fixer.js
+        const currentUrl = window.location.href;
+        const baseUrl = currentUrl.includes('69.62.91.195') ? 'http://69.62.91.195:3000' : '';
         
-        // Usar a URL correta conforme identificado nas memórias
-        fetch(`${config.apiBaseUrl}/api/veiculos/marcas/all`, {
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+        // Lista de todas as possíveis URLs para tentar, em ordem de prioridade
+        const urlsParaTentar = [
+            `${baseUrl}/api/veiculos/marcas`,
+            `${baseUrl}/api/marcas`
+        ];
+        
+        console.log('Tentando URLs para carregar marcas:', urlsParaTentar);
+        
+        // Tentar cada URL em sequência até encontrar uma que funcione
+        let currentUrlIndex = 0;
+        
+        function tryNextUrl() {
+            if (currentUrlIndex >= urlsParaTentar.length) {
+                console.error('Todas as URLs falharam');
+                reject(new Error('Erro ao carregar marcas: Todas as URLs falharam'));
+                return;
             }
-        })
-        .then(response => {
-            if (!response.ok) {
-                console.error('Falha ao carregar marcas. Status:', response.status, response.statusText);
-                throw new Error(`Erro ao carregar marcas: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(marcas => {
-            console.log('Marcas carregadas:', marcas);
             
-            // Preencher select de marcas
-            const marcaSelect = document.getElementById('marcaId');
-            if (marcaSelect) {
-                // Limpar opções existentes, mantendo apenas a primeira (placeholder)
-                while (marcaSelect.options.length > 1) {
-                    marcaSelect.remove(1);
+            const url = urlsParaTentar[currentUrlIndex];
+            console.log(`Tentando carregar marcas de: ${url}`);
+            
+            fetch(url, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    console.error(`Falha ao carregar marcas de ${url}. Status:`, response.status, response.statusText);
+                    currentUrlIndex++;
+                    tryNextUrl();
+                    return null;
+                }
+                return response.json();
+            })
+            .then(marcas => {
+                if (!marcas) return; // Já passou para a próxima URL
+                
+                console.log('Marcas carregadas com sucesso:', marcas);
+                
+                // Se a resposta for um objeto com propriedade items (paginação), usar items
+                if (marcas && marcas.items && Array.isArray(marcas.items)) {
+                    marcas = marcas.items;
                 }
                 
-                // Adicionar novas opções
-                marcas.forEach(marca => {
-                    const option = document.createElement('option');
-                    option.value = marca.id;
-                    option.textContent = marca.nome;
-                    marcaSelect.appendChild(option);
-                });
-            }
-            
-            resolve(marcas);
-        })
-        .catch(error => {
-            console.error('Erro ao carregar marcas:', error);
-            showError('Não foi possível carregar as marcas. Por favor, tente novamente mais tarde.');
-            reject(error);
-        });
-    });
-}
-
-// Função para carregar modelos de uma marca
-function loadModelos(marcaId) {
-    console.log('Carregando modelos da marca ID:', marcaId);
-    return new Promise((resolve, reject) => {
-        if (!marcaId) {
-            console.warn('ID da marca não fornecido para carregar modelos');
-            
-            // Limpar select de modelos
-            const modeloSelect = document.getElementById('modeloId');
-            if (modeloSelect) {
-                // Manter apenas a primeira opção (placeholder)
-                while (modeloSelect.options.length > 1) {
-                    modeloSelect.remove(1);
-                }
-            }
-            
-            // Limpar select de versões
-            const versaoSelect = document.getElementById('versaoId');
-            if (versaoSelect) {
-                // Manter apenas a primeira opção (placeholder)
-                while (versaoSelect.options.length > 1) {
-                    versaoSelect.remove(1);
-                }
-            }
-            
-            resolve([]);
-            return;
-        }
-        
-        const token = auth.getToken();
-        
-        // Usar a URL correta conforme identificado nas memórias
-        fetch(`${config.apiBaseUrl}/api/veiculos/modelos/by-marca/${marcaId}`, {
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            }
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`Erro ao carregar modelos: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(modelos => {
-            console.log('Modelos carregados:', modelos);
-            
-            // Preencher select de modelos
-            const modeloSelect = document.getElementById('modeloId');
-            if (modeloSelect) {
-                // Limpar opções existentes, mantendo apenas a primeira (placeholder)
-                while (modeloSelect.options.length > 1) {
-                    modeloSelect.remove(1);
+                // Verificar se marcas é um array
+                if (!Array.isArray(marcas)) {
+                    console.error('Resposta não é um array:', marcas);
+                    currentUrlIndex++;
+                    tryNextUrl();
+                    return;
                 }
                 
-                // Adicionar novas opções
-                modelos.forEach(modelo => {
-                    const option = document.createElement('option');
-                    option.value = modelo.id;
-                    option.textContent = modelo.nome;
-                    modeloSelect.appendChild(option);
-                });
-            }
-            
-            // Limpar select de versões
-            const versaoSelect = document.getElementById('versaoId');
-            if (versaoSelect) {
-                // Manter apenas a primeira opção (placeholder)
-                while (versaoSelect.options.length > 1) {
-                    versaoSelect.remove(1);
-                }
-            }
-            
-            resolve(modelos);
-        })
-        .catch(error => {
-            console.error('Erro ao carregar modelos:', error);
-            showError('Não foi possível carregar os modelos. Por favor, tente novamente mais tarde.');
-            reject(error);
-        });
-    });
-}
-
-// Função para carregar versões de um modelo
-function loadVersoes(modeloId) {
-    console.log('Carregando versões do modelo ID:', modeloId);
-    return new Promise((resolve, reject) => {
-        if (!modeloId) {
-            console.warn('ID do modelo não fornecido para carregar versões');
-            
-            // Limpar select de versões
-            const versaoSelect = document.getElementById('versaoId');
-            if (versaoSelect) {
-                // Manter apenas a primeira opção (placeholder)
-                while (versaoSelect.options.length > 1) {
-                    versaoSelect.remove(1);
-                }
-            }
-            
-            resolve([]);
-            return;
-        }
-        
-        // Obter token diretamente do localStorage para garantir que estamos usando o token mais recente
-        const token = localStorage.getItem('token');
-        if (!token) {
-            console.error('Token de autenticação não encontrado');
-            reject(new Error('Falha na autenticação. Por favor, faça login novamente.'));
-            return;
-        }
-        
-        console.log('Tentando carregar versões do modelo ID:', modeloId);
-        console.log('Token utilizado:', token ? 'Token presente' : 'Token ausente');
-        
-        // Usar a URL correta conforme identificado nas memórias
-        fetch(`${config.apiBaseUrl}/api/versoes/modelo/${modeloId}/public`, {
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            }
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`Erro ao carregar versões: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(versoes => {
-            console.log('Versões carregadas:', versoes);
-            
-            // Preencher select de versões
-            const versaoSelect = document.getElementById('versaoId');
-            if (versaoSelect) {
-                // Limpar opções existentes, mantendo apenas a primeira (placeholder)
-                while (versaoSelect.options.length > 1) {
-                    versaoSelect.remove(1);
+                // Verificar se temos marcas
+                if (marcas.length === 0) {
+                    console.warn('Array de marcas está vazio');
                 }
                 
-                // Adicionar novas opções
-                versoes.forEach(versao => {
-                    console.log('Adicionando versão ao select:', versao);
-                    const option = document.createElement('option');
-                    option.value = versao.id;
+                // Preencher select de marcas
+                const marcaSelect = document.getElementById('marca');
+                if (marcaSelect) {
+                    // Limpar opções existentes
+                    marcaSelect.innerHTML = '<option value="">Selecione uma marca</option>';
                     
-                    // Usar nome_versao em vez de nome, conforme a entidade Versao
-                    if (versao.nome_versao !== undefined) {
-                        option.textContent = versao.nome_versao;
-                    } else if (versao.nome !== undefined) {
-                        option.textContent = versao.nome;
-                    } else if (versao.name !== undefined) {
-                        option.textContent = versao.name;
-                    } else if (versao.descricao !== undefined) {
-                        option.textContent = versao.descricao;
-                    } else if (versao.description !== undefined) {
-                        option.textContent = versao.description;
-                    } else {
-                        // Se não encontrar nenhuma propriedade adequada, usar o ID como texto
-                        option.textContent = `Versão ${versao.id}`;
-                    }
-                    
-                    versaoSelect.appendChild(option);
-                });
-            }
-            
-            resolve(versoes);
-        })
-        .catch(error => {
-            console.error('Erro ao carregar versões:', error);
-            showError('Não foi possível carregar as versões. Por favor, tente novamente mais tarde.');
-            reject(error);
-        });
+                    // Adicionar novas opções
+                    marcas.forEach(marca => {
+                        const option = document.createElement('option');
+                        option.value = marca.id;
+                        option.textContent = marca.nome;
+                        marcaSelect.appendChild(option);
+                    });
+                }
+                
+                resolve(marcas);
+            })
+            .catch(error => {
+                console.error(`Erro ao carregar marcas de ${url}:`, error);
+                currentUrlIndex++;
+                tryNextUrl();
+            });
+        }
+        
+        // Iniciar tentativas
+        tryNextUrl();
     });
 }
 
