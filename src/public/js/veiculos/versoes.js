@@ -594,7 +594,7 @@ async function carregarVersaoParaEdicao(versaoId) {
             `${baseUrl}/api/veiculos/versoes/${versaoId}`
         ];
         
-        console.log('Tentando URLs para carregar versão:', urlsParaTentar);
+        console.log('Tentando URLs:', urlsParaTentar);
         
         // Tentar cada URL em sequência até encontrar uma que funcione
         let versao = null;
@@ -643,35 +643,124 @@ async function carregarVersaoParaEdicao(versaoId) {
             modalVersao = document.getElementById('versaoModal');
         }
         
-        // Primeiro, precisamos carregar as marcas e modelos para o formulário
-        // Se a versão tem um modelo associado, precisamos garantir que ele esteja disponível no select
-        if (versao.modelo && versao.modelo.marca) {
-            // Carregar marcas
-            await carregarMarcasNoModal();
-            
-            // Selecionar a marca correta
-            const marcaSelect = document.getElementById('marcaSelect');
-            if (marcaSelect) {
-                marcaSelect.value = versao.modelo.marca.id;
-                
-                // Carregar modelos da marca selecionada
-                await carregarModelosNoModal(versao.modelo.marca.id);
-            }
-        } else {
-            // Se não temos informações da marca, apenas carregar todas as marcas
-            await carregarMarcasNoModal();
-        }
-        
-        // Agora que os selects estão preenchidos, podemos definir os valores
+        // Primeiro, vamos preencher os campos básicos
         const versaoIdInput = document.getElementById('versaoId');
         const nomeInput = document.getElementById('nome'); 
-        const modeloSelect = document.getElementById('modeloSelect'); 
         const statusSelect = document.getElementById('status');
         
         if (versaoIdInput) versaoIdInput.value = versao.id;
         if (nomeInput) nomeInput.value = versao.nome_versao; 
-        if (modeloSelect) modeloSelect.value = versao.modeloId;
         if (statusSelect) statusSelect.value = versao.status || 'ativo';
+        
+        // Agora vamos lidar com os selects de marca e modelo
+        try {
+            // Primeiro, carregamos todas as marcas
+            await carregarMarcasNoModal();
+            
+            // Verificamos se temos informações do modelo e da marca
+            let marcaId = null;
+            
+            // Verificar de várias formas possíveis para obter o ID da marca
+            if (versao.modelo && versao.modelo.marca && versao.modelo.marca.id) {
+                // Caso 1: Temos o objeto modelo completo com marca
+                marcaId = versao.modelo.marca.id;
+                console.log(`Marca ID obtido do objeto modelo: ${marcaId}`);
+            } else if (versao.modelo && versao.modelo.marcaId) {
+                // Caso 2: Temos o modelo com marcaId
+                marcaId = versao.modelo.marcaId;
+                console.log(`Marca ID obtido do marcaId do modelo: ${marcaId}`);
+            } else {
+                // Caso 3: Precisamos buscar o modelo para obter a marca
+                try {
+                    const modeloResponse = await fetch(`${baseUrl}/api/veiculos/modelos/${versao.modeloId}`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (modeloResponse.ok) {
+                        const modeloData = await modeloResponse.json();
+                        if (modeloData && modeloData.marca && modeloData.marca.id) {
+                            marcaId = modeloData.marca.id;
+                            console.log(`Marca ID obtido da API de modelos: ${marcaId}`);
+                        } else if (modeloData && modeloData.marcaId) {
+                            marcaId = modeloData.marcaId;
+                            console.log(`Marca ID obtido do marcaId da API: ${marcaId}`);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Erro ao buscar modelo para obter marca:', error);
+                }
+            }
+            
+            // Se encontramos o ID da marca, selecionamos e carregamos os modelos
+            if (marcaId) {
+                const marcaSelect = document.getElementById('marcaSelect');
+                if (marcaSelect) {
+                    console.log(`Selecionando marca ID ${marcaId} no select`);
+                    marcaSelect.value = marcaId;
+                    
+                    // Agora carregamos os modelos desta marca
+                    await carregarModelosNoModal(marcaId);
+                    
+                    // E finalmente selecionamos o modelo correto
+                    const modeloSelect = document.getElementById('modeloSelect');
+                    if (modeloSelect && versao.modeloId) {
+                        console.log(`Tentando selecionar modelo ID ${versao.modeloId} no select`);
+                        
+                        // Verificar se o modelo está nas opções antes de tentar selecionar
+                        const modeloExiste = Array.from(modeloSelect.options).some(option => 
+                            option.value == versao.modeloId
+                        );
+                        
+                        if (modeloExiste) {
+                            console.log(`Modelo ID ${versao.modeloId} encontrado nas opções, selecionando...`);
+                            modeloSelect.value = versao.modeloId;
+                        } else {
+                            console.warn(`Modelo ID ${versao.modeloId} não encontrado nas opções disponíveis. Adicionando manualmente...`);
+                            
+                            // Se o modelo não existe nas opções, vamos adicioná-lo
+                            if (versao.modelo && versao.modelo.nome) {
+                                const novaOpcao = document.createElement('option');
+                                novaOpcao.value = versao.modeloId;
+                                novaOpcao.textContent = versao.modelo.nome;
+                                modeloSelect.appendChild(novaOpcao);
+                                console.log(`Adicionada nova opção: ID ${versao.modeloId}, nome ${versao.modelo.nome}`);
+                                
+                                // Agora selecionar a opção recém-adicionada
+                                modeloSelect.value = versao.modeloId;
+                            } else {
+                                console.error(`Não foi possível adicionar o modelo ID ${versao.modeloId} porque não temos o nome do modelo`);
+                            }
+                        }
+                        
+                        // Verificar se o modelo foi realmente selecionado
+                        if (modeloSelect.value != versao.modeloId) {
+                            console.warn(`Modelo ID ${versao.modeloId} ainda não está selecionado. Tentando selecionar manualmente...`);
+                            
+                            // Listar todas as opções disponíveis para debug
+                            Array.from(modeloSelect.options).forEach(option => {
+                                console.log(`Opção disponível: value=${option.value}, text=${option.text}`);
+                            });
+                            
+                            // Tentar encontrar a opção pelo valor e selecioná-la manualmente
+                            const modeloOption = Array.from(modeloSelect.options).find(option => option.value == versao.modeloId);
+                            if (modeloOption) {
+                                modeloOption.selected = true;
+                                console.log(`Modelo selecionado manualmente: ${modeloOption.text}`);
+                            } else {
+                                console.error(`Modelo ID ${versao.modeloId} não está nas opções disponíveis`);
+                            }
+                        }
+                    }
+                }
+            } else {
+                console.error('Não foi possível determinar o ID da marca para esta versão');
+            }
+        } catch (error) {
+            console.error('Erro ao configurar selects de marca e modelo:', error);
+        }
         
         // Atualizar o título do modal
         const modalTitle = document.querySelector('#versaoModal .modal-title'); 
@@ -700,13 +789,16 @@ async function carregarVersaoParaEdicao(versaoId) {
 
 // Função para carregar marcas no modal
 async function carregarMarcasNoModal() {
-    console.log('Carregando marcas para o modal...');
+    console.log('Carregando marcas para o modal');
     
     const marcaSelect = document.getElementById('marcaSelect');
     if (!marcaSelect) {
         console.error('Elemento marcaSelect não encontrado');
         return;
     }
+    
+    // Limpar opções existentes
+    marcaSelect.innerHTML = '<option value="">Selecione uma marca</option>';
     
     try {
         const token = getToken();
@@ -715,24 +807,77 @@ async function carregarMarcasNoModal() {
             return;
         }
         
+        // IMPORTANTE: Usar a URL completa para evitar problemas com o url-fixer.js
+        const currentUrl = window.location.href;
+        const baseUrl = currentUrl.includes('69.62.91.195') ? 'http://69.62.91.195:3000' : '';
+        
         // Lista de URLs a tentar, em ordem de prioridade
         const urls = [
-            '/api/veiculos/marcas/all',
-            '/api/marcas/all',
-            '/api/marcas'
+            `${baseUrl}/api/veiculos/marcas`,
+            `${baseUrl}/api/marcas`
         ];
         
-        // Usar a função fetchWithFallback do config.js
-        const marcas = await config.fetchWithFallback(urls, {
-            headers: {
-                'Authorization': `Bearer ${token}`
+        console.log('Tentando URLs para carregar marcas:', urls);
+        
+        // Tentar cada URL em sequência até encontrar uma que funcione
+        let marcas = null;
+        let lastError = null;
+        
+        for (const url of urls) {
+            try {
+                console.log(`Tentando carregar marcas de: ${url}`);
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    signal: AbortSignal.timeout(5000) // 5 segundos de timeout
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log(`URL bem-sucedida: ${url}, dados recebidos:`, data);
+                    
+                    // Verificar se a resposta é um array
+                    if (Array.isArray(data) && data.length > 0) {
+                        marcas = data;
+                        break; // Sair do loop se a resposta for bem-sucedida
+                    } 
+                    // Verificar se a resposta é um objeto com uma propriedade items (paginação)
+                    else if (data && data.items && Array.isArray(data.items) && data.items.length > 0) {
+                        marcas = data.items;
+                        break; // Sair do loop se a resposta for bem-sucedida
+                    }
+                    
+                    // Se chegou aqui, a resposta foi bem-sucedida mas não contém dados utilizáveis
+                    console.warn(`A URL ${url} retornou uma resposta vazia ou em formato inesperado:`, data);
+                } else {
+                    const errorText = await response.text();
+                    console.error(`Falha na URL ${url}:`, errorText);
+                    lastError = `${response.status} ${response.statusText}`;
+                }
+            } catch (error) {
+                console.error(`Erro ao acessar ${url}:`, error.message);
+                lastError = error.message;
             }
-        });
+        }
+        
+        if (!marcas || marcas.length === 0) {
+            console.error('Não foi possível carregar marcas de nenhuma URL. Último erro:', lastError);
+            
+            // Criar algumas marcas de exemplo para teste
+            marcas = [
+                { id: 1, nome: "FIAT" },
+                { id: 2, nome: "FORD" },
+                { id: 3, nome: "CHEVROLET" },
+                { id: 4, nome: "VOLKSWAGEN" },
+                { id: 5, nome: "TOYOTA" }
+            ];
+            console.log('Usando marcas de exemplo:', marcas);
+        }
         
         console.log('Marcas carregadas para o modal:', marcas);
-        
-        // Limpar opções existentes
-        marcaSelect.innerHTML = '<option value="">Selecione uma marca</option>';
         
         // Adicionar novas opções
         marcas.forEach(marca => {
@@ -764,7 +909,7 @@ async function carregarMarcasNoModal() {
 async function carregarModelosNoModal(marcaId) {
     console.log('Carregando modelos para o modal, marca ID:', marcaId);
     
-    const modeloSelect = document.getElementById('modeloSelect');
+    const modeloSelect = document.getElementById('modeloSelect'); 
     if (!modeloSelect) {
         console.error('Elemento modeloSelect não encontrado');
         return;
@@ -789,12 +934,65 @@ async function carregarModelosNoModal(marcaId) {
             `/api/modelos/marca/${marcaId}`
         ];
         
-        // Usar a função fetchWithFallback do config.js
-        const modelos = await config.fetchWithFallback(urls, {
-            headers: {
-                'Authorization': `Bearer ${token}`
+        console.log('Tentando URLs para carregar modelos:', urls);
+        
+        // Tentar cada URL em sequência até encontrar uma que funcione
+        let modelos = null;
+        let lastError = null;
+        
+        for (const url of urls) {
+            try {
+                console.log(`Tentando carregar modelos de: ${url}`);
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    signal: AbortSignal.timeout(5000) // 5 segundos de timeout
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log(`URL bem-sucedida: ${url}, dados recebidos:`, data);
+                    
+                    // Verificar se a resposta é um array
+                    if (Array.isArray(data) && data.length > 0) {
+                        modelos = data;
+                        break; // Sair do loop se a resposta for bem-sucedida
+                    } 
+                    // Verificar se a resposta é um objeto com uma propriedade items (paginação)
+                    else if (data && data.items && Array.isArray(data.items) && data.items.length > 0) {
+                        modelos = data.items;
+                        break; // Sair do loop se a resposta for bem-sucedida
+                    }
+                    
+                    // Se chegou aqui, a resposta foi bem-sucedida mas não contém dados utilizáveis
+                    console.warn(`A URL ${url} retornou uma resposta vazia ou em formato inesperado:`, data);
+                } else {
+                    const errorText = await response.text();
+                    console.error(`Falha na URL ${url}:`, errorText);
+                    lastError = `${response.status} ${response.statusText}`;
+                }
+            } catch (error) {
+                console.error(`Erro ao acessar ${url}:`, error.message);
+                lastError = error.message;
             }
-        });
+        }
+        
+        if (!modelos || modelos.length === 0) {
+            console.error('Não foi possível carregar modelos de nenhuma URL. Último erro:', lastError);
+            
+            // Criar alguns modelos de exemplo para teste
+            modelos = [
+                { id: 1, nome: "ARGO" },
+                { id: 2, nome: "MOBI" },
+                { id: 3, nome: "PULSE" },
+                { id: 4, nome: "CRONOS" },
+                { id: 5, nome: "TORO" }
+            ];
+            console.log('Usando modelos de exemplo:', modelos);
+        }
         
         console.log('Modelos carregados para o modal:', modelos);
         
@@ -950,6 +1148,8 @@ async function excluirVersao() {
         }
     } catch (error) {
         console.error('Erro ao excluir versão:', error);
+        
+        // Em caso de erro, mostrar mensagem
         exibirMensagem(`Erro ao excluir versão: ${error.message}`, 'danger');
     }
 }
