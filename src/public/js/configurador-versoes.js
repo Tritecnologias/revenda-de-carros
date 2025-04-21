@@ -19,22 +19,50 @@ async function loadVersoes(modeloId) {
             versaoSelect.disabled = true;
         }
         
-        // Lista de URLs a tentar, em ordem de prioridade
-        const urls = [
+        // URLs para tentar carregar versões
+        const apiUrls = [
             `/api/versoes/modelo/${modeloId}/public`,
-            `/api/versoes/by-modelo/${modeloId}/public`,
-            `/api/veiculos/versoes/by-modelo/${modeloId}`,
-            `/api/versoes/modelo/${modeloId}`
+            `http://localhost:3000/api/versoes/modelo/${modeloId}/public`,
+            `http://69.62.91.195:3000/api/versoes/modelo/${modeloId}/public`
         ];
         
-        console.log('Tentando carregar versões usando múltiplas URLs:', urls);
+        console.log('Tentando carregar versões usando múltiplas URLs:', apiUrls);
         
-        // Usar a função fetchWithFallback do config.js
-        const versoes = await config.fetchWithFallback(urls, {
-            headers: {
-                'Content-Type': 'application/json'
+        // Tentar cada URL em sequência
+        let response = null;
+        let lastError = null;
+        let versoes = null;
+        
+        for (const url of apiUrls) {
+            try {
+                console.log(`Tentando carregar versões de: ${url}`);
+                response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    versoes = await response.json();
+                    console.log(`URL bem-sucedida: ${url}`);
+                    break; // Sair do loop se a resposta for bem-sucedida
+                } else {
+                    const errorText = await response.text();
+                    console.error(`Falha na URL ${url}:`, errorText);
+                    lastError = `${response.status} ${response.statusText}`;
+                }
+            } catch (error) {
+                console.error(`Erro ao acessar ${url}:`, error.message);
+                lastError = error.message;
             }
-        });
+        }
+        
+        // Se todas as URLs falharam
+        if (!versoes) {
+            console.error(`Falha ao carregar versões: ${lastError}`);
+            versoes = []; // Usar array vazio como fallback para não quebrar a interface
+        }
         
         console.log('Versões carregadas com sucesso:', versoes);
         
@@ -42,76 +70,110 @@ async function loadVersoes(modeloId) {
         const veiculosExistentes = new Set();
         
         try {
-            // Lista de URLs a tentar para veículos, em ordem de prioridade
+            // URLs para tentar carregar veículos
             const veiculosUrls = [
                 `/api/veiculos/public`,
-                `/api/veiculos`
+                `http://localhost:3000/api/veiculos/public`,
+                `http://69.62.91.195:3000/api/veiculos/public`
             ];
             
-            // Usar a função fetchWithFallback do config.js
-            const veiculosData = await config.fetchWithFallback(veiculosUrls, {
-                headers: {
-                    'Content-Type': 'application/json'
+            // Tentar cada URL em sequência
+            let veiculosResponse = null;
+            let veiculosLastError = null;
+            let veiculos = null;
+            
+            for (const url of veiculosUrls) {
+                try {
+                    console.log(`Tentando carregar veículos de: ${url}`);
+                    veiculosResponse = await fetch(url, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (veiculosResponse.ok) {
+                        veiculos = await veiculosResponse.json();
+                        console.log(`URL bem-sucedida para veículos: ${url}`);
+                        break; // Sair do loop se a resposta for bem-sucedida
+                    } else {
+                        const errorText = await veiculosResponse.text();
+                        console.error(`Falha na URL ${url}:`, errorText);
+                        veiculosLastError = `${veiculosResponse.status} ${veiculosResponse.statusText}`;
+                    }
+                } catch (error) {
+                    console.error(`Erro ao acessar ${url}:`, error.message);
+                    veiculosLastError = error.message;
                 }
-            });
-            
-            console.log('Veículos disponíveis:', veiculosData);
-            
-            // Extrair os IDs das versões que têm veículos associados
-            if (veiculosData.items) {
-                // Resposta paginada
-                veiculosData.items.forEach(veiculo => {
-                    if (veiculo.versaoId) {
-                        veiculosExistentes.add(veiculo.versaoId);
-                    }
-                });
-            } else if (Array.isArray(veiculosData)) {
-                // Lista simples
-                veiculosData.forEach(veiculo => {
-                    if (veiculo.versaoId) {
-                        veiculosExistentes.add(veiculo.versaoId);
-                    }
-                });
             }
-        } catch (veiculosError) {
-            console.warn('Erro ao carregar veículos:', veiculosError);
-            // Continuar mesmo se não conseguir carregar os veículos
+            
+            if (veiculos) {
+                // Criar um conjunto de IDs de veículos existentes
+                veiculos.forEach(veiculo => veiculosExistentes.add(veiculo.versao_id));
+                console.log('Veículos existentes:', veiculosExistentes);
+            } else {
+                console.error(`Falha ao carregar veículos: ${veiculosLastError}`);
+            }
+        } catch (error) {
+            console.error('Erro ao verificar veículos existentes:', error);
         }
         
         // Preencher o select de versões
         if (versaoSelect) {
-            versaoSelect.innerHTML = '<option value="">Selecione uma versão</option>';
+            // Limpar o select
+            versaoSelect.innerHTML = '';
             
-            if (versoes.length === 0) {
-                versaoSelect.innerHTML += '<option value="" disabled>Nenhuma versão disponível</option>';
-            } else {
+            // Adicionar opção padrão
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = 'Selecione uma versão';
+            versaoSelect.appendChild(defaultOption);
+            
+            // Adicionar versões
+            if (versoes.length > 0) {
                 versoes.forEach(versao => {
                     // Verificar se a versão tem veículos associados
                     const temVeiculos = veiculosExistentes.has(versao.id);
+                    
                     const option = document.createElement('option');
                     option.value = versao.id;
-                    option.textContent = versao.nome || versao.nome_versao;
+                    option.textContent = versao.nome;
                     
-                    // Se não tiver veículos, desabilitar a opção
+                    // Adicionar indicador visual se não houver veículos
                     if (!temVeiculos) {
-                        option.disabled = true;
                         option.textContent += ' (Indisponível)';
+                        option.disabled = true;
+                        option.style.color = '#999';
                     }
                     
                     versaoSelect.appendChild(option);
                 });
+                
+                // Habilitar o select
+                versaoSelect.disabled = false;
+            } else {
+                // Se não houver versões, adicionar uma opção informativa
+                const noOption = document.createElement('option');
+                noOption.value = '';
+                noOption.textContent = 'Nenhuma versão disponível';
+                versaoSelect.appendChild(noOption);
+                
+                // Manter o select desabilitado
+                versaoSelect.disabled = true;
             }
-            
-            versaoSelect.disabled = false;
         }
+        
+        return versoes;
     } catch (error) {
         console.error('Erro ao carregar versões:', error);
         
-        const versaoSelect = document.getElementById('configuradorVersao');
+        // Em caso de erro, limpar e desabilitar o select
         if (versaoSelect) {
             versaoSelect.innerHTML = '<option value="">Erro ao carregar versões</option>';
             versaoSelect.disabled = true;
         }
+        
+        return [];
     }
 }
 
