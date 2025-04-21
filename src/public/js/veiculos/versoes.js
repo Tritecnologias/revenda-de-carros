@@ -633,7 +633,7 @@ async function carregarVersaoParaEdicao(versaoId) {
             return null;
         }
         
-        console.log('Versão carregada:', versao);
+        console.log('Versão carregada com sucesso:', JSON.stringify(versao, null, 2));
         
         // Verificar se o modal existe
         let modalVersao = document.getElementById('versaoModal');
@@ -643,13 +643,53 @@ async function carregarVersaoParaEdicao(versaoId) {
             modalVersao = document.getElementById('versaoModal');
         }
         
+        // SOLUÇÃO DIRETA: Primeiro vamos garantir que temos os dados do modelo e marca
+        // Se não temos o objeto modelo completo, mas temos o modeloId, vamos buscar o modelo
+        if (!versao.modelo && versao.modeloId) {
+            try {
+                console.log(`Versão não tem objeto modelo completo. Buscando modelo ${versao.modeloId}...`);
+                const modeloResponse = await fetch(`${baseUrl}/api/veiculos/modelos/${versao.modeloId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (modeloResponse.ok) {
+                    const modeloData = await modeloResponse.json();
+                    console.log(`Modelo obtido da API:`, modeloData);
+                    
+                    // Adicionar o modelo à versão
+                    versao.modelo = modeloData;
+                    
+                    // Se o modelo não tem a marca, mas tem marcaId, buscar a marca
+                    if (!versao.modelo.marca && versao.modelo.marcaId) {
+                        const marcaResponse = await fetch(`${baseUrl}/api/veiculos/marcas/${versao.modelo.marcaId}`, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                        
+                        if (marcaResponse.ok) {
+                            const marcaData = await marcaResponse.json();
+                            console.log(`Marca obtida da API:`, marcaData);
+                            versao.modelo.marca = marcaData;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Erro ao buscar dados complementares do modelo:', error);
+            }
+        }
+        
         // Primeiro, vamos preencher os campos básicos
         const versaoIdInput = document.getElementById('versaoId');
         const nomeInput = document.getElementById('nome'); 
         const statusSelect = document.getElementById('status');
         
         if (versaoIdInput) versaoIdInput.value = versao.id;
-        if (nomeInput) nomeInput.value = versao.nome_versao; 
+        if (nomeInput) nomeInput.value = versao.nome_versao; // Usar nome_versao em vez de nome
         if (statusSelect) statusSelect.value = versao.status || 'ativo';
         
         // Agora vamos lidar com os selects de marca e modelo
@@ -709,39 +749,33 @@ async function carregarVersaoParaEdicao(versaoId) {
                     if (modeloSelect && versao.modeloId) {
                         console.log(`Tentando selecionar modelo ID ${versao.modeloId} no select`);
                         
-                        // Verificar se o modelo está nas opções antes de tentar selecionar
+                        // SOLUÇÃO DIRETA: Adicionar o modelo diretamente ao select, independente da API
+                        let modeloNome = versao.modelo && versao.modelo.nome ? versao.modelo.nome : "Modelo ID " + versao.modeloId;
+                        
+                        // Verificar se o modelo já existe nas opções
                         const modeloExiste = Array.from(modeloSelect.options).some(option => 
                             option.value == versao.modeloId
                         );
                         
-                        if (modeloExiste) {
-                            console.log(`Modelo ID ${versao.modeloId} encontrado nas opções, selecionando...`);
-                            modeloSelect.value = versao.modeloId;
-                        } else {
-                            console.warn(`Modelo ID ${versao.modeloId} não encontrado nas opções disponíveis. Adicionando manualmente...`);
-                            
-                            // Se o modelo não existe nas opções, vamos adicioná-lo
-                            if (versao.modelo && versao.modelo.nome) {
-                                const novaOpcao = document.createElement('option');
-                                novaOpcao.value = versao.modeloId;
-                                novaOpcao.textContent = versao.modelo.nome;
-                                modeloSelect.appendChild(novaOpcao);
-                                console.log(`Adicionada nova opção: ID ${versao.modeloId}, nome ${versao.modelo.nome}`);
-                                
-                                // Agora selecionar a opção recém-adicionada
-                                modeloSelect.value = versao.modeloId;
-                            } else {
-                                console.error(`Não foi possível adicionar o modelo ID ${versao.modeloId} porque não temos o nome do modelo`);
-                            }
+                        if (!modeloExiste) {
+                            console.log(`Modelo ID ${versao.modeloId} não encontrado nas opções. Adicionando manualmente: ${modeloNome}`);
+                            const novaOpcao = document.createElement('option');
+                            novaOpcao.value = versao.modeloId;
+                            novaOpcao.textContent = modeloNome;
+                            modeloSelect.appendChild(novaOpcao);
                         }
+                        
+                        // Agora selecionar o modelo
+                        modeloSelect.value = versao.modeloId;
                         
                         // Verificar se o modelo foi realmente selecionado
                         if (modeloSelect.value != versao.modeloId) {
-                            console.warn(`Modelo ID ${versao.modeloId} ainda não está selecionado. Tentando selecionar manualmente...`);
+                            console.error(`FALHA AO SELECIONAR MODELO: Valor atual do select: ${modeloSelect.value}, valor esperado: ${versao.modeloId}`);
                             
                             // Listar todas as opções disponíveis para debug
+                            console.log('Opções disponíveis no select de modelos:');
                             Array.from(modeloSelect.options).forEach(option => {
-                                console.log(`Opção disponível: value=${option.value}, text=${option.text}`);
+                                console.log(`Opção: value=${option.value}, text=${option.text}`);
                             });
                             
                             // Tentar encontrar a opção pelo valor e selecioná-la manualmente
@@ -750,8 +784,10 @@ async function carregarVersaoParaEdicao(versaoId) {
                                 modeloOption.selected = true;
                                 console.log(`Modelo selecionado manualmente: ${modeloOption.text}`);
                             } else {
-                                console.error(`Modelo ID ${versao.modeloId} não está nas opções disponíveis`);
+                                console.error(`Modelo ID ${versao.modeloId} não está nas opções disponíveis mesmo após tentativa de adição`);
                             }
+                        } else {
+                            console.log(`Modelo ID ${versao.modeloId} selecionado com sucesso!`);
                         }
                     }
                 }
