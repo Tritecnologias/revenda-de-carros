@@ -1,6 +1,7 @@
 import { VersoesService, CreateVersaoDto, UpdateVersaoDto } from '../services/versoes.service';
 export declare class VersoesController {
     private readonly versoesService;
+    private readonly logger;
     constructor(versoesService: VersoesService);
     create(createVersaoDto: CreateVersaoDto): Promise<import("../entities/versao.entity").Versao>;
     findAll(): Promise<import("../entities/versao.entity").Versao[]>;

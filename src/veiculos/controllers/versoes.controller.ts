@@ -3,11 +3,28 @@ import { VersoesService, CreateVersaoDto, UpdateVersaoDto } from '../services/ve
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
+import { Logger } from '@nestjs/common';
 
 @Controller('api/versoes')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class VersoesController {
-  constructor(private readonly versoesService: VersoesService) {}
+  private readonly logger = new Logger(VersoesController.name);
+
+  constructor(private readonly versoesService: VersoesService) {
+    this.logger.log('VersoesController inicializado');
+    this.logger.log('Rotas disponíveis:');
+    this.logger.log('GET /api/versoes/raw');
+    this.logger.log('GET /api/versoes/raw/modelo/:modeloId');
+    this.logger.log('GET /api/versoes/public');
+    this.logger.log('GET /api/versoes/all');
+    this.logger.log('GET /api/versoes/modelo/:modeloId');
+    this.logger.log('GET /api/versoes/modelo/:modeloId/public');
+    this.logger.log('GET /api/versoes/:id');
+    this.logger.log('GET /api/versoes/:id/public');
+    this.logger.log('POST /api/versoes');
+    this.logger.log('PATCH /api/versoes/:id');
+    this.logger.log('DELETE /api/versoes/:id');
+  }
 
   @Post()
   @Roles('admin', 'cadastrador')

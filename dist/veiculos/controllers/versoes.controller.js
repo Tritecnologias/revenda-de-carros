@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var VersoesController_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.VersoesController = void 0;
 const common_1 = require("@nestjs/common");
@@ -18,9 +19,24 @@ const versoes_service_1 = require("../services/versoes.service");
 const jwt_auth_guard_1 = require("../../auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("../../auth/guards/roles.guard");
 const roles_decorator_1 = require("../../auth/decorators/roles.decorator");
-let VersoesController = class VersoesController {
+const common_2 = require("@nestjs/common");
+let VersoesController = VersoesController_1 = class VersoesController {
     constructor(versoesService) {
         this.versoesService = versoesService;
+        this.logger = new common_2.Logger(VersoesController_1.name);
+        this.logger.log('VersoesController inicializado');
+        this.logger.log('Rotas disponíveis:');
+        this.logger.log('GET /api/versoes/raw');
+        this.logger.log('GET /api/versoes/raw/modelo/:modeloId');
+        this.logger.log('GET /api/versoes/public');
+        this.logger.log('GET /api/versoes/all');
+        this.logger.log('GET /api/versoes/modelo/:modeloId');
+        this.logger.log('GET /api/versoes/modelo/:modeloId/public');
+        this.logger.log('GET /api/versoes/:id');
+        this.logger.log('GET /api/versoes/:id/public');
+        this.logger.log('POST /api/versoes');
+        this.logger.log('PATCH /api/versoes/:id');
+        this.logger.log('DELETE /api/versoes/:id');
     }
     async create(createVersaoDto) {
         try {
@@ -236,7 +252,7 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], VersoesController.prototype, "remove", null);
-exports.VersoesController = VersoesController = __decorate([
+exports.VersoesController = VersoesController = VersoesController_1 = __decorate([
     (0, common_1.Controller)('api/versoes'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     __metadata("design:paramtypes", [versoes_service_1.VersoesService])
