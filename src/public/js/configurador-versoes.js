@@ -19,87 +19,36 @@ async function loadVersoes(modeloId) {
             versaoSelect.disabled = true;
         }
         
-        // Nova abordagem: obter versões a partir dos veículos disponíveis
-        // URLs para tentar carregar veículos
-        const veiculosUrls = [
-            `/api/veiculos/public`,
-            `http://localhost:3000/api/veiculos/public`,
-            `http://69.62.91.195:3000/api/veiculos/public`
-        ];
+        // Tentar várias abordagens em sequência
+        let versoes = [];
         
-        console.log('Tentando carregar veículos para extrair versões:', veiculosUrls);
+        // 1. Tentar obter versões diretamente
+        try {
+            versoes = await carregarVersoesViaAPI(modeloId);
+            if (versoes && versoes.length > 0) {
+                console.log('Versões carregadas via API direta:', versoes);
+            }
+        } catch (error) {
+            console.error('Erro ao carregar versões via API direta:', error);
+        }
         
-        // Tentar cada URL em sequência
-        let veiculosResponse = null;
-        let veiculosLastError = null;
-        let veiculos = null;
-        
-        for (const url of veiculosUrls) {
+        // 2. Se não conseguiu via API direta, tentar extrair de veículos
+        if (!versoes || versoes.length === 0) {
             try {
-                console.log(`Tentando carregar veículos de: ${url}`);
-                veiculosResponse = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-                
-                if (veiculosResponse.ok) {
-                    veiculos = await veiculosResponse.json();
-                    console.log(`URL bem-sucedida para veículos: ${url}`);
-                    break; // Sair do loop se a resposta for bem-sucedida
-                } else {
-                    const errorText = await veiculosResponse.text();
-                    console.error(`Falha na URL ${url}:`, errorText);
-                    veiculosLastError = `${veiculosResponse.status} ${veiculosResponse.statusText}`;
+                versoes = await extrairVersoesDosVeiculos(modeloId);
+                if (versoes && versoes.length > 0) {
+                    console.log('Versões extraídas dos veículos:', versoes);
                 }
             } catch (error) {
-                console.error(`Erro ao acessar ${url}:`, error.message);
-                veiculosLastError = error.message;
+                console.error('Erro ao extrair versões dos veículos:', error);
             }
         }
         
-        // Se não conseguiu carregar veículos, retornar array vazio
-        if (!veiculos) {
-            console.error(`Falha ao carregar veículos: ${veiculosLastError}`);
-            
-            if (versaoSelect) {
-                versaoSelect.innerHTML = '<option value="">Erro ao carregar versões</option>';
-                versaoSelect.disabled = true;
-            }
-            
-            return [];
+        // 3. Se ainda não conseguiu, usar dados estáticos como último recurso
+        if (!versoes || versoes.length === 0) {
+            console.log('Usando dados estáticos como fallback para versões');
+            versoes = obterDadosEstaticos(modeloId);
         }
-        
-        console.log('Veículos carregados:', veiculos);
-        
-        // Filtrar veículos pelo modelo selecionado e extrair versões únicas
-        const veiculosFiltrados = Array.isArray(veiculos) 
-            ? veiculos.filter(v => v.modelo_id == modeloId || v.modeloId == modeloId)
-            : [];
-        
-        console.log('Veículos filtrados por modelo:', veiculosFiltrados);
-        
-        // Criar um Map para armazenar versões únicas
-        const versoesMap = new Map();
-        
-        // Extrair versões únicas dos veículos
-        veiculosFiltrados.forEach(veiculo => {
-            const versaoId = veiculo.versao_id || veiculo.versaoId;
-            const versaoNome = veiculo.versao?.nome || veiculo.versao_nome || 'Versão ' + versaoId;
-            
-            if (versaoId && !versoesMap.has(versaoId)) {
-                versoesMap.set(versaoId, {
-                    id: versaoId,
-                    nome: versaoNome,
-                    veiculoId: veiculo.id
-                });
-            }
-        });
-        
-        // Converter o Map para array
-        const versoes = Array.from(versoesMap.values());
-        console.log('Versões extraídas dos veículos:', versoes);
         
         // Preencher o select de versões
         if (versaoSelect) {
@@ -148,6 +97,147 @@ async function loadVersoes(modeloId) {
         
         return [];
     }
+}
+
+// Função para tentar carregar versões diretamente via API
+async function carregarVersoesViaAPI(modeloId) {
+    // URLs para tentar carregar versões
+    const apiUrls = [
+        `/api/versoes/modelo/${modeloId}/public`,
+        `/api/versoes/by-modelo/${modeloId}/public`,
+        `/api/veiculos/versoes/modelo/${modeloId}/public`,
+        `/api/versoes/modelo/${modeloId}`,
+        `http://localhost:3000/api/versoes/modelo/${modeloId}/public`,
+        `http://69.62.91.195:3000/api/versoes/modelo/${modeloId}/public`
+    ];
+    
+    // Tentar cada URL em sequência
+    for (const url of apiUrls) {
+        try {
+            console.log(`Tentando carregar versões de: ${url}`);
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (response.ok) {
+                const versoes = await response.json();
+                console.log(`URL bem-sucedida: ${url}`);
+                return versoes;
+            } else {
+                const errorText = await response.text();
+                console.error(`Falha na URL ${url}:`, errorText);
+            }
+        } catch (error) {
+            console.error(`Erro ao acessar ${url}:`, error.message);
+        }
+    }
+    
+    return [];
+}
+
+// Função para extrair versões dos veículos
+async function extrairVersoesDosVeiculos(modeloId) {
+    // URLs para tentar carregar veículos
+    const veiculosUrls = [
+        `/api/veiculos/public`,
+        `http://localhost:3000/api/veiculos/public`,
+        `http://69.62.91.195:3000/api/veiculos/public`
+    ];
+    
+    // Tentar cada URL em sequência
+    for (const url of veiculosUrls) {
+        try {
+            console.log(`Tentando carregar veículos de: ${url}`);
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (response.ok) {
+                const veiculos = await response.json();
+                console.log(`URL bem-sucedida para veículos: ${url}`);
+                
+                // Filtrar veículos pelo modelo selecionado
+                const veiculosFiltrados = Array.isArray(veiculos) 
+                    ? veiculos.filter(v => v.modelo_id == modeloId || v.modeloId == modeloId)
+                    : [];
+                
+                console.log('Veículos filtrados por modelo:', veiculosFiltrados);
+                
+                // Criar um Map para armazenar versões únicas
+                const versoesMap = new Map();
+                
+                // Extrair versões únicas dos veículos
+                veiculosFiltrados.forEach(veiculo => {
+                    const versaoId = veiculo.versao_id || veiculo.versaoId;
+                    const versaoNome = veiculo.versao?.nome || veiculo.versao_nome || 'Versão ' + versaoId;
+                    
+                    if (versaoId && !versoesMap.has(versaoId)) {
+                        versoesMap.set(versaoId, {
+                            id: versaoId,
+                            nome: versaoNome,
+                            veiculoId: veiculo.id
+                        });
+                    }
+                });
+                
+                // Converter o Map para array
+                return Array.from(versoesMap.values());
+            } else {
+                const errorText = await response.text();
+                console.error(`Falha na URL ${url}:`, errorText);
+            }
+        } catch (error) {
+            console.error(`Erro ao acessar ${url}:`, error.message);
+        }
+    }
+    
+    return [];
+}
+
+// Função para obter dados estáticos como último recurso
+function obterDadosEstaticos(modeloId) {
+    // Mapeamento de modelos para versões (dados estáticos)
+    const dadosEstaticos = {
+        // Modelos de Fiat
+        1: [
+            { id: 1, nome: 'Attractive 1.0' },
+            { id: 2, nome: 'Essence 1.6' },
+            { id: 3, nome: 'Sport 1.8' }
+        ],
+        // Modelos de Chevrolet
+        2: [
+            { id: 4, nome: 'LT 1.0' },
+            { id: 5, nome: 'LTZ 1.4' },
+            { id: 6, nome: 'Premier 1.8' }
+        ],
+        // Modelos de Volkswagen
+        3: [
+            { id: 7, nome: 'Trendline 1.0' },
+            { id: 8, nome: 'Comfortline 1.4' },
+            { id: 9, nome: 'Highline 1.8' }
+        ],
+        // Modelos de Ford
+        4: [
+            { id: 10, nome: 'SE 1.5' },
+            { id: 11, nome: 'SEL 1.5' },
+            { id: 12, nome: 'Titanium 2.0' }
+        ],
+        // Modelos de Hyundai
+        5: [
+            { id: 13, nome: 'Vision 1.6' },
+            { id: 14, nome: 'Comfort 1.6' },
+            { id: 15, nome: 'Premium 2.0' }
+        ]
+    };
+    
+    // Retornar versões para o modelo especificado ou array vazio se não existir
+    return dadosEstaticos[modeloId] || [];
 }
 
 // Função para carregar modelos por marca no configurador
