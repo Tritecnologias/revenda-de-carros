@@ -338,222 +338,81 @@ async function carregarVersoes() {
         if (status) params.append('status', status);
         const queryString = params.toString() ? `?${params.toString()}` : '';
         
-        // Implementação direta em vez de depender de config.fetchWithFallback
-        let versoes = [];
-        let lastError = null;
-        let usouDadosEstaticos = false;
-        
         // Determinar a URL base atual
         const currentUrl = window.location.href;
-        const isLocalhost = currentUrl.includes('localhost');
         const isExternalIP = currentUrl.includes('69.62.91.195');
         
-        // Priorizar URLs baseadas no ambiente atual
-        let urlsPrioritarias = [];
-        if (isExternalIP) {
-            // Se estamos no IP externo, priorizar URLs absolutas com esse IP
-            urlsPrioritarias = [`http://69.62.91.195:3000`];
-        } else if (isLocalhost) {
-            // Se estamos no localhost, priorizar URLs absolutas com localhost
-            urlsPrioritarias = [`http://localhost:3000`];
-        } else {
-            // Caso contrário, usar URLs relativas
-            urlsPrioritarias = [``];
-        }
+        // Definir a URL base correta para o ambiente atual
+        let baseUrl = isExternalIP ? 'http://69.62.91.195:3000' : '';
         
+        // Definir as URLs específicas para o ambiente atual
+        let url;
         if (modeloId) {
-            // URLs para modelo específico, priorizando o ambiente atual
-            const urls = [];
-            
-            // Adicionar URLs prioritárias baseadas no ambiente
-            for (const baseUrl of urlsPrioritarias) {
-                urls.push(
-                    `${baseUrl}/api/versoes/modelo/${modeloId}/public${queryString}`,
-                    `${baseUrl}/api/versoes/modelo/${modeloId}${queryString}`,
-                    `${baseUrl}/api/veiculos/versoes/modelo/${modeloId}${queryString}`
-                );
-            }
-            
-            // Adicionar URLs de fallback para outros ambientes
-            if (!isExternalIP) urls.push(`http://69.62.91.195:3000/api/versoes/modelo/${modeloId}/public${queryString}`);
-            if (!isLocalhost) urls.push(`http://localhost:3000/api/versoes/modelo/${modeloId}/public${queryString}`);
-            
-            console.log('Tentando URLs para modelo específico:', urls);
-            
-            // Tentar cada URL em sequência
-            for (const url of urls) {
-                try {
-                    console.log(`Tentando carregar versões de: ${url}`);
-                    const response = await fetch(url, {
-                        method: 'GET',
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        },
-                        // Adicionar timeout para não ficar esperando muito tempo
-                        signal: AbortSignal.timeout(5000) // 5 segundos de timeout
-                    });
-                    
-                    if (response.ok) {
-                        const data = await response.json();
-                        console.log(`URL bem-sucedida: ${url}, dados recebidos:`, data);
-                        
-                        // Verificar se a resposta é um array
-                        if (Array.isArray(data)) {
-                            // Se for um array não vazio, usá-lo diretamente
-                            if (data.length > 0) {
-                                versoes = data;
-                                break; // Sair do loop se a resposta for bem-sucedida
-                            }
-                        } 
-                        // Verificar se a resposta é um objeto com uma propriedade items (paginação)
-                        else if (data && data.items && Array.isArray(data.items)) {
-                            // Se for um array não vazio, usá-lo
-                            if (data.items.length > 0) {
-                                versoes = data.items;
-                                break; // Sair do loop se a resposta for bem-sucedida
-                            }
-                        }
-                        
-                        // Se chegou aqui, a resposta foi bem-sucedida mas não contém dados utilizáveis
-                        console.warn(`A URL ${url} retornou uma resposta vazia ou em formato inesperado:`, data);
-                    } else {
-                        const errorText = await response.text();
-                        console.error(`Falha na URL ${url}:`, errorText);
-                        lastError = `${response.status} ${response.statusText}`;
-                    }
-                } catch (error) {
-                    console.error(`Erro ao acessar ${url}:`, error.message);
-                    lastError = error.message;
-                }
-            }
+            url = `${baseUrl}/api/versoes/modelo/${modeloId}/public${queryString}`;
         } else {
-            // URLs para todas as versões, priorizando o ambiente atual
-            const urls = [];
-            
-            // Adicionar URLs prioritárias baseadas no ambiente
-            for (const baseUrl of urlsPrioritarias) {
-                urls.push(
-                    `${baseUrl}/api/versoes/public${queryString}`,
-                    `${baseUrl}/api/versoes${queryString}`,
-                    `${baseUrl}/api/veiculos/versoes${queryString}`
-                );
-            }
-            
-            // Adicionar URLs de fallback para outros ambientes
-            if (!isExternalIP) urls.push(`http://69.62.91.195:3000/api/versoes/public${queryString}`);
-            if (!isLocalhost) urls.push(`http://localhost:3000/api/versoes/public${queryString}`);
-            
-            console.log('Tentando URLs para todas as versões:', urls);
-            
-            // Tentar cada URL em sequência
-            for (const url of urls) {
-                try {
-                    console.log(`Tentando carregar versões de: ${url}`);
-                    const response = await fetch(url, {
-                        method: 'GET',
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        },
-                        // Adicionar timeout para não ficar esperando muito tempo
-                        signal: AbortSignal.timeout(5000) // 5 segundos de timeout
-                    });
-                    
-                    if (response.ok) {
-                        const data = await response.json();
-                        console.log(`URL bem-sucedida: ${url}, dados recebidos:`, data);
-                        
-                        // Verificar se a resposta é um array
-                        if (Array.isArray(data)) {
-                            // Se for um array não vazio, usá-lo diretamente
-                            if (data.length > 0) {
-                                versoes = data;
-                                break; // Sair do loop se a resposta for bem-sucedida
-                            }
-                        } 
-                        // Verificar se a resposta é um objeto com uma propriedade items (paginação)
-                        else if (data && data.items && Array.isArray(data.items)) {
-                            // Se for um array não vazio, usá-lo
-                            if (data.items.length > 0) {
-                                versoes = data.items;
-                                break; // Sair do loop se a resposta for bem-sucedida
-                            }
-                        }
-                        
-                        // Se chegou aqui, a resposta foi bem-sucedida mas não contém dados utilizáveis
-                        console.warn(`A URL ${url} retornou uma resposta vazia ou em formato inesperado:`, data);
-                    } else {
-                        const errorText = await response.text();
-                        console.error(`Falha na URL ${url}:`, errorText);
-                        lastError = `${response.status} ${response.statusText}`;
-                    }
-                } catch (error) {
-                    console.error(`Erro ao acessar ${url}:`, error.message);
-                    lastError = error.message;
-                }
-            }
+            url = `${baseUrl}/api/versoes/public${queryString}`;
         }
         
-        // Se não conseguimos carregar versões de nenhuma URL, usar dados estáticos como fallback
-        if (versoes.length === 0) {
-            console.log('Nenhuma versão encontrada. Usando dados estáticos como fallback.');
-            versoes = obterDadosEstaticosVersoes(modeloId);
-            usouDadosEstaticos = true;
-            
-            // Mostrar aviso na interface se estamos usando dados mockados
-            if (versoesTableBody) {
-                const alertaDiv = document.createElement('div');
-                alertaDiv.className = 'alert alert-warning mt-2';
-                alertaDiv.innerHTML = '<strong>Atenção:</strong> Exibindo dados mockados. Não foi possível conectar ao banco de dados.';
-                
-                // Inserir o alerta antes da tabela
-                const tabelaContainer = versoesTableBody.closest('.table-responsive');
-                if (tabelaContainer && tabelaContainer.parentNode) {
-                    tabelaContainer.parentNode.insertBefore(alertaDiv, tabelaContainer);
-                }
+        console.log(`Tentando carregar versões de: ${url}`);
+        
+        // Fazer a requisição diretamente para a URL correta
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
             }
-        }
+        });
         
-        console.log('Versões carregadas com sucesso:', versoes);
-        
-        // Só renderizar se estivermos na página correta
-        if (versoesTableBody) {
-            renderizarVersoes(versoes, versoesTableBody, usouDadosEstaticos);
+        if (response.ok) {
+            const data = await response.json();
+            console.log(`Dados carregados com sucesso:`, data);
+            
+            // Verificar se a resposta é um array
+            if (Array.isArray(data)) {
+                // Renderizar os dados
+                renderizarVersoes(data, versoesTableBody);
+            } 
+            // Verificar se a resposta é um objeto com uma propriedade items (paginação)
+            else if (data && data.items && Array.isArray(data.items)) {
+                // Renderizar os items
+                renderizarVersoes(data.items, versoesTableBody);
+            } else {
+                console.warn(`A resposta não está no formato esperado:`, data);
+                versoesTableBody.innerHTML = '<tr><td colspan="6" class="text-center">Formato de resposta inválido do servidor.</td></tr>';
+            }
         } else {
-            console.warn('Elemento da tabela de versões não encontrado. Não é possível renderizar versões.');
+            const errorText = await response.text();
+            console.error(`Falha ao carregar versões: ${response.status} ${response.statusText}`, errorText);
+            versoesTableBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Erro ${response.status}: Não foi possível carregar as versões do banco de dados.</td></tr>`;
+            exibirMensagem(`Erro ao carregar versões: ${response.status} ${response.statusText}`, 'danger');
         }
     } catch (error) {
         console.error('Erro ao carregar versões:', error);
         
         // Em caso de erro, mostrar mensagem e limpar tabela
         if (versoesTableBody) {
-            versoesTableBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Erro ao carregar versões. Por favor, tente novamente.</td></tr>';
+            versoesTableBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Erro ao carregar versões do banco de dados. Por favor, tente novamente.</td></tr>';
         }
         
-        exibirMensagem('Erro ao carregar versões. Por favor, tente novamente.', 'danger');
+        exibirMensagem('Erro ao carregar versões do banco de dados. Por favor, tente novamente.', 'danger');
     }
 }
 
 // Função para renderizar a tabela de versões
-function renderizarVersoes(data, tableBody, usouDadosEstaticos = false) {
+function renderizarVersoes(data, tableBody) {
     // Limpar a tabela
     tableBody.innerHTML = '';
     
     // Verificar se há dados para exibir
     if (!data || data.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="6" class="text-center">Nenhuma versão encontrada.</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="6" class="text-center">Nenhuma versão encontrada no banco de dados.</td></tr>';
         return;
     }
     
     // Renderizar cada versão
     data.forEach(versao => {
         const tr = document.createElement('tr');
-        
-        // Adicionar classe se estamos usando dados mockados
-        if (usouDadosEstaticos) {
-            tr.classList.add('table-warning');
-        }
         
         // Verificar se a versão tem um modelo associado
         const modeloNome = versao.modelo?.nome || versao.modelo_nome || 'N/A';
@@ -634,27 +493,36 @@ async function carregarVersaoParaEdicao(versaoId) {
         
         // Verificar qual ID do campo de nome está presente na página
         const nomeField = document.getElementById('nome') || document.getElementById('nomeVersao');
-        if (nomeField) {
-            nomeField.value = versao.nome || versao.nome_versao || '';
-        } else {
-            console.warn('Campo de nome da versão não encontrado no formulário');
+        if (!nomeField) {
+            throw new Error('Campo de nome da versão não encontrado no formulário');
         }
+        const nome = nomeField.value = versao.nome || versao.nome_versao || '';
         
-        // Verificar se os campos opcionais existem antes de tentar preenchê-los
+        // Obter valores dos campos opcionais se existirem
+        let descricao = '';
         const descricaoField = document.getElementById('descricao');
         if (descricaoField) {
-            descricaoField.value = versao.descricao || '';
+            descricao = descricaoField.value = versao.descricao || '';
         }
         
+        let ano = null;
         const anoField = document.getElementById('ano');
         if (anoField) {
-            anoField.value = versao.ano || '';
+            ano = anoField.value = versao.ano || '';
         }
         
+        let preco = null;
         const precoField = document.getElementById('preco');
         if (precoField) {
-            precoField.value = versao.preco || '';
+            preco = precoField.value = versao.preco || '';
         }
+        
+        // Obter modelo
+        const modeloSelect = document.getElementById('modeloSelect');
+        if (!modeloSelect) {
+            throw new Error('Campo de modelo não encontrado no formulário');
+        }
+        const modeloId = modeloSelect.value = versao.modeloId || '';
         
         // Verificar qual campo de status está presente na página
         let status = 'ativo';
@@ -662,7 +530,7 @@ async function carregarVersaoParaEdicao(versaoId) {
         const statusCheckbox = document.getElementById('statusVersao');
         
         if (statusField) {
-            status = statusField.value;
+            status = statusField.value = versao.status || 'ativo';
         } else if (statusCheckbox) {
             // Se for um checkbox, marcar se o status for 'ativo'
             statusCheckbox.checked = versao.status === 'ativo';
@@ -680,10 +548,7 @@ async function carregarVersaoParaEdicao(versaoId) {
                 await carregarModelosFormulario(versao.modelo.marca.id);
                 
                 // Selecionar o modelo correto
-                const modeloSelect = document.getElementById('modeloSelect');
-                if (modeloSelect) {
-                    modeloSelect.value = versao.modelo.id || versao.modeloId;
-                }
+                modeloSelect.value = versao.modelo.id || versao.modeloId;
             }
         }
         
@@ -978,67 +843,6 @@ async function carregarModelosFormulario(marcaId) {
         console.error('Erro ao carregar modelos para formulário:', error);
         exibirMensagem('Erro ao carregar modelos. Por favor, tente novamente.', 'danger');
     }
-}
-
-// Função para obter dados estáticos de versões como fallback
-function obterDadosEstaticosVersoes(modeloId) {
-    console.log('Usando dados estáticos para versões, modelo ID:', modeloId);
-    
-    // Mapeamento de modelos para versões (dados estáticos)
-    const dadosEstaticos = {
-        // Modelos de Fiat (ID 1)
-        1: [
-            { id: 101, nome: 'Attractive 1.0', modeloId: 1, modelo: { id: 1, nome: 'Argo', marcaId: 1 } },
-            { id: 102, nome: 'Essence 1.6', modeloId: 1, modelo: { id: 1, nome: 'Argo', marcaId: 1 } },
-            { id: 103, nome: 'Sport 1.8', modeloId: 1, modelo: { id: 1, nome: 'Argo', marcaId: 1 } }
-        ],
-        // Modelos de Chevrolet (ID 2)
-        2: [
-            { id: 201, nome: 'LT 1.0', modeloId: 2, modelo: { id: 2, nome: 'Onix', marcaId: 2 } },
-            { id: 202, nome: 'LTZ 1.4', modeloId: 2, modelo: { id: 2, nome: 'Onix', marcaId: 2 } },
-            { id: 203, nome: 'Premier 1.8', modeloId: 2, modelo: { id: 2, nome: 'Onix', marcaId: 2 } }
-        ],
-        // Modelos de Volkswagen (ID 3)
-        3: [
-            { id: 301, nome: 'Trendline 1.0', modeloId: 3, modelo: { id: 3, nome: 'Polo', marcaId: 3 } },
-            { id: 302, nome: 'Comfortline 1.4', modeloId: 3, modelo: { id: 3, nome: 'Polo', marcaId: 3 } },
-            { id: 303, nome: 'Highline 1.8', modeloId: 3, modelo: { id: 3, nome: 'Polo', marcaId: 3 } }
-        ],
-        // Modelos de Ford (ID 4)
-        4: [
-            { id: 401, nome: 'SE 1.5', modeloId: 4, modelo: { id: 4, nome: 'Ka', marcaId: 4 } },
-            { id: 402, nome: 'SEL 1.5', modeloId: 4, modelo: { id: 4, nome: 'Ka', marcaId: 4 } },
-            { id: 403, nome: 'Titanium 2.0', modeloId: 4, modelo: { id: 4, nome: 'Ka', marcaId: 4 } }
-        ],
-        // Modelos de Hyundai (ID 5)
-        5: [
-            { id: 501, nome: 'Vision 1.6', modeloId: 5, modelo: { id: 5, nome: 'HB20', marcaId: 5 } },
-            { id: 502, nome: 'Comfort 1.6', modeloId: 5, modelo: { id: 5, nome: 'HB20', marcaId: 5 } },
-            { id: 503, nome: 'Premium 2.0', modeloId: 5, modelo: { id: 5, nome: 'HB20', marcaId: 5 } }
-        ],
-        // Dados genéricos para todos os modelos
-        default: [
-            { id: 901, nome: 'Versão Básica', status: 'ativo' },
-            { id: 902, nome: 'Versão Intermediária', status: 'ativo' },
-            { id: 903, nome: 'Versão Premium', status: 'ativo' }
-        ]
-    };
-    
-    // Se um modelo específico foi selecionado, retornar versões para esse modelo
-    if (modeloId && dadosEstaticos[modeloId]) {
-        return dadosEstaticos[modeloId];
-    }
-    
-    // Se nenhum modelo específico foi selecionado ou o modelo não existe nos dados estáticos,
-    // retornar uma lista combinada de todas as versões
-    const todasVersoes = [];
-    for (const modelo in dadosEstaticos) {
-        if (modelo !== 'default') {
-            todasVersoes.push(...dadosEstaticos[modelo]);
-        }
-    }
-    
-    return todasVersoes.length > 0 ? todasVersoes : dadosEstaticos.default;
 }
 
 // Função para exibir mensagens
