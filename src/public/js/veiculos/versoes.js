@@ -342,57 +342,35 @@ async function carregarVersoes() {
         const currentUrl = window.location.href;
         const baseUrl = currentUrl.includes('69.62.91.195') ? 'http://69.62.91.195:3000' : '';
         
-        // Usar a rota correta do VersoesPublicController
-        let url;
+        // Lista de todas as possíveis URLs para tentar, em ordem de prioridade
+        const urls = [];
+        
         if (modeloId) {
-            url = `${baseUrl}/api/veiculos/versoes/modelo/${modeloId}${queryString}`;
+            // URLs para modelo específico
+            urls.push(
+                `${baseUrl}/api/veiculos/versoes/modelo/${modeloId}${queryString}`,
+                `${baseUrl}/api/versoes/modelo/${modeloId}/public${queryString}`,
+                `${baseUrl}/api/versoes/modelo/${modeloId}${queryString}`
+            );
         } else {
-            url = `${baseUrl}/api/veiculos/versoes${queryString}`;
+            // URLs para todas as versões
+            urls.push(
+                `${baseUrl}/api/veiculos/versoes${queryString}`,
+                `${baseUrl}/api/versoes/public${queryString}`,
+                `${baseUrl}/api/versoes${queryString}`
+            );
         }
         
-        console.log(`Tentando carregar versões de: ${url}`);
+        console.log('Tentando URLs para buscar versões:', urls);
         
-        // Fazer a requisição diretamente para a URL correta
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            signal: AbortSignal.timeout(5000) // 5 segundos de timeout
-        });
+        // Tentar cada URL em sequência até encontrar uma que funcione
+        let versoes = null;
+        let lastError = null;
         
-        if (response.ok) {
-            const data = await response.json();
-            console.log(`Dados carregados com sucesso:`, data);
-            
-            // Verificar se a resposta é um array
-            if (Array.isArray(data)) {
-                // Renderizar os dados
-                renderizarVersoes(data, versoesTableBody);
-            } 
-            // Verificar se a resposta é um objeto com uma propriedade items (paginação)
-            else if (data && data.items && Array.isArray(data.items)) {
-                // Renderizar os items
-                renderizarVersoes(data.items, versoesTableBody);
-            } else {
-                console.warn(`A resposta não está no formato esperado:`, data);
-                versoesTableBody.innerHTML = '<tr><td colspan="6" class="text-center">Formato de resposta inválido do servidor.</td></tr>';
-            }
-        } else {
-            const errorText = await response.text();
-            console.error(`Falha ao carregar versões: ${response.status} ${response.statusText}`, errorText);
-            
-            // Tentar a rota alternativa
-            console.log('Tentando rota alternativa...');
-            const alternativeUrl = modeloId 
-                ? `${baseUrl}/api/veiculos/versoes/all/modelo/${modeloId}${queryString}`
-                : `${baseUrl}/api/veiculos/versoes/all${queryString}`;
-            
-            console.log(`Tentando carregar versões de: ${alternativeUrl}`);
-            
+        for (const url of urls) {
             try {
-                const alternativeResponse = await fetch(alternativeUrl, {
+                console.log(`Tentando carregar versões de: ${url}`);
+                const response = await fetch(url, {
                     method: 'GET',
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -401,32 +379,43 @@ async function carregarVersoes() {
                     signal: AbortSignal.timeout(5000) // 5 segundos de timeout
                 });
                 
-                if (alternativeResponse.ok) {
-                    const alternativeData = await alternativeResponse.json();
-                    console.log(`Dados carregados com sucesso da rota alternativa:`, alternativeData);
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log(`URL bem-sucedida: ${url}, dados recebidos:`, data);
                     
                     // Verificar se a resposta é um array
-                    if (Array.isArray(alternativeData)) {
-                        // Renderizar os dados
-                        renderizarVersoes(alternativeData, versoesTableBody);
-                        return;
+                    if (Array.isArray(data) && data.length > 0) {
+                        versoes = data;
+                        break; // Sair do loop se a resposta for bem-sucedida
                     } 
                     // Verificar se a resposta é um objeto com uma propriedade items (paginação)
-                    else if (alternativeData && alternativeData.items && Array.isArray(alternativeData.items)) {
-                        // Renderizar os items
-                        renderizarVersoes(alternativeData.items, versoesTableBody);
-                        return;
+                    else if (data && data.items && Array.isArray(data.items) && data.items.length > 0) {
+                        versoes = data.items;
+                        break; // Sair do loop se a resposta for bem-sucedida
                     }
+                    
+                    // Se chegou aqui, a resposta foi bem-sucedida mas não contém dados utilizáveis
+                    console.warn(`A URL ${url} retornou uma resposta vazia ou em formato inesperado:`, data);
+                } else {
+                    const errorText = await response.text();
+                    console.error(`Falha na URL ${url}:`, errorText);
+                    lastError = `${response.status} ${response.statusText}`;
                 }
-                
-                // Se chegou aqui, a rota alternativa também falhou
-                versoesTableBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Erro ${response.status}: Não foi possível carregar as versões do banco de dados.</td></tr>`;
-                exibirMensagem(`Erro ao carregar versões: ${response.status} ${response.statusText}`, 'danger');
-            } catch (alternativeError) {
-                console.error('Erro ao acessar rota alternativa:', alternativeError);
-                versoesTableBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Erro ${response.status}: Não foi possível carregar as versões do banco de dados.</td></tr>`;
-                exibirMensagem(`Erro ao carregar versões: ${response.status} ${response.statusText}`, 'danger');
+            } catch (error) {
+                console.error(`Erro ao acessar ${url}:`, error.message);
+                lastError = error.message;
             }
+        }
+        
+        // Se encontramos versões, renderizá-las
+        if (versoes && versoes.length > 0) {
+            console.log('Versões carregadas com sucesso:', versoes);
+            renderizarVersoes(versoes, versoesTableBody);
+        } else {
+            // Se não conseguimos carregar versões de nenhuma URL, mostrar mensagem de erro
+            console.error('Não foi possível carregar versões de nenhuma URL. Último erro:', lastError);
+            versoesTableBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Não foi possível carregar as versões do banco de dados. Erro: ${lastError || 'Desconhecido'}</td></tr>`;
+            exibirMensagem(`Erro ao carregar versões: ${lastError || 'Desconhecido'}`, 'danger');
         }
     } catch (error) {
         console.error('Erro ao carregar versões:', error);
@@ -557,28 +546,52 @@ async function carregarVersaoParaEdicao(versaoId) {
         const currentUrl = window.location.href;
         const baseUrl = currentUrl.includes('69.62.91.195') ? 'http://69.62.91.195:3000' : '';
         
-        // Usar a rota correta do VersoesPublicController
-        const url = `${baseUrl}/api/veiculos/versoes/${versaoId}`;
+        // Lista de todas as possíveis URLs para tentar, em ordem de prioridade
+        const urls = [
+            `${baseUrl}/api/veiculos/versoes/${versaoId}`,
+            `${baseUrl}/api/versoes/${versaoId}`,
+            `${baseUrl}/api/versoes/${versaoId}/public`
+        ];
         
-        console.log(`Buscando versão de: ${url}`);
+        console.log('Tentando URLs para buscar versão:', urls);
         
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            signal: AbortSignal.timeout(5000) // 5 segundos de timeout
-        });
+        // Tentar cada URL em sequência até encontrar uma que funcione
+        let versao = null;
+        let lastError = null;
         
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`Erro ao carregar versão ${versaoId}:`, errorText);
-            exibirMensagem(`Erro ao carregar versão: ${response.status} ${response.statusText}`, 'danger');
+        for (const url of urls) {
+            try {
+                console.log(`Tentando carregar versão de: ${url}`);
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    signal: AbortSignal.timeout(5000) // 5 segundos de timeout
+                });
+                
+                if (response.ok) {
+                    versao = await response.json();
+                    console.log(`URL bem-sucedida: ${url}, dados recebidos:`, versao);
+                    break; // Sair do loop se a resposta for bem-sucedida
+                } else {
+                    const errorText = await response.text();
+                    console.error(`Falha na URL ${url}:`, errorText);
+                    lastError = `${response.status} ${response.statusText}`;
+                }
+            } catch (error) {
+                console.error(`Erro ao acessar ${url}:`, error.message);
+                lastError = error.message;
+            }
+        }
+        
+        if (!versao) {
+            console.error('Não foi possível carregar a versão de nenhuma URL. Último erro:', lastError);
+            exibirMensagem(`Erro ao carregar versão: ${lastError || 'Desconhecido'}`, 'danger');
             return null;
         }
         
-        const versao = await response.json();
         console.log('Versão carregada:', versao);
         
         // Preencher o formulário de edição
@@ -738,24 +751,53 @@ async function excluirVersao() {
         const currentUrl = window.location.href;
         const baseUrl = currentUrl.includes('69.62.91.195') ? 'http://69.62.91.195:3000' : '';
         
-        // Usar a rota correta do VersoesPublicController
-        const url = `${baseUrl}/api/veiculos/versoes/${versaoId}`;
+        // Lista de todas as possíveis URLs para tentar, em ordem de prioridade
+        const urls = [
+            `${baseUrl}/api/versoes/${versaoId}`,
+            `${baseUrl}/api/veiculos/versoes/${versaoId}`
+        ];
         
-        console.log(`Excluindo versão: ${url}`);
+        console.log('Tentando URLs para excluir versão:', urls);
         
-        const response = await fetch(url, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            signal: AbortSignal.timeout(5000) // 5 segundos de timeout
-        });
+        // Tentar cada URL em sequência até encontrar uma que funcione
+        let resultado = null;
+        let lastError = null;
         
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`Erro ao excluir versão ${versaoId}:`, errorText);
-            exibirMensagem(`Erro ao excluir versão: ${response.status} ${response.statusText}`, 'danger');
+        for (const url of urls) {
+            try {
+                console.log(`Tentando excluir versão em: ${url}`);
+                const response = await fetch(url, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    signal: AbortSignal.timeout(5000) // 5 segundos de timeout
+                });
+                
+                if (response.ok) {
+                    // Para DELETE, a resposta pode ser vazia
+                    try {
+                        resultado = await response.json();
+                    } catch (e) {
+                        resultado = { success: true };
+                    }
+                    console.log(`URL bem-sucedida: ${url}`);
+                    break; // Sair do loop se a resposta for bem-sucedida
+                } else {
+                    const errorText = await response.text();
+                    console.error(`Falha na URL ${url}:`, errorText);
+                    lastError = `${response.status} ${response.statusText}`;
+                }
+            } catch (error) {
+                console.error(`Erro ao acessar ${url}:`, error.message);
+                lastError = error.message;
+            }
+        }
+        
+        if (!resultado) {
+            console.error('Não foi possível excluir a versão em nenhuma URL. Último erro:', lastError);
+            exibirMensagem(`Erro ao excluir versão: ${lastError || 'Desconhecido'}`, 'danger');
             return;
         }
         
@@ -881,10 +923,20 @@ function criarModalVersao() {
 }
 
 // Função para salvar uma versão (criar ou atualizar)
-async function salvarVersao(event) {
-    event.preventDefault();
-    
+async function salvarVersao() {
     console.log('Salvando versão...');
+    
+    // Obter dados do formulário
+    const versaoId = document.getElementById('editVersaoId').value;
+    const nome = document.getElementById('editVersaoNome').value;
+    const modeloId = document.getElementById('editVersaoModelo').value;
+    const status = document.getElementById('editVersaoStatus').value;
+    
+    // Validar dados
+    if (!nome || !modeloId) {
+        exibirMensagem('Por favor, preencha todos os campos obrigatórios.', 'warning');
+        return;
+    }
     
     // Obter token de autenticação
     const token = getToken();
@@ -893,43 +945,9 @@ async function salvarVersao(event) {
         return;
     }
     
-    // Obter dados do formulário
-    const versaoId = document.getElementById('versaoId').value;
-    
-    // Verificar qual ID do campo de nome está presente na página
-    const nomeField = document.getElementById('nome') || document.getElementById('nomeVersao');
-    if (!nomeField) {
-        exibirMensagem('Campo de nome da versão não encontrado no formulário', 'danger');
-        return;
-    }
-    
-    // Obter modelo
-    const modeloSelect = document.getElementById('modeloSelect');
-    if (!modeloSelect) {
-        exibirMensagem('Campo de modelo não encontrado no formulário', 'danger');
-        return;
-    }
-    
-    const modeloId = modeloSelect.value;
-    if (!modeloId) {
-        exibirMensagem('Por favor, selecione um modelo', 'warning');
-        return;
-    }
-    
-    // Verificar qual campo de status está presente na página
-    let status = 'ativo';
-    const statusField = document.getElementById('status');
-    const statusCheckbox = document.getElementById('statusVersao');
-    
-    if (statusField) {
-        status = statusField.value;
-    } else if (statusCheckbox) {
-        status = statusCheckbox.checked ? 'ativo' : 'inativo';
-    }
-    
-    // Construir objeto de dados da versão - usar nome_versao conforme a entidade
+    // Construir objeto com os dados da versão
     const versaoData = {
-        nome_versao: nomeField.value,
+        nome_versao: nome,
         modeloId: parseInt(modeloId),
         status: status
     };
@@ -941,42 +959,72 @@ async function salvarVersao(event) {
         const currentUrl = window.location.href;
         const baseUrl = currentUrl.includes('69.62.91.195') ? 'http://69.62.91.195:3000' : '';
         
-        let url, method;
+        // Lista de todas as possíveis URLs para tentar, em ordem de prioridade
+        let urls = [];
+        let method;
         
         if (versaoId) {
             // Atualizar versão existente
-            url = `${baseUrl}/api/veiculos/versoes/${versaoId}`;
+            urls = [
+                `${baseUrl}/api/versoes/${versaoId}`,
+                `${baseUrl}/api/veiculos/versoes/${versaoId}`
+            ];
             method = 'PATCH';
         } else {
             // Criar nova versão
-            url = `${baseUrl}/api/veiculos/versoes`;
+            urls = [
+                `${baseUrl}/api/versoes`,
+                `${baseUrl}/api/veiculos/versoes`
+            ];
             method = 'POST';
         }
         
-        console.log(`${method} para ${url} com dados:`, versaoData);
+        console.log('Tentando URLs para salvar versão:', urls);
         
-        const response = await fetch(url, {
-            method: method,
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(versaoData),
-            signal: AbortSignal.timeout(5000) // 5 segundos de timeout
-        });
+        // Tentar cada URL em sequência até encontrar uma que funcione
+        let resultado = null;
+        let lastError = null;
         
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || `Erro ${response.status}: ${response.statusText}`);
+        for (const url of urls) {
+            try {
+                console.log(`Tentando salvar versão em: ${url}`);
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(versaoData),
+                    signal: AbortSignal.timeout(5000) // 5 segundos de timeout
+                });
+                
+                if (response.ok) {
+                    resultado = await response.json();
+                    console.log(`URL bem-sucedida: ${url}, dados recebidos:`, resultado);
+                    break; // Sair do loop se a resposta for bem-sucedida
+                } else {
+                    const errorText = await response.text();
+                    console.error(`Falha na URL ${url}:`, errorText);
+                    lastError = `${response.status} ${response.statusText}`;
+                }
+            } catch (error) {
+                console.error(`Erro ao acessar ${url}:`, error.message);
+                lastError = error.message;
+            }
         }
         
-        const savedVersao = await response.json();
-        console.log('Versão salva com sucesso:', savedVersao);
+        if (!resultado) {
+            console.error('Não foi possível salvar a versão em nenhuma URL. Último erro:', lastError);
+            exibirMensagem(`Erro ao salvar versão: ${lastError || 'Desconhecido'}`, 'danger');
+            return;
+        }
         
-        // Fechar modal
-        const versaoModal = bootstrap.Modal.getInstance(document.getElementById('versaoModal'));
-        if (versaoModal) {
-            versaoModal.hide();
+        console.log('Versão salva com sucesso:', resultado);
+        
+        // Fechar o modal
+        const editModal = bootstrap.Modal.getInstance(document.getElementById('editVersaoModal'));
+        if (editModal) {
+            editModal.hide();
         }
         
         // Exibir mensagem de sucesso
@@ -987,7 +1035,7 @@ async function salvarVersao(event) {
         
     } catch (error) {
         console.error('Erro ao salvar versão:', error);
-        exibirMensagem(`Erro ao salvar versão: ${error.message}`, 'danger');
+        exibirMensagem('Erro ao salvar versão. Por favor, tente novamente.', 'danger');
     }
 }
 
