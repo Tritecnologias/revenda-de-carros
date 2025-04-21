@@ -19,11 +19,19 @@ async function loadVersoes(modeloId) {
             versaoSelect.disabled = true;
         }
         
-        // URLs para tentar carregar versões
+        // URLs para tentar carregar versões - incluindo mais alternativas
         const apiUrls = [
             `/api/versoes/modelo/${modeloId}/public`,
+            `/api/versoes/by-modelo/${modeloId}/public`,
+            `/api/veiculos/versoes/modelo/${modeloId}/public`,
+            `/api/versoes/modelo/${modeloId}`,
+            `/api/veiculos/versoes/by-modelo/${modeloId}`,
             `http://localhost:3000/api/versoes/modelo/${modeloId}/public`,
-            `http://69.62.91.195:3000/api/versoes/modelo/${modeloId}/public`
+            `http://localhost:3000/api/versoes/by-modelo/${modeloId}/public`,
+            `http://localhost:3000/api/veiculos/versoes/modelo/${modeloId}/public`,
+            `http://69.62.91.195:3000/api/versoes/modelo/${modeloId}/public`,
+            `http://69.62.91.195:3000/api/versoes/by-modelo/${modeloId}/public`,
+            `http://69.62.91.195:3000/api/veiculos/versoes/modelo/${modeloId}/public`
         ];
         
         console.log('Tentando carregar versões usando múltiplas URLs:', apiUrls);
