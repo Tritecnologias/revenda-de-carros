@@ -302,94 +302,121 @@ function showDeleteModal(id) {
 }
 
 // Função para salvar marca
-function saveMarca() {
-    console.log('Função saveMarca chamada');
+async function saveMarca() {
+    // Obter dados do formulário
+    const form = document.getElementById('marcaForm');
+    const nomeInput = document.getElementById('marcaNome');
+    const statusSelect = document.getElementById('marcaStatus');
+    const marcaIdInput = document.getElementById('marcaId');
+    
+    // Verificar se os elementos existem
+    if (!form || !nomeInput || !statusSelect) {
+        showError('Formulário incompleto. Recarregue a página e tente novamente.');
+        return;
+    }
     
     // Validar formulário
-    if (!marcaForm) {
-        console.error('Elemento marcaForm não encontrado');
+    if (!nomeInput.value.trim()) {
+        showError('O nome da marca é obrigatório.');
+        nomeInput.focus();
         return;
     }
     
-    if (!marcaForm.checkValidity()) {
-        console.log('Formulário inválido, exibindo validação');
-        marcaForm.classList.add('was-validated');
-        return;
-    }
+    // Obter ID (se estiver editando)
+    const id = marcaIdInput ? marcaIdInput.value : null;
     
-    // Mostrar spinner
-    if (!saveButton) {
-        console.error('Elemento saveButton não encontrado');
-        return;
-    }
-    
-    saveButton.disabled = true;
-    if (saveSpinner) {
-        saveSpinner.classList.remove('d-none');
-    }
-    
-    // Obter dados do formulário
-    const id = document.getElementById('marcaId')?.value || '';
-    const nome = document.getElementById('marcaNome')?.value || '';
-    const status = document.getElementById('marcaStatus')?.value || 'ativo';
-    
-    console.log('Dados do formulário:', { id, nome, status });
-    
-    // Preparar dados para envio
+    // Preparar dados
     const marcaData = {
-        nome,
-        status
+        nome: nomeInput.value.trim(),
+        status: statusSelect.value
     };
     
     console.log('Enviando dados da marca:', marcaData);
     
-    const token = auth.getToken();
-    const method = id ? 'PUT' : 'POST';
-    const url = id ? `${config.apiBaseUrl}/api/veiculos/marcas/${id}` : `${config.apiBaseUrl}/api/veiculos/marcas`;
-    
-    console.log('URL da requisição:', url);
-    console.log('Método da requisição:', method);
-    
-    // Enviar requisição
-    fetch(url, {
-        method,
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(marcaData)
-    })
-    .then(response => {
-        console.log('Status da resposta:', response.status);
-        if (!response.ok) {
-            return response.text().then(text => {
-                console.error('Resposta do servidor:', text);
-                throw new Error('Falha ao salvar marca');
-            });
+    try {
+        // Obter token de autenticação
+        const token = auth.getToken();
+        if (!token) {
+            showError('Você precisa estar autenticado para realizar esta operação.');
+            return;
         }
-        return response.json();
-    })
-    .then(data => {
+        
+        // Determinar método e URL
+        const method = id ? 'PUT' : 'POST';
+        
+        // Obter a URL base com base no ambiente atual
+        const currentUrl = window.location.href;
+        const baseUrl = currentUrl.includes('69.62.91.195') ? 'http://69.62.91.195:3000' : '';
+        
+        // Construir URL absoluta
+        const url = id 
+            ? `${baseUrl}/api/veiculos/marcas/${id}` 
+            : `${baseUrl}/api/veiculos/marcas`;
+        
+        console.log('URL da requisição:', url);
+        console.log('Método da requisição:', method);
+        
+        // Desabilitar botão de salvar e mostrar spinner
+        const saveButton = document.getElementById('saveMarcaButton');
+        const saveSpinner = document.getElementById('saveSpinner');
+        
+        if (saveButton && saveSpinner) {
+            saveButton.disabled = true;
+            saveSpinner.classList.remove('d-none');
+        }
+        
+        // Enviar requisição
+        const response = await fetch(url, {
+            method,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(marcaData)
+        });
+        
+        console.log('Status da resposta:', response.status);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Resposta do servidor:', errorText);
+            throw new Error('Falha ao salvar marca');
+        }
+        
+        const data = await response.json();
         console.log('Marca salva com sucesso:', data);
+        
         // Fechar modal e recarregar marcas
+        const marcaModal = bootstrap.Modal.getInstance(document.getElementById('marcaModal'));
         if (marcaModal) {
             marcaModal.hide();
         }
-        loadMarcas();
-    })
-    .catch(error => {
-        console.error('Erro ao salvar marca:', error);
-        showError('Não foi possível salvar a marca. Por favor, tente novamente mais tarde.');
-    })
-    .finally(() => {
-        // Esconder spinner
-        if (saveButton) {
-            saveButton.disabled = false;
+        
+        // Recarregar lista de marcas
+        await loadMarcas();
+        
+        // Mostrar mensagem de sucesso
+        const successAlert = document.getElementById('successAlert');
+        if (successAlert) {
+            successAlert.textContent = id ? 'Marca atualizada com sucesso!' : 'Marca criada com sucesso!';
+            successAlert.classList.remove('d-none');
+            setTimeout(() => {
+                successAlert.classList.add('d-none');
+            }, 3000);
         }
-        if (saveSpinner) {
+    } catch (error) {
+        console.error('Erro ao salvar marca:', error);
+        showError(error.message || 'Ocorreu um erro ao salvar a marca. Por favor, tente novamente.');
+    } finally {
+        // Reabilitar botão de salvar e esconder spinner
+        const saveButton = document.getElementById('saveMarcaButton');
+        const saveSpinner = document.getElementById('saveSpinner');
+        
+        if (saveButton && saveSpinner) {
+            saveButton.disabled = false;
             saveSpinner.classList.add('d-none');
         }
-    });
+    }
 }
 
 // Função para excluir marca
