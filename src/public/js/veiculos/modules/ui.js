@@ -113,9 +113,9 @@ function renderVeiculos(data) {
 
 // Função para renderizar a paginação
 function renderPagination(data) {
-    const paginationContainer = document.getElementById('pagination');
+    const paginationContainer = document.getElementById('paginationControls');
     if (!paginationContainer) {
-        console.error('Elemento pagination não encontrado');
+        console.error('Elemento paginationControls não encontrado');
         return;
     }
     

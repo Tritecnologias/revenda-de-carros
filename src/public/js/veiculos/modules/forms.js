@@ -78,6 +78,12 @@ async function preencherFormularioVeiculo(veiculo) {
         const situacaoSelect = document.getElementById('situacao');
         const observacoesInput = document.getElementById('observacoes');
         
+        // Campos de isenções
+        const defisicoicmsInput = document.getElementById('defisicoicms');
+        const defisicoipiInput = document.getElementById('defisicoipi');
+        const taxicmsInput = document.getElementById('taxicms');
+        const taxipiInput = document.getElementById('taxipi');
+        
         if (veiculoIdInput) veiculoIdInput.value = veiculo.id;
         if (anoInput) anoInput.value = veiculo.ano;
         if (placaInput) placaInput.value = veiculo.placa;
@@ -85,6 +91,12 @@ async function preencherFormularioVeiculo(veiculo) {
         if (precoInput) precoInput.value = formatarPreco(veiculo.preco);
         if (situacaoSelect) situacaoSelect.value = veiculo.situacao;
         if (observacoesInput) observacoesInput.value = veiculo.observacoes;
+        
+        // Preencher campos de isenções
+        if (defisicoicmsInput) defisicoicmsInput.value = formatarPreco(veiculo.defisicoicms);
+        if (defisicoipiInput) defisicoipiInput.value = formatarPreco(veiculo.defisicoipi);
+        if (taxicmsInput) taxicmsInput.value = formatarPreco(veiculo.taxicms);
+        if (taxipiInput) taxipiInput.value = formatarPreco(veiculo.taxipi);
         
         // Selecionar marca
         if (marcaSelect && veiculo.marcaId) {
@@ -340,6 +352,12 @@ function obterDadosFormulario() {
     const situacaoSelect = document.getElementById('situacao');
     const observacoesInput = document.getElementById('observacoes');
     
+    // Campos de isenções
+    const defisicoicmsInput = document.getElementById('defisicoicms');
+    const defisicoipiInput = document.getElementById('defisicoipi');
+    const taxicmsInput = document.getElementById('taxicms');
+    const taxipiInput = document.getElementById('taxipi');
+    
     // Criar objeto com dados do veículo
     const veiculo = {
         marcaId: marcaSelect ? parseInt(marcaSelect.value) : null,
@@ -350,7 +368,13 @@ function obterDadosFormulario() {
         cor: corInput ? corInput.value : null,
         preco: precoInput ? converterParaNumero(precoInput.value) : null,
         situacao: situacaoSelect ? situacaoSelect.value : null,
-        observacoes: observacoesInput ? observacoesInput.value : null
+        observacoes: observacoesInput ? observacoesInput.value : null,
+        
+        // Adicionar campos de isenções
+        defisicoicms: defisicoicmsInput ? converterParaNumero(defisicoicmsInput.value) : null,
+        defisicoipi: defisicoipiInput ? converterParaNumero(defisicoipiInput.value) : null,
+        taxicms: taxicmsInput ? converterParaNumero(taxicmsInput.value) : null,
+        taxipi: taxipiInput ? converterParaNumero(taxipiInput.value) : null
     };
     
     // Adicionar ID se estiver editando
