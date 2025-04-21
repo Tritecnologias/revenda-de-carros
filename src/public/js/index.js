@@ -256,66 +256,89 @@ function loadMarcas() {
         return;
     }
     
-    // Usar XMLHttpRequest em vez de fetch
-    const xhr = new XMLHttpRequest();
-    xhr.open('GET', `${config.apiBaseUrl}/api/veiculos/marcas/public`, true);
-    xhr.setRequestHeader('Content-Type', 'application/json');
+    // URLs para tentar carregar marcas
+    const apiUrls = [
+        '/api/veiculos/marcas/public',
+        'http://localhost:3000/api/veiculos/marcas/public',
+        'http://69.62.91.195:3000/api/veiculos/marcas/public'
+    ];
     
-    xhr.onload = function() {
-        console.log('Resposta da API recebida:', xhr.status);
-        
-        if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-                const marcas = JSON.parse(xhr.responseText);
-                console.log('Marcas carregadas:', marcas);
-                
-                // Habilitar o select
-                marcaSelect.disabled = false;
-                
-                // Limpar select atual
-                marcaSelect.innerHTML = '<option value="">Selecione uma marca</option>';
-                
-                // Adicionar opções de marcas
-                if (Array.isArray(marcas)) {
-                    marcas.forEach(marca => {
-                        console.log('Adicionando marca:', marca.id, marca.nome);
-                        const option = document.createElement('option');
-                        option.value = marca.id;
-                        option.textContent = marca.nome;
-                        marcaSelect.appendChild(option);
-                    });
-                    
-                    if (marcas.length === 0) {
-                        console.log('Nenhuma marca encontrada');
-                        const option = document.createElement('option');
-                        option.value = "";
-                        option.textContent = "Nenhuma marca disponível";
-                        marcaSelect.appendChild(option);
-                    }
-                } else {
-                    console.error('Resposta da API não é um array:', marcas);
-                    marcaSelect.innerHTML = '<option value="">Formato de resposta inválido</option>';
-                }
-            } catch (error) {
-                console.error('Erro ao processar resposta da API:', error);
-                marcaSelect.disabled = false;
-                marcaSelect.innerHTML = '<option value="">Erro ao processar resposta</option>';
-            }
-        } else {
-            console.error('Erro na resposta da API:', xhr.status, xhr.statusText);
+    // Função para tentar próxima URL
+    function tryNextUrl(index) {
+        if (index >= apiUrls.length) {
+            console.error('Todas as URLs falharam');
             marcaSelect.disabled = false;
             marcaSelect.innerHTML = '<option value="">Erro ao carregar marcas</option>';
+            return;
         }
-    };
+        
+        const url = apiUrls[index];
+        console.log(`Tentando URL ${index + 1}/${apiUrls.length}: ${url}`);
+        
+        // Usar XMLHttpRequest
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', url, true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        
+        xhr.onload = function() {
+            console.log(`Resposta da API recebida para ${url}:`, xhr.status);
+            
+            if (xhr.status >= 200 && xhr.status < 300) {
+                try {
+                    const marcas = JSON.parse(xhr.responseText);
+                    console.log('Marcas carregadas:', marcas);
+                    
+                    // Habilitar o select
+                    marcaSelect.disabled = false;
+                    
+                    // Limpar select atual
+                    marcaSelect.innerHTML = '<option value="">Selecione uma marca</option>';
+                    
+                    // Adicionar opções de marcas
+                    if (Array.isArray(marcas)) {
+                        marcas.forEach(marca => {
+                            console.log('Adicionando marca:', marca.id, marca.nome);
+                            const option = document.createElement('option');
+                            option.value = marca.id;
+                            option.textContent = marca.nome;
+                            marcaSelect.appendChild(option);
+                        });
+                        
+                        if (marcas.length === 0) {
+                            console.log('Nenhuma marca encontrada');
+                            const option = document.createElement('option');
+                            option.value = "";
+                            option.textContent = "Nenhuma marca disponível";
+                            marcaSelect.appendChild(option);
+                        }
+                    } else {
+                        console.error('Resposta da API não é um array:', marcas);
+                        marcaSelect.innerHTML = '<option value="">Formato de resposta inválido</option>';
+                    }
+                } catch (error) {
+                    console.error('Erro ao processar resposta da API:', error);
+                    // Tentar próxima URL
+                    tryNextUrl(index + 1);
+                }
+            } else {
+                console.error(`Erro na resposta da API para ${url}:`, xhr.status, xhr.statusText);
+                // Tentar próxima URL
+                tryNextUrl(index + 1);
+            }
+        };
+        
+        xhr.onerror = function() {
+            console.error(`Erro de rede ao carregar marcas de ${url}`);
+            // Tentar próxima URL
+            tryNextUrl(index + 1);
+        };
+        
+        xhr.send();
+        console.log(`Requisição enviada para carregar marcas de ${url}`);
+    }
     
-    xhr.onerror = function() {
-        console.error('Erro de rede ao carregar marcas');
-        marcaSelect.disabled = false;
-        marcaSelect.innerHTML = '<option value="">Erro de conexão</option>';
-    };
-    
-    xhr.send();
-    console.log('Requisição enviada para carregar marcas');
+    // Iniciar tentativas com a primeira URL
+    tryNextUrl(0);
 }
 
 // Função para carregar modelos
@@ -329,59 +352,95 @@ function loadModelos(marcaId) {
         console.error('Elemento select de modelo não encontrado');
         return;
     }
-    // Usar o endpoint correto e autenticação
-    const xhr = new XMLHttpRequest();
-    const url = `${config.apiBaseUrl}/api/veiculos/modelos/public/by-marca/${marcaId}`;
-    xhr.open('GET', url, true);
-    xhr.setRequestHeader('Content-Type', 'application/json');
-    if (typeof auth !== 'undefined' && auth.getToken) {
-        xhr.setRequestHeader('Authorization', 'Bearer ' + auth.getToken());
-    }
-    xhr.onload = function() {
-        console.log('Resposta da API recebida:', xhr.status);
-        if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-                const modelos = JSON.parse(xhr.responseText);
-                console.log('Modelos carregados:', modelos);
-                modeloSelect.disabled = false;
-                modeloSelect.innerHTML = '<option value="">Selecione um modelo</option>';
-                if (Array.isArray(modelos)) {
-                    modelos.forEach(modelo => {
-                        console.log('Adicionando modelo:', modelo.id, modelo.nome);
-                        const option = document.createElement('option');
-                        option.value = modelo.id;
-                        option.textContent = modelo.nome;
-                        modeloSelect.appendChild(option);
-                    });
-                    if (modelos.length === 0) {
-                        console.log('Nenhum modelo encontrado');
-                        const option = document.createElement('option');
-                        option.value = "";
-                        option.textContent = "Nenhum modelo disponível";
-                        modeloSelect.appendChild(option);
-                    }
-                } else {
-                    console.error('Resposta da API não é um array:', modelos);
-                    modeloSelect.innerHTML = '<option value="">Formato de resposta inválido</option>';
-                }
-            } catch (error) {
-                console.error('Erro ao processar resposta da API:', error);
-                modeloSelect.disabled = false;
-                modeloSelect.innerHTML = '<option value="">Erro ao processar resposta</option>';
-            }
-        } else {
-            console.error('Erro na resposta da API:', xhr.status, xhr.statusText);
+    
+    // URLs para tentar carregar modelos
+    const apiUrls = [
+        `/api/veiculos/modelos/public/by-marca/${marcaId}`,
+        `http://localhost:3000/api/veiculos/modelos/public/by-marca/${marcaId}`,
+        `http://69.62.91.195:3000/api/veiculos/modelos/public/by-marca/${marcaId}`
+    ];
+    
+    // Função para tentar próxima URL
+    function tryNextUrl(index) {
+        if (index >= apiUrls.length) {
+            console.error('Todas as URLs falharam');
             modeloSelect.disabled = false;
             modeloSelect.innerHTML = '<option value="">Erro ao carregar modelos</option>';
+            return;
         }
-    };
-    xhr.onerror = function() {
-        console.error('Erro de rede ao carregar modelos');
-        modeloSelect.disabled = false;
-        modeloSelect.innerHTML = '<option value="">Erro de conexão</option>';
-    };
-    xhr.send();
-    console.log('Requisição enviada para carregar modelos');
+        
+        const url = apiUrls[index];
+        console.log(`Tentando URL ${index + 1}/${apiUrls.length}: ${url}`);
+        
+        // Usar XMLHttpRequest
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', url, true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        
+        // Adicionar token de autenticação se disponível
+        if (typeof auth !== 'undefined' && auth.getToken) {
+            xhr.setRequestHeader('Authorization', 'Bearer ' + auth.getToken());
+        }
+        
+        xhr.onload = function() {
+            console.log(`Resposta da API recebida para ${url}:`, xhr.status);
+            
+            if (xhr.status >= 200 && xhr.status < 300) {
+                try {
+                    const modelos = JSON.parse(xhr.responseText);
+                    console.log('Modelos carregados:', modelos);
+                    
+                    // Habilitar o select
+                    modeloSelect.disabled = false;
+                    
+                    // Limpar select atual
+                    modeloSelect.innerHTML = '<option value="">Selecione um modelo</option>';
+                    
+                    // Adicionar opções de modelos
+                    if (Array.isArray(modelos)) {
+                        modelos.forEach(modelo => {
+                            console.log('Adicionando modelo:', modelo.id, modelo.nome);
+                            const option = document.createElement('option');
+                            option.value = modelo.id;
+                            option.textContent = modelo.nome;
+                            modeloSelect.appendChild(option);
+                        });
+                        
+                        if (modelos.length === 0) {
+                            console.log('Nenhum modelo encontrado');
+                            const option = document.createElement('option');
+                            option.value = "";
+                            option.textContent = "Nenhum modelo disponível";
+                            modeloSelect.appendChild(option);
+                        }
+                    } else {
+                        console.error('Resposta da API não é um array:', modelos);
+                        modeloSelect.innerHTML = '<option value="">Formato de resposta inválido</option>';
+                    }
+                } catch (error) {
+                    console.error('Erro ao processar resposta da API:', error);
+                    // Tentar próxima URL
+                    tryNextUrl(index + 1);
+                }
+            } else {
+                console.error(`Erro na resposta da API para ${url}:`, xhr.status, xhr.statusText);
+                // Tentar próxima URL
+                tryNextUrl(index + 1);
+            }
+        };
+        
+        xhr.onerror = function() {
+            console.error(`Erro de rede ao carregar modelos de ${url}`);
+            // Tentar próxima URL
+            tryNextUrl(index + 1);
+        };
+        
+        xhr.send();
+        console.log(`Requisição enviada para carregar modelos de ${url}`);
+    }
+    
+    // Iniciar tentativas com a primeira URL
+    tryNextUrl(0);
 }
 
 // Função para configurar os event listeners dos campos de input
