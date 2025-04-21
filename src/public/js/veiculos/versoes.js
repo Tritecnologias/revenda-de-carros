@@ -643,7 +643,26 @@ async function carregarVersaoParaEdicao(versaoId) {
             modalVersao = document.getElementById('versaoModal');
         }
         
-        // Verificar se os elementos do formulário existem antes de definir seus valores
+        // Primeiro, precisamos carregar as marcas e modelos para o formulário
+        // Se a versão tem um modelo associado, precisamos garantir que ele esteja disponível no select
+        if (versao.modelo && versao.modelo.marca) {
+            // Carregar marcas
+            await carregarMarcasNoModal();
+            
+            // Selecionar a marca correta
+            const marcaSelect = document.getElementById('marcaSelect');
+            if (marcaSelect) {
+                marcaSelect.value = versao.modelo.marca.id;
+                
+                // Carregar modelos da marca selecionada
+                await carregarModelosNoModal(versao.modelo.marca.id);
+            }
+        } else {
+            // Se não temos informações da marca, apenas carregar todas as marcas
+            await carregarMarcasNoModal();
+        }
+        
+        // Agora que os selects estão preenchidos, podemos definir os valores
         const versaoIdInput = document.getElementById('versaoId');
         const nomeInput = document.getElementById('nome'); 
         const modeloSelect = document.getElementById('modeloSelect'); 
@@ -676,6 +695,118 @@ async function carregarVersaoParaEdicao(versaoId) {
         console.error('Erro ao carregar versão para edição:', error);
         exibirMensagem('Erro ao carregar versão para edição. Por favor, tente novamente.', 'danger');
         return null;
+    }
+}
+
+// Função para carregar marcas no modal
+async function carregarMarcasNoModal() {
+    console.log('Carregando marcas para o modal...');
+    
+    const marcaSelect = document.getElementById('marcaSelect');
+    if (!marcaSelect) {
+        console.error('Elemento marcaSelect não encontrado');
+        return;
+    }
+    
+    try {
+        const token = getToken();
+        if (!token) {
+            console.error('Token de autenticação não encontrado');
+            return;
+        }
+        
+        // Lista de URLs a tentar, em ordem de prioridade
+        const urls = [
+            '/api/veiculos/marcas/all',
+            '/api/marcas/all',
+            '/api/marcas'
+        ];
+        
+        // Usar a função fetchWithFallback do config.js
+        const marcas = await config.fetchWithFallback(urls, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        console.log('Marcas carregadas para o modal:', marcas);
+        
+        // Limpar opções existentes
+        marcaSelect.innerHTML = '<option value="">Selecione uma marca</option>';
+        
+        // Adicionar novas opções
+        marcas.forEach(marca => {
+            const option = document.createElement('option');
+            option.value = marca.id;
+            option.textContent = marca.nome;
+            marcaSelect.appendChild(option);
+        });
+        
+        // Adicionar event listener para carregar modelos quando a marca mudar
+        marcaSelect.addEventListener('change', function() {
+            const marcaId = this.value;
+            if (marcaId) {
+                carregarModelosNoModal(marcaId);
+            } else {
+                // Limpar o select de modelos se nenhuma marca for selecionada
+                const modeloSelect = document.getElementById('modeloSelect');
+                if (modeloSelect) {
+                    modeloSelect.innerHTML = '<option value="">Selecione um modelo</option>';
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Erro ao carregar marcas para o modal:', error);
+    }
+}
+
+// Função para carregar modelos no modal
+async function carregarModelosNoModal(marcaId) {
+    console.log('Carregando modelos para o modal, marca ID:', marcaId);
+    
+    const modeloSelect = document.getElementById('modeloSelect');
+    if (!modeloSelect) {
+        console.error('Elemento modeloSelect não encontrado');
+        return;
+    }
+    
+    // Limpar opções existentes
+    modeloSelect.innerHTML = '<option value="">Selecione um modelo</option>';
+    
+    // Se não houver marca selecionada, não carrega modelos
+    if (!marcaId) return;
+    
+    try {
+        const token = getToken();
+        if (!token) {
+            console.error('Token de autenticação não encontrado');
+            return;
+        }
+        
+        // Lista de URLs a tentar, em ordem de prioridade
+        const urls = [
+            `/api/veiculos/modelos/by-marca/${marcaId}`,
+            `/api/modelos/marca/${marcaId}`
+        ];
+        
+        // Usar a função fetchWithFallback do config.js
+        const modelos = await config.fetchWithFallback(urls, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        console.log('Modelos carregados para o modal:', modelos);
+        
+        // Adicionar novas opções
+        modelos.forEach(modelo => {
+            const option = document.createElement('option');
+            option.value = modelo.id;
+            option.textContent = modelo.nome;
+            modeloSelect.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Erro ao carregar modelos para o modal:', error);
     }
 }
 
