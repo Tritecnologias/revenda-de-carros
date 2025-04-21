@@ -140,6 +140,8 @@ async function carregarVersoesViaAPI(modeloId) {
 
 // Função para extrair versões dos veículos
 async function extrairVersoesDosVeiculos(modeloId) {
+    console.log('Tentando extrair versões dos veículos para o modelo ID:', modeloId);
+    
     // URLs para tentar carregar veículos
     const veiculosUrls = [
         `/api/veiculos/public`,
@@ -155,7 +157,9 @@ async function extrairVersoesDosVeiculos(modeloId) {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json'
-                }
+                },
+                // Adicionar timeout para não ficar esperando muito tempo
+                signal: AbortSignal.timeout(5000) // 5 segundos de timeout
             });
             
             if (response.ok) {
@@ -168,6 +172,12 @@ async function extrairVersoesDosVeiculos(modeloId) {
                     : [];
                 
                 console.log('Veículos filtrados por modelo:', veiculosFiltrados);
+                
+                // Se não encontrou veículos para este modelo, retornar array vazio
+                if (veiculosFiltrados.length === 0) {
+                    console.log('Nenhum veículo encontrado para este modelo');
+                    return [];
+                }
                 
                 // Criar um Map para armazenar versões únicas
                 const versoesMap = new Map();
@@ -187,7 +197,9 @@ async function extrairVersoesDosVeiculos(modeloId) {
                 });
                 
                 // Converter o Map para array
-                return Array.from(versoesMap.values());
+                const versoes = Array.from(versoesMap.values());
+                console.log('Versões extraídas dos veículos:', versoes);
+                return versoes;
             } else {
                 const errorText = await response.text();
                 console.error(`Falha na URL ${url}:`, errorText);
@@ -197,47 +209,58 @@ async function extrairVersoesDosVeiculos(modeloId) {
         }
     }
     
+    console.log('Não foi possível extrair versões dos veículos');
     return [];
 }
 
 // Função para obter dados estáticos como último recurso
 function obterDadosEstaticos(modeloId) {
+    console.log('Usando dados estáticos para o modelo ID:', modeloId);
+    
     // Mapeamento de modelos para versões (dados estáticos)
     const dadosEstaticos = {
-        // Modelos de Fiat
+        // Modelos de Fiat (ID 1)
         1: [
-            { id: 1, nome: 'Attractive 1.0' },
-            { id: 2, nome: 'Essence 1.6' },
-            { id: 3, nome: 'Sport 1.8' }
+            { id: 101, nome: 'Attractive 1.0' },
+            { id: 102, nome: 'Essence 1.6' },
+            { id: 103, nome: 'Sport 1.8' }
         ],
-        // Modelos de Chevrolet
+        // Modelos de Chevrolet (ID 2)
         2: [
-            { id: 4, nome: 'LT 1.0' },
-            { id: 5, nome: 'LTZ 1.4' },
-            { id: 6, nome: 'Premier 1.8' }
+            { id: 201, nome: 'LT 1.0' },
+            { id: 202, nome: 'LTZ 1.4' },
+            { id: 203, nome: 'Premier 1.8' }
         ],
-        // Modelos de Volkswagen
+        // Modelos de Volkswagen (ID 3)
         3: [
-            { id: 7, nome: 'Trendline 1.0' },
-            { id: 8, nome: 'Comfortline 1.4' },
-            { id: 9, nome: 'Highline 1.8' }
+            { id: 301, nome: 'Trendline 1.0' },
+            { id: 302, nome: 'Comfortline 1.4' },
+            { id: 303, nome: 'Highline 1.8' }
         ],
-        // Modelos de Ford
+        // Modelos de Ford (ID 4)
         4: [
-            { id: 10, nome: 'SE 1.5' },
-            { id: 11, nome: 'SEL 1.5' },
-            { id: 12, nome: 'Titanium 2.0' }
+            { id: 401, nome: 'SE 1.5' },
+            { id: 402, nome: 'SEL 1.5' },
+            { id: 403, nome: 'Titanium 2.0' }
         ],
-        // Modelos de Hyundai
+        // Modelos de Hyundai (ID 5)
         5: [
-            { id: 13, nome: 'Vision 1.6' },
-            { id: 14, nome: 'Comfort 1.6' },
-            { id: 15, nome: 'Premium 2.0' }
+            { id: 501, nome: 'Vision 1.6' },
+            { id: 502, nome: 'Comfort 1.6' },
+            { id: 503, nome: 'Premium 2.0' }
+        ],
+        // Dados genéricos para qualquer outro modelo
+        default: [
+            { id: 901, nome: 'Versão Básica' },
+            { id: 902, nome: 'Versão Intermediária' },
+            { id: 903, nome: 'Versão Premium' }
         ]
     };
     
-    // Retornar versões para o modelo especificado ou array vazio se não existir
-    return dadosEstaticos[modeloId] || [];
+    // Retornar versões para o modelo especificado ou dados genéricos se não existir
+    const versoes = dadosEstaticos[modeloId] || dadosEstaticos.default;
+    console.log('Dados estáticos retornados:', versoes);
+    return versoes;
 }
 
 // Função para carregar modelos por marca no configurador
