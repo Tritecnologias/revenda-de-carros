@@ -372,68 +372,158 @@ function showDeleteModal(id) {
 }
 
 // Função para salvar modelo
-function saveModelo(event) {
-    event.preventDefault();
-    
-    // Mostrar spinner
-    saveButton.disabled = true;
-    saveSpinner.classList.remove('d-none');
-    
-    // Obter dados do formulário
-    const modeloId = document.getElementById('modeloId').value;
-    const nome = document.getElementById('nome').value;
-    const marcaId = document.getElementById('marcaId').value;
-    const status = document.getElementById('status').value;
-    
-    // Validar campos obrigatórios
-    if (!nome || !marcaId) {
-        showError('Por favor, preencha todos os campos obrigatórios.');
-        saveButton.disabled = false;
-        saveSpinner.classList.add('d-none');
-        return;
+async function saveModelo(event) {
+    if (event) {
+        event.preventDefault();
     }
     
-    // Criar objeto com dados do modelo
-    const modeloData = {
-        nome,
-        marcaId: parseInt(marcaId),
-        status
-    };
+    console.log('Função saveModelo chamada');
     
-    const token = auth.getToken();
-    
-    // Determinar se é criação ou atualização
-    let method, url;
-    if (modeloId) {
-        method = 'PUT';
-        url = `/api/veiculos/modelos/${modeloId}`;
-        modeloData.id = parseInt(modeloId);
-    } else {
-        method = 'POST';
-        url = '/api/veiculos/modelos';
-    }
-    
-    // Usar as funções auxiliares do config.js para maior resiliência
-    const apiCall = method === 'POST' 
-        ? config.post(url, modeloData, { headers: { 'Authorization': `Bearer ${token}` } })
-        : config.put(url, modeloData, { headers: { 'Authorization': `Bearer ${token}` } });
-    
-    apiCall
-        .then(data => {
-            console.log('Modelo salvo com sucesso:', data);
-            // Fechar modal e recarregar modelos
-            modeloModal.hide();
-            loadModelos();
-        })
-        .catch(error => {
-            console.error('Erro ao salvar modelo:', error);
-            showError('Não foi possível salvar o modelo. Por favor, tente novamente mais tarde.');
-        })
-        .finally(() => {
-            // Esconder spinner
-            saveButton.disabled = false;
-            saveSpinner.classList.add('d-none');
+    try {
+        // Obter elementos do formulário com verificações de segurança
+        const modeloIdElement = document.getElementById('modeloId');
+        const nomeElement = document.getElementById('modeloNome');
+        const marcaIdElement = document.getElementById('marcaId');
+        const statusElement = document.getElementById('modeloStatus');
+        const saveButtonElement = document.getElementById('saveModeloButton');
+        const saveSpinnerElement = document.getElementById('saveSpinner');
+        
+        // Verificar se todos os elementos necessários existem
+        if (!nomeElement || !marcaIdElement || !statusElement) {
+            console.error('Elementos do formulário não encontrados:', {
+                nomeElement,
+                marcaIdElement,
+                statusElement
+            });
+            showError('Formulário incompleto. Recarregue a página e tente novamente.');
+            return;
+        }
+        
+        console.log('Elementos do formulário encontrados:', {
+            modeloId: modeloIdElement?.value,
+            nome: nomeElement?.value,
+            marcaId: marcaIdElement?.value,
+            status: statusElement?.value
         });
+        
+        // Desabilitar botão de salvar e mostrar spinner
+        if (saveButtonElement) {
+            saveButtonElement.disabled = true;
+        }
+        
+        if (saveSpinnerElement) {
+            saveSpinnerElement.classList.remove('d-none');
+        }
+        
+        // Obter valores do formulário
+        const modeloId = modeloIdElement ? modeloIdElement.value : '';
+        const nome = nomeElement.value.trim();
+        const marcaId = marcaIdElement.value;
+        const status = statusElement.value;
+        
+        // Validar campos obrigatórios
+        if (!nome || !marcaId) {
+            showError('Por favor, preencha todos os campos obrigatórios.');
+            if (saveButtonElement) saveButtonElement.disabled = false;
+            if (saveSpinnerElement) saveSpinnerElement.classList.add('d-none');
+            return;
+        }
+        
+        // Preparar dados
+        const modeloData = {
+            nome,
+            marcaId: parseInt(marcaId),
+            status
+        };
+        
+        console.log('Enviando dados do modelo:', modeloData);
+        
+        // Obter token de autenticação
+        const token = auth.getToken();
+        if (!token) {
+            showError('Você precisa estar autenticado para realizar esta operação.');
+            if (saveButtonElement) saveButtonElement.disabled = false;
+            if (saveSpinnerElement) saveSpinnerElement.classList.add('d-none');
+            return;
+        }
+        
+        // Determinar método e URL
+        const method = modeloId ? 'PUT' : 'POST';
+        
+        // Obter a URL base com base no ambiente atual
+        const currentUrl = window.location.href;
+        const baseUrl = currentUrl.includes('69.62.91.195') ? 'http://69.62.91.195:3000' : '';
+        
+        // Construir URL absoluta
+        const url = modeloId 
+            ? `${baseUrl}/api/veiculos/modelos/${modeloId}` 
+            : `${baseUrl}/api/veiculos/modelos`;
+        
+        console.log('URL da requisição:', url);
+        console.log('Método da requisição:', method);
+        
+        // Enviar requisição
+        const response = await fetch(url, {
+            method,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(modeloData)
+        });
+        
+        console.log('Status da resposta:', response.status);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Resposta do servidor:', errorText);
+            throw new Error('Falha ao salvar modelo');
+        }
+        
+        const data = await response.json();
+        console.log('Modelo salvo com sucesso:', data);
+        
+        // Fechar modal e recarregar modelos
+        const modeloModalElement = document.getElementById('modeloModal');
+        if (modeloModalElement) {
+            const modalInstance = bootstrap.Modal.getInstance(modeloModalElement);
+            if (modalInstance) {
+                modalInstance.hide();
+            } else {
+                console.warn('Não foi possível obter a instância do modal');
+            }
+        }
+        
+        // Recarregar lista de modelos
+        await loadModelos();
+        
+        // Mostrar mensagem de sucesso
+        const successAlert = document.getElementById('successAlert');
+        if (successAlert) {
+            successAlert.textContent = modeloId ? 'Modelo atualizado com sucesso!' : 'Modelo criado com sucesso!';
+            successAlert.classList.remove('d-none');
+            setTimeout(() => {
+                successAlert.classList.add('d-none');
+            }, 3000);
+        } else {
+            console.log('Modelo salvo com sucesso, mas elemento successAlert não encontrado');
+        }
+    } catch (error) {
+        console.error('Erro ao salvar modelo:', error);
+        showError(error.message || 'Ocorreu um erro ao salvar o modelo. Por favor, tente novamente.');
+    } finally {
+        // Reabilitar botão de salvar e esconder spinner
+        const saveButtonElement = document.getElementById('saveModeloButton');
+        const saveSpinnerElement = document.getElementById('saveSpinner');
+        
+        if (saveButtonElement) {
+            saveButtonElement.disabled = false;
+        }
+        
+        if (saveSpinnerElement) {
+            saveSpinnerElement.classList.add('d-none');
+        }
+    }
 }
 
 // Função para excluir modelo
