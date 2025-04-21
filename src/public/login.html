@@ -50,93 +50,94 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/js/config.js"></script>
     <script>
-        // Limpar qualquer estado anterior que possa estar causando loops
+        // URLs de API para login
+        const LOGIN_URLS = [
+            '/auth/login',
+            'http://localhost:3000/auth/login',
+            'http://69.62.91.195:3000/auth/login'
+        ];
+        
+        // Limpar qualquer estado anterior
         localStorage.removeItem('loginAttemptTime');
         
-        // Classe Auth simplificada apenas para a página de login
-        class Auth {
-            constructor() {
-                console.log('Auth class initialized for login page');
+        // Função para tentar login em múltiplas URLs
+        async function tryLogin(email, password) {
+            const loginButton = document.getElementById('loginButton');
+            const loginSpinner = document.getElementById('loginSpinner');
+            const loginError = document.getElementById('loginError');
+            
+            // Mostrar spinner e desabilitar botão
+            if (loginButton) loginButton.disabled = true;
+            if (loginSpinner) loginSpinner.classList.remove('d-none');
+            if (loginError) loginError.classList.add('d-none');
+            
+            // Opções da requisição
+            const requestOptions = {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ email, password })
+            };
+            
+            // Tentar cada URL
+            let success = false;
+            let userData = null;
+            let lastError = null;
+            
+            console.log('Tentando login nas URLs:', LOGIN_URLS);
+            
+            for (const url of LOGIN_URLS) {
+                try {
+                    console.log('Tentando login em:', url);
+                    const response = await fetch(url, requestOptions);
+                    
+                    if (!response.ok) {
+                        console.error(`Login falhou em ${url}: ${response.status}`);
+                        lastError = `${response.status} - ${response.statusText}`;
+                        continue; // Tentar próxima URL
+                    }
+                    
+                    // Login bem-sucedido
+                    userData = await response.json();
+                    console.log('Login successful:', userData);
+                    success = true;
+                    break;
+                } catch (error) {
+                    console.error(`Erro ao tentar ${url}:`, error);
+                    lastError = error.message;
+                }
             }
             
-            async login(email, password) {
-                console.log('Attempting login with:', email);
+            // Processar resultado
+            if (success && userData) {
+                // Salvar token e dados do usuário
+                localStorage.setItem('token', userData.access_token);
+                localStorage.setItem('user', JSON.stringify(userData.user));
+                localStorage.setItem('lastLogin', new Date().toLocaleString());
                 
-                try {
-                    // Mostrar spinner
-                    const loginButton = document.getElementById('loginButton');
-                    const loginSpinner = document.getElementById('loginSpinner');
-                    
-                    if (loginButton) loginButton.disabled = true;
-                    if (loginSpinner) loginSpinner.classList.remove('d-none');
-                    
-                    // Esconder mensagem de erro anterior
-                    const loginError = document.getElementById('loginError');
-                    if (loginError) loginError.classList.add('d-none');
-                    
-                    // Obter a URL base da API
-                    const apiBaseUrl = window.config ? window.config.apiBaseUrl : '';
-                    console.log('API Base URL:', apiBaseUrl);
-                    
-                    // Fazer a requisição de login
-                    const response = await fetch(`${apiBaseUrl}/auth/login`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ email, password })
-                    });
-                    
-                    // Processar a resposta
-                    if (response.ok) {
-                        const data = await response.json();
-                        console.log('Login successful:', data);
-                        
-                        // Salvar token e dados do usuário
-                        localStorage.setItem('token', data.access_token);
-                        localStorage.setItem('user', JSON.stringify(data.user));
-                        localStorage.setItem('lastLogin', new Date().toLocaleString());
-                        
-                        // Redirecionar com base no papel do usuário
-                        if (data.user && data.user.role) {
-                            if (data.user.role === 'admin' || data.user.role === 'cadastrador') {
-                                window.location.href = '/index.html';
-                            } else {
-                                window.location.href = '/usuario.html';
-                            }
-                        } else {
-                            window.location.href = '/index.html';
-                        }
+                // Redirecionar com base no papel do usuário
+                if (userData.user && userData.user.role) {
+                    if (userData.user.role === 'admin' || userData.user.role === 'cadastrador') {
+                        window.location.href = '/index.html';
                     } else {
-                        // Mostrar erro
-                        console.error('Login failed:', response.status);
-                        if (loginError) {
-                            loginError.textContent = 'Email ou senha inválidos';
-                            loginError.classList.remove('d-none');
-                        }
-                        
-                        // Resetar botão
-                        if (loginButton) loginButton.disabled = false;
-                        if (loginSpinner) loginSpinner.classList.add('d-none');
+                        window.location.href = '/usuario.html';
                     }
-                } catch (error) {
-                    console.error('Login error:', error);
-                    
-                    // Mostrar erro
-                    const loginError = document.getElementById('loginError');
-                    if (loginError) {
-                        loginError.textContent = 'Erro ao conectar ao servidor';
-                        loginError.classList.remove('d-none');
-                    }
-                    
-                    // Resetar botão
-                    const loginButton = document.getElementById('loginButton');
-                    const loginSpinner = document.getElementById('loginSpinner');
-                    if (loginButton) loginButton.disabled = false;
-                    if (loginSpinner) loginSpinner.classList.add('d-none');
+                } else {
+                    window.location.href = '/index.html';
                 }
+            } else {
+                // Mostrar erro
+                console.error('Login failed:', lastError);
+                if (loginError) {
+                    loginError.textContent = 'Email ou senha inválidos';
+                    loginError.classList.remove('d-none');
+                }
+                
+                // Resetar botão
+                if (loginButton) loginButton.disabled = false;
+                if (loginSpinner) loginSpinner.classList.add('d-none');
             }
         }
         
@@ -151,10 +152,19 @@
                     event.preventDefault();
                     
                     if (loginForm.checkValidity()) {
-                        const auth = new Auth();
-                        auth.login(emailInput.value, passwordInput.value)
+                        tryLogin(emailInput.value, passwordInput.value)
                             .catch(error => {
                                 console.error('Login error:', error);
+                                const loginError = document.getElementById('loginError');
+                                if (loginError) {
+                                    loginError.textContent = 'Erro ao conectar ao servidor';
+                                    loginError.classList.remove('d-none');
+                                }
+                                
+                                const loginButton = document.getElementById('loginButton');
+                                const loginSpinner = document.getElementById('loginSpinner');
+                                if (loginButton) loginButton.disabled = false;
+                                if (loginSpinner) loginSpinner.classList.add('d-none');
                             });
                     } else {
                         event.stopPropagation();
