@@ -454,18 +454,24 @@ function renderizarVersoes(data, tableBody) {
         return;
     }
     
+    console.log('Dados para renderizar:', data);
+    
     // Renderizar cada versão
     data.forEach(versao => {
         const tr = document.createElement('tr');
         
+        // Verificar todas as possíveis propriedades para o nome da versão
+        // Priorizar nome_versao que é o nome da coluna no banco de dados conforme versao.entity.ts
+        const versaoNome = versao.nome_versao || versao.nome || versao.versaoNome || versao.name || 'N/A';
+        
         // Verificar se a versão tem um modelo associado
-        const modeloNome = versao.modelo?.nome || versao.modelo_nome || 'N/A';
-        const marcaNome = versao.modelo?.marca?.nome || versao.marca_nome || 'N/A';
+        const modeloNome = versao.modelo?.nome || versao.modelo_nome || versao.modeloNome || 'N/A';
+        const marcaNome = versao.modelo?.marca?.nome || versao.marca_nome || versao.marcaNome || 'N/A';
         
         // Construir a linha da tabela
         tr.innerHTML = `
             <td>${versao.id}</td>
-            <td>${versao.nome}</td>
+            <td>${versaoNome}</td>
             <td>${modeloNome}</td>
             <td>${marcaNome}</td>
             <td>${versao.status || 'ativo'}</td>
@@ -473,7 +479,7 @@ function renderizarVersoes(data, tableBody) {
                 <button class="btn btn-sm btn-primary editar-versao" data-id="${versao.id}">
                     <i class="fas fa-edit"></i>
                 </button>
-                <button class="btn btn-sm btn-danger excluir-versao" data-id="${versao.id}" data-nome="${versao.nome}">
+                <button class="btn btn-sm btn-danger excluir-versao" data-id="${versao.id}" data-nome="${versaoNome}">
                     <i class="fas fa-trash"></i>
                 </button>
             </td>
@@ -510,29 +516,43 @@ function renderizarVersoes(data, tableBody) {
 async function carregarVersaoParaEdicao(versaoId) {
     console.log(`Carregando versão ${versaoId} para edição...`);
     
+    // Obter token de autenticação
+    const token = getToken();
+    if (!token) {
+        console.error('Token de autenticação não encontrado');
+        return;
+    }
+    
     try {
-        const token = getToken();
-        if (!token) {
-            console.error('Token de autenticação não encontrado');
-            return;
-        }
+        // Determinar a URL base atual
+        const currentUrl = window.location.href;
+        const isExternalIP = currentUrl.includes('69.62.91.195');
         
-        // Lista de URLs a tentar, em ordem de prioridade
-        const urls = [
-            `/api/versoes/${versaoId}`,
-            `/api/veiculos/versoes/${versaoId}`
-        ];
+        // Definir a URL base correta para o ambiente atual
+        let baseUrl = isExternalIP ? 'http://69.62.91.195:3000' : '';
         
-        // Usar a função fetchWithFallback do config.js
-        const versao = await config.fetchWithFallback(urls, {
+        // URL para carregar versão específica
+        const url = `${baseUrl}/api/versoes/${versaoId}`;
+        
+        console.log(`Tentando carregar versão de: ${url}`);
+        
+        const response = await fetch(url, {
+            method: 'GET',
             headers: {
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
             }
         });
         
-        console.log('Versão carregada com sucesso:', versao);
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Erro ${response.status}: ${errorText}`);
+        }
         
-        // Preencher formulário com dados da versão
+        const versao = await response.json();
+        console.log('Versão carregada:', versao);
+        
+        // Preencher o formulário com os dados da versão
         document.getElementById('versaoId').value = versao.id;
         
         // Verificar qual ID do campo de nome está presente na página
@@ -540,7 +560,8 @@ async function carregarVersaoParaEdicao(versaoId) {
         if (!nomeField) {
             throw new Error('Campo de nome da versão não encontrado no formulário');
         }
-        const nome = nomeField.value = versao.nome || versao.nome_versao || '';
+        // Usar nome_versao conforme definido na entidade
+        nomeField.value = versao.nome_versao || '';
         
         // Obter valores dos campos opcionais se existirem
         let descricao = '';
@@ -578,137 +599,126 @@ async function carregarVersaoParaEdicao(versaoId) {
         } else if (statusCheckbox) {
             // Se for um checkbox, marcar se o status for 'ativo'
             statusCheckbox.checked = versao.status === 'ativo';
+            status = statusCheckbox.checked ? 'ativo' : 'inativo';
         }
         
-        // Carregar marcas e modelos
-        await carregarMarcasFormulario();
-        
+        // Se a versão tem um modelo e o modelo tem uma marca, carregar os modelos da marca
         if (versao.modelo && versao.modelo.marca) {
-            const marcaSelect = document.getElementById('marcaSelect');
-            if (marcaSelect) {
-                marcaSelect.value = versao.modelo.marca.id;
-                
-                // Carregar modelos da marca e depois selecionar o modelo correto
+            try {
                 await carregarModelosFormulario(versao.modelo.marca.id);
                 
                 // Selecionar o modelo correto
                 modeloSelect.value = versao.modelo.id || versao.modeloId;
             }
+            catch (error) {
+                console.error('Erro ao carregar modelos da marca:', error);
+            }
         }
         
-        // Verificar se o botão de exclusão existe antes de tentar modificá-lo
-        const btnExcluirVersao = document.getElementById('btnExcluirVersao');
-        if (btnExcluirVersao) {
-            btnExcluirVersao.style.display = 'block';
-        }
+        // Abrir o modal de edição
+        const versaoModal = new bootstrap.Modal(document.getElementById('versaoModal'));
+        versaoModal.show();
         
-        // Abrir modal - verificar qual ID do modal está presente na página
-        const versaoModal = document.getElementById('versaoModal') || document.getElementById('modalVersao');
-        if (versaoModal) {
-            const modal = new bootstrap.Modal(versaoModal);
-            modal.show();
-        } else {
-            console.error('Modal de versão não encontrado na página');
-        }
     } catch (error) {
         console.error('Erro ao carregar versão para edição:', error);
-        exibirMensagem('Erro ao carregar versão para edição: ' + error.message, 'danger');
+        exibirMensagem(`Erro ao carregar versão: ${error.message}`, 'danger');
     }
 }
 
 // Função para salvar uma versão (criar ou atualizar)
 async function salvarVersao(event) {
-    if (event && event.preventDefault) {
-        event.preventDefault();
-    }
+    event.preventDefault();
+    
     console.log('Salvando versão...');
     
+    // Obter token de autenticação
+    const token = getToken();
+    if (!token) {
+        console.error('Token de autenticação não encontrado');
+        return;
+    }
+    
+    // Obter dados do formulário
+    const versaoId = document.getElementById('versaoId').value;
+    
+    // Verificar qual ID do campo de nome está presente na página
+    const nomeField = document.getElementById('nome') || document.getElementById('nomeVersao');
+    if (!nomeField) {
+        exibirMensagem('Campo de nome da versão não encontrado no formulário', 'danger');
+        return;
+    }
+    
+    // Obter modelo
+    const modeloSelect = document.getElementById('modeloSelect');
+    if (!modeloSelect) {
+        exibirMensagem('Campo de modelo não encontrado no formulário', 'danger');
+        return;
+    }
+    
+    const modeloId = modeloSelect.value;
+    if (!modeloId) {
+        exibirMensagem('Por favor, selecione um modelo', 'warning');
+        return;
+    }
+    
+    // Verificar qual campo de status está presente na página
+    let status = 'ativo';
+    const statusField = document.getElementById('status');
+    const statusCheckbox = document.getElementById('statusVersao');
+    
+    if (statusField) {
+        status = statusField.value;
+    } else if (statusCheckbox) {
+        status = statusCheckbox.checked ? 'ativo' : 'inativo';
+    }
+    
+    // Construir objeto de dados da versão - usar nome_versao conforme a entidade
+    const versaoData = {
+        nome_versao: nomeField.value,
+        modeloId: parseInt(modeloId),
+        status: status
+    };
+    
+    // Adicionar campos opcionais se existirem
+    const descricaoField = document.getElementById('descricao');
+    if (descricaoField) {
+        versaoData.descricao = descricaoField.value;
+    }
+    
+    const anoField = document.getElementById('ano');
+    if (anoField && anoField.value) {
+        versaoData.ano = parseInt(anoField.value);
+    }
+    
+    const precoField = document.getElementById('preco');
+    if (precoField && precoField.value) {
+        versaoData.preco = parseFloat(precoField.value.replace(',', '.'));
+    }
+    
+    console.log('Dados da versão a salvar:', versaoData);
+    
     try {
-        // Obter dados do formulário
-        const versaoId = document.getElementById('versaoId').value;
+        // Determinar a URL base atual
+        const currentUrl = window.location.href;
+        const isExternalIP = currentUrl.includes('69.62.91.195');
         
-        // Verificar qual ID do campo de nome está presente na página
-        const nomeField = document.getElementById('nome') || document.getElementById('nomeVersao');
-        if (!nomeField) {
-            throw new Error('Campo de nome da versão não encontrado no formulário');
-        }
-        const nome = nomeField.value;
-        
-        // Obter valores dos campos opcionais se existirem
-        let descricao = '';
-        const descricaoField = document.getElementById('descricao');
-        if (descricaoField) {
-            descricao = descricaoField.value;
-        }
-        
-        let ano = null;
-        const anoField = document.getElementById('ano');
-        if (anoField) {
-            ano = anoField.value;
-        }
-        
-        let preco = null;
-        const precoField = document.getElementById('preco');
-        if (precoField) {
-            preco = precoField.value;
-        }
-        
-        // Obter modelo
-        const modeloSelect = document.getElementById('modeloSelect');
-        if (!modeloSelect) {
-            throw new Error('Campo de modelo não encontrado no formulário');
-        }
-        const modeloId = modeloSelect.value;
-        
-        // Verificar qual campo de status está presente na página
-        let status = 'ativo';
-        const statusField = document.getElementById('status');
-        const statusCheckbox = document.getElementById('statusVersao');
-        
-        if (statusField) {
-            status = statusField.value;
-        } else if (statusCheckbox) {
-            // Se for um checkbox, o status é 'ativo' se estiver marcado, senão é 'inativo'
-            status = statusCheckbox.checked ? 'ativo' : 'inativo';
-        }
-        
-        // Validar campos obrigatórios
-        if (!nome || !modeloId) {
-            exibirMensagem('Por favor, preencha todos os campos obrigatórios.', 'warning');
-            return;
-        }
-        
-        // Criar objeto com dados da versão
-        const versaoData = {
-            nome,
-            nome_versao: nome, // Incluir ambos os campos para compatibilidade
-            descricao,
-            ano: ano ? parseInt(ano) : null,
-            preco: preco ? parseFloat(preco) : null,
-            modeloId: parseInt(modeloId),
-            status
-        };
-        
-        const token = getToken();
-        if (!token) {
-            console.error('Token de autenticação não encontrado');
-            return;
-        }
+        // Definir a URL base correta para o ambiente atual
+        let baseUrl = isExternalIP ? 'http://69.62.91.195:3000' : '';
         
         let url, method;
         
         if (versaoId) {
             // Atualizar versão existente
-            url = `/api/versoes/${versaoId}`;
-            method = 'PUT';
-            versaoData.id = parseInt(versaoId);
+            url = `${baseUrl}/api/versoes/${versaoId}`;
+            method = 'PATCH';
         } else {
             // Criar nova versão
-            url = '/api/versoes';
+            url = `${baseUrl}/api/versoes`;
             method = 'POST';
         }
         
-        // Fazer requisição para API
+        console.log(`${method} para ${url} com dados:`, versaoData);
+        
         const response = await fetch(url, {
             method: method,
             headers: {
@@ -720,29 +730,27 @@ async function salvarVersao(event) {
         
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.message || 'Erro ao salvar versão');
+            throw new Error(errorData.message || `Erro ${response.status}: ${response.statusText}`);
         }
         
-        const data = await response.json();
-        console.log('Versão salva com sucesso:', data);
+        const savedVersao = await response.json();
+        console.log('Versão salva com sucesso:', savedVersao);
         
-        // Fechar modal - verificar qual ID do modal está presente na página
-        const versaoModal = document.getElementById('versaoModal') || document.getElementById('modalVersao');
+        // Fechar modal
+        const versaoModal = bootstrap.Modal.getInstance(document.getElementById('versaoModal'));
         if (versaoModal) {
-            const modal = bootstrap.Modal.getInstance(versaoModal);
-            if (modal) {
-                modal.hide();
-            }
+            versaoModal.hide();
         }
         
         // Exibir mensagem de sucesso
-        exibirMensagem('Versão salva com sucesso!', 'success');
+        exibirMensagem(versaoId ? 'Versão atualizada com sucesso!' : 'Versão criada com sucesso!', 'success');
         
         // Recarregar lista de versões
-        carregarVersoes();
+        await carregarVersoes();
+        
     } catch (error) {
         console.error('Erro ao salvar versão:', error);
-        exibirMensagem('Erro ao salvar versão: ' + error.message, 'danger');
+        exibirMensagem(`Erro ao salvar versão: ${error.message}`, 'danger');
     }
 }
 
