@@ -3,6 +3,8 @@
  * Este módulo contém todas as funções relacionadas a chamadas de API
  */
 
+import { apiConfig } from './config.js';
+
 // Função para obter a URL base com base no ambiente atual
 function getBaseUrl() {
     const currentUrl = window.location.href;
@@ -12,278 +14,245 @@ function getBaseUrl() {
 // Função para carregar marcas
 async function loadMarcas() {
     console.log('Carregando marcas...');
-    return new Promise((resolve, reject) => {
-        // Obter token diretamente do localStorage para garantir que estamos usando o token mais recente
-        const token = localStorage.getItem('token');
-        if (!token) {
-            console.error('Token de autenticação não encontrado');
-            reject(new Error('Falha na autenticação. Por favor, faça login novamente.'));
-            return;
-        }
-        
-        // IMPORTANTE: Usar a URL completa para evitar problemas com o url-fixer.js
-        const baseUrl = getBaseUrl();
-        
-        // Lista de todas as possíveis URLs para tentar, em ordem de prioridade
-        const urlsParaTentar = [
-            `${baseUrl}/api/veiculos/marcas`,
-            `${baseUrl}/api/marcas`
-        ];
-        
-        console.log('Tentando URLs para carregar marcas:', urlsParaTentar);
-        
-        // Tentar cada URL em sequência até encontrar uma que funcione
-        let currentUrlIndex = 0;
-        
-        function tryNextUrl() {
-            if (currentUrlIndex >= urlsParaTentar.length) {
-                console.error('Todas as URLs falharam');
-                reject(new Error('Erro ao carregar marcas: Todas as URLs falharam'));
-                return;
-            }
-            
-            const url = urlsParaTentar[currentUrlIndex];
+    
+    // Obter token diretamente do localStorage para garantir que estamos usando o token mais recente
+    const token = localStorage.getItem('token');
+    if (!token) {
+        console.error('Token de autenticação não encontrado');
+        throw new Error('Falha na autenticação. Por favor, faça login novamente.');
+    }
+    
+    // Obter a URL base
+    const baseUrl = getBaseUrl();
+    
+    // Lista de todas as possíveis URLs para tentar, em ordem de prioridade
+    const urlsParaTentar = [
+        `${baseUrl}/api/marcas`,
+        `${baseUrl}/api/veiculos/marcas/all`,
+        `${baseUrl}/api/veiculos/marcas`
+    ];
+    
+    console.log('Tentando URLs para carregar marcas:', urlsParaTentar);
+    
+    // Tentar cada URL em sequência até encontrar uma que funcione
+    let response = null;
+    let error = null;
+    
+    for (const url of urlsParaTentar) {
+        try {
             console.log(`Tentando carregar marcas de: ${url}`);
-            
-            fetch(url, {
+            response = await fetch(url, {
+                method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    console.error(`Falha ao carregar marcas de ${url}. Status:`, response.status, response.statusText);
-                    currentUrlIndex++;
-                    tryNextUrl();
-                    return null;
-                }
-                return response.json();
-            })
-            .then(marcas => {
-                if (!marcas) return; // Já passou para a próxima URL
-                
-                console.log('Marcas carregadas com sucesso:', marcas);
-                
-                // Se a resposta for um objeto com propriedade items (paginação), usar items
-                if (marcas && marcas.items && Array.isArray(marcas.items)) {
-                    marcas = marcas.items;
-                }
-                
-                // Verificar se marcas é um array
-                if (!Array.isArray(marcas)) {
-                    console.error('Resposta não é um array:', marcas);
-                    currentUrlIndex++;
-                    tryNextUrl();
-                    return;
-                }
-                
-                // Verificar se temos marcas
-                if (marcas.length === 0) {
-                    console.warn('Array de marcas está vazio');
-                }
-                
-                resolve(marcas);
-            })
-            .catch(error => {
-                console.error(`Erro ao carregar marcas de ${url}:`, error);
-                currentUrlIndex++;
-                tryNextUrl();
             });
+            
+            if (response.ok) {
+                console.log(`URL bem-sucedida para marcas: ${url}`);
+                break;
+            } else {
+                console.error(`Falha ao carregar marcas de ${url}. Status:`, response.status, response.statusText);
+                if (response.status === 401) {
+                    console.error('Erro de autenticação. Redirecionando para login...');
+                    localStorage.removeItem('token');
+                    window.location.href = '/login.html';
+                    throw new Error('Falha na autenticação. Por favor, faça login novamente.');
+                }
+            }
+        } catch (e) {
+            console.error(`Erro ao acessar ${url}:`, e);
+            error = e;
         }
-        
-        // Iniciar tentativas
-        tryNextUrl();
-    });
+    }
+    
+    if (!response || !response.ok) {
+        throw new Error(error?.message || 'Erro ao carregar marcas: Todas as URLs falharam');
+    }
+    
+    // Processar a resposta
+    const data = await response.json();
+    
+    // Verificar se a resposta é um array ou se tem uma propriedade items
+    let marcas = [];
+    if (Array.isArray(data)) {
+        marcas = data;
+    } else if (data && Array.isArray(data.items)) {
+        marcas = data.items;
+    } else {
+        console.error('Formato de resposta inesperado para marcas:', data);
+        throw new Error('Formato de resposta inesperado para marcas');
+    }
+    
+    console.log(`Carregadas ${marcas.length} marcas com sucesso`);
+    return marcas;
 }
 
 // Função para carregar modelos de uma marca
 async function loadModelos(marcaId) {
-    console.log('Carregando modelos da marca ID:', marcaId);
-    return new Promise((resolve, reject) => {
-        if (!marcaId) {
-            console.warn('ID da marca não fornecido para carregar modelos');
-            resolve([]);
-            return;
-        }
-        
-        // Obter token diretamente do localStorage
-        const token = localStorage.getItem('token');
-        if (!token) {
-            console.error('Token de autenticação não encontrado');
-            reject(new Error('Falha na autenticação. Por favor, faça login novamente.'));
-            return;
-        }
-        
-        // IMPORTANTE: Usar a URL completa para evitar problemas com o url-fixer.js
-        const baseUrl = getBaseUrl();
-        
-        // Lista de todas as possíveis URLs para tentar, em ordem de prioridade
-        const urlsParaTentar = [
-            `${baseUrl}/api/veiculos/modelos/by-marca/${marcaId}`,
-            `${baseUrl}/api/modelos/marca/${marcaId}`
-        ];
-        
-        console.log('Tentando URLs para carregar modelos:', urlsParaTentar);
-        
-        // Tentar cada URL em sequência até encontrar uma que funcione
-        let currentUrlIndex = 0;
-        
-        function tryNextUrl() {
-            if (currentUrlIndex >= urlsParaTentar.length) {
-                console.error('Todas as URLs falharam');
-                reject(new Error('Erro ao carregar modelos: Todas as URLs falharam'));
-                return;
-            }
-            
-            const url = urlsParaTentar[currentUrlIndex];
+    console.log(`Carregando modelos para marca ID: ${marcaId}`);
+    
+    if (!marcaId) {
+        console.error('ID da marca não fornecido');
+        throw new Error('ID da marca não fornecido');
+    }
+    
+    // Obter token diretamente do localStorage para garantir que estamos usando o token mais recente
+    const token = localStorage.getItem('token');
+    if (!token) {
+        console.error('Token de autenticação não encontrado');
+        throw new Error('Falha na autenticação. Por favor, faça login novamente.');
+    }
+    
+    // Obter a URL base
+    const baseUrl = getBaseUrl();
+    
+    // Lista de todas as possíveis URLs para tentar, em ordem de prioridade
+    const urlsParaTentar = [
+        `${baseUrl}/api/modelos/marca/${marcaId}`,
+        `${baseUrl}/api/veiculos/modelos/all?marcaId=${marcaId}`,
+        `${baseUrl}/api/veiculos/modelos/by-marca/${marcaId}`
+    ];
+    
+    console.log('Tentando URLs para carregar modelos:', urlsParaTentar);
+    
+    // Tentar cada URL em sequência até encontrar uma que funcione
+    let response = null;
+    let error = null;
+    
+    for (const url of urlsParaTentar) {
+        try {
             console.log(`Tentando carregar modelos de: ${url}`);
-            
-            fetch(url, {
+            response = await fetch(url, {
+                method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    console.error(`Falha ao carregar modelos de ${url}. Status:`, response.status, response.statusText);
-                    currentUrlIndex++;
-                    tryNextUrl();
-                    return null;
-                }
-                return response.json();
-            })
-            .then(modelos => {
-                if (!modelos) return; // Já passou para a próxima URL
-                
-                console.log('Modelos carregados com sucesso:', modelos);
-                
-                // Se a resposta for um objeto com propriedade items (paginação), usar items
-                if (modelos && modelos.items && Array.isArray(modelos.items)) {
-                    modelos = modelos.items;
-                }
-                
-                // Verificar se modelos é um array
-                if (!Array.isArray(modelos)) {
-                    console.error('Resposta não é um array:', modelos);
-                    currentUrlIndex++;
-                    tryNextUrl();
-                    return;
-                }
-                
-                // Verificar se temos modelos
-                if (modelos.length === 0) {
-                    console.warn('Array de modelos está vazio');
-                }
-                
-                resolve(modelos);
-            })
-            .catch(error => {
-                console.error(`Erro ao carregar modelos de ${url}:`, error);
-                currentUrlIndex++;
-                tryNextUrl();
             });
+            
+            if (response.ok) {
+                console.log(`URL bem-sucedida para modelos: ${url}`);
+                break;
+            } else {
+                console.error(`Falha ao carregar modelos de ${url}. Status:`, response.status, response.statusText);
+                if (response.status === 401) {
+                    console.error('Erro de autenticação. Redirecionando para login...');
+                    localStorage.removeItem('token');
+                    window.location.href = '/login.html';
+                    throw new Error('Falha na autenticação. Por favor, faça login novamente.');
+                }
+            }
+        } catch (e) {
+            console.error(`Erro ao acessar ${url}:`, e);
+            error = e;
         }
-        
-        // Iniciar tentativas
-        tryNextUrl();
-    });
+    }
+    
+    if (!response || !response.ok) {
+        throw new Error(error?.message || `Erro ao carregar modelos para marca ID: ${marcaId}`);
+    }
+    
+    // Processar a resposta
+    const data = await response.json();
+    
+    // Verificar se a resposta é um array ou se tem uma propriedade items
+    let modelos = [];
+    if (Array.isArray(data)) {
+        modelos = data;
+    } else if (data && Array.isArray(data.items)) {
+        modelos = data.items;
+    } else {
+        console.error('Formato de resposta inesperado para modelos:', data);
+        throw new Error('Formato de resposta inesperado para modelos');
+    }
+    
+    console.log(`Carregados ${modelos.length} modelos com sucesso para marca ID: ${marcaId}`);
+    return modelos;
 }
 
 // Função para carregar versões de um modelo
 async function loadVersoes(modeloId) {
-    console.log('Carregando versões do modelo ID:', modeloId);
-    return new Promise((resolve, reject) => {
-        if (!modeloId) {
-            console.warn('ID do modelo não fornecido para carregar versões');
-            resolve([]);
-            return;
-        }
-        
-        // Obter token diretamente do localStorage
-        const token = localStorage.getItem('token');
-        if (!token) {
-            console.error('Token de autenticação não encontrado');
-            reject(new Error('Falha na autenticação. Por favor, faça login novamente.'));
-            return;
-        }
-        
-        // IMPORTANTE: Usar a URL completa para evitar problemas com o url-fixer.js
-        const baseUrl = getBaseUrl();
-        
-        // Lista de todas as possíveis URLs para tentar, em ordem de prioridade
-        const urlsParaTentar = [
-            `${baseUrl}/api/versoes/modelo/${modeloId}`,
-            `${baseUrl}/api/veiculos/versoes/modelo/${modeloId}`,
-            `${baseUrl}/api/versoes/modelo/${modeloId}/public`
-        ];
-        
-        console.log('Tentando URLs para carregar versões:', urlsParaTentar);
-        
-        // Tentar cada URL em sequência até encontrar uma que funcione
-        let currentUrlIndex = 0;
-        
-        function tryNextUrl() {
-            if (currentUrlIndex >= urlsParaTentar.length) {
-                console.error('Todas as URLs falharam');
-                reject(new Error('Erro ao carregar versões: Todas as URLs falharam'));
-                return;
-            }
-            
-            const url = urlsParaTentar[currentUrlIndex];
+    console.log(`Carregando versões para modelo ID: ${modeloId}`);
+    
+    if (!modeloId) {
+        console.error('ID do modelo não fornecido');
+        throw new Error('ID do modelo não fornecido');
+    }
+    
+    // Obter token diretamente do localStorage para garantir que estamos usando o token mais recente
+    const token = localStorage.getItem('token');
+    if (!token) {
+        console.error('Token de autenticação não encontrado');
+        throw new Error('Falha na autenticação. Por favor, faça login novamente.');
+    }
+    
+    // Obter a URL base
+    const baseUrl = getBaseUrl();
+    
+    // Lista de todas as possíveis URLs para tentar, em ordem de prioridade
+    const urlsParaTentar = [
+        `${baseUrl}/api/versoes/modelo/${modeloId}`,
+        `${baseUrl}/api/veiculos/versoes/all?modeloId=${modeloId}`,
+        `${baseUrl}/api/versoes/public?modeloId=${modeloId}`
+    ];
+    
+    console.log('Tentando URLs para carregar versões:', urlsParaTentar);
+    
+    // Tentar cada URL em sequência até encontrar uma que funcione
+    let response = null;
+    let error = null;
+    
+    for (const url of urlsParaTentar) {
+        try {
             console.log(`Tentando carregar versões de: ${url}`);
-            
-            fetch(url, {
+            response = await fetch(url, {
+                method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    console.error(`Falha ao carregar versões de ${url}. Status:`, response.status, response.statusText);
-                    currentUrlIndex++;
-                    tryNextUrl();
-                    return null;
-                }
-                return response.json();
-            })
-            .then(versoes => {
-                if (!versoes) return; // Já passou para a próxima URL
-                
-                console.log('Versões carregadas com sucesso:', versoes);
-                
-                // Se a resposta for um objeto com propriedade items (paginação), usar items
-                if (versoes && versoes.items && Array.isArray(versoes.items)) {
-                    versoes = versoes.items;
-                }
-                
-                // Verificar se versoes é um array
-                if (!Array.isArray(versoes)) {
-                    console.error('Resposta não é um array:', versoes);
-                    currentUrlIndex++;
-                    tryNextUrl();
-                    return;
-                }
-                
-                // Verificar se temos versões
-                if (versoes.length === 0) {
-                    console.warn('Array de versões está vazio');
-                }
-                
-                resolve(versoes);
-            })
-            .catch(error => {
-                console.error(`Erro ao carregar versões de ${url}:`, error);
-                currentUrlIndex++;
-                tryNextUrl();
             });
+            
+            if (response.ok) {
+                console.log(`URL bem-sucedida para versões: ${url}`);
+                break;
+            } else {
+                console.error(`Falha ao carregar versões de ${url}. Status:`, response.status, response.statusText);
+                if (response.status === 401) {
+                    console.error('Erro de autenticação. Redirecionando para login...');
+                    localStorage.removeItem('token');
+                    window.location.href = '/login.html';
+                    throw new Error('Falha na autenticação. Por favor, faça login novamente.');
+                }
+            }
+        } catch (e) {
+            console.error(`Erro ao acessar ${url}:`, e);
+            error = e;
         }
-        
-        // Iniciar tentativas
-        tryNextUrl();
-    });
+    }
+    
+    if (!response || !response.ok) {
+        throw new Error(error?.message || `Erro ao carregar versões para modelo ID: ${modeloId}`);
+    }
+    
+    // Processar a resposta
+    const data = await response.json();
+    
+    // Verificar se a resposta é um array ou se tem uma propriedade items
+    let versoes = [];
+    if (Array.isArray(data)) {
+        versoes = data;
+    } else if (data && Array.isArray(data.items)) {
+        versoes = data.items;
+    } else {
+        console.error('Formato de resposta inesperado para versões:', data);
+        throw new Error('Formato de resposta inesperado para versões');
+    }
+    
+    console.log(`Carregadas ${versoes.length} versões com sucesso para modelo ID: ${modeloId}`);
+    return versoes;
 }
 
 // Função para carregar todos os modelos
@@ -324,26 +293,25 @@ async function loadAllModelos() {
                 });
                 
                 if (response.ok) {
-                    const data = await response.json();
-                    console.log(`URL bem-sucedida: ${url}, dados recebidos:`, data);
+                    console.log(`URL bem-sucedida: ${url}, dados recebidos:`, response);
                     
                     // Se a resposta for um objeto com propriedade items (paginação), usar items
-                    if (data && data.items && Array.isArray(data.items)) {
-                        modelos = data.items;
+                    if (response && response.items && Array.isArray(response.items)) {
+                        modelos = response.items;
                     } 
                     // Se a resposta for um array, usar diretamente
-                    else if (Array.isArray(data)) {
-                        modelos = data;
+                    else if (Array.isArray(response)) {
+                        modelos = response;
                     }
                     // Se chegou aqui, temos dados mas não no formato esperado
                     else {
-                        console.warn(`Resposta não é um array nem tem propriedade items:`, data);
+                        console.warn(`Resposta não é um array nem tem propriedade items:`, response);
                         // Tentar extrair modelos de alguma outra propriedade
-                        if (data && typeof data === 'object') {
+                        if (response && typeof response === 'object') {
                             // Procurar por alguma propriedade que seja um array
-                            for (const key in data) {
-                                if (Array.isArray(data[key]) && data[key].length > 0) {
-                                    modelos = data[key];
+                            for (const key in response) {
+                                if (Array.isArray(response[key]) && response[key].length > 0) {
+                                    modelos = response[key];
                                     console.log(`Usando dados da propriedade ${key}:`, modelos);
                                     break;
                                 }
@@ -443,26 +411,25 @@ async function loadAllVersoes() {
                 });
                 
                 if (response.ok) {
-                    const data = await response.json();
-                    console.log(`URL bem-sucedida: ${url}, dados recebidos:`, data);
+                    console.log(`URL bem-sucedida: ${url}, dados recebidos:`, response);
                     
                     // Se a resposta for um objeto com propriedade items (paginação), usar items
-                    if (data && data.items && Array.isArray(data.items)) {
-                        versoes = data.items;
+                    if (response && response.items && Array.isArray(response.items)) {
+                        versoes = response.items;
                     } 
                     // Se a resposta for um array, usar diretamente
-                    else if (Array.isArray(data)) {
-                        versoes = data;
+                    else if (Array.isArray(response)) {
+                        versoes = response;
                     }
                     // Se chegou aqui, temos dados mas não no formato esperado
                     else {
-                        console.warn(`Resposta não é um array nem tem propriedade items:`, data);
+                        console.warn(`Resposta não é um array nem tem propriedade items:`, response);
                         // Tentar extrair versões de alguma outra propriedade
-                        if (data && typeof data === 'object') {
+                        if (response && typeof response === 'object') {
                             // Procurar por alguma propriedade que seja um array
-                            for (const key in data) {
-                                if (Array.isArray(data[key]) && data[key].length > 0) {
-                                    versoes = data[key];
+                            for (const key in response) {
+                                if (Array.isArray(response[key]) && response[key].length > 0) {
+                                    versoes = response[key];
                                     console.log(`Usando dados da propriedade ${key}:`, versoes);
                                     break;
                                 }
@@ -549,10 +516,20 @@ async function loadVeiculos(page = 1) {
             throw new Error(`Erro ao carregar veículos: ${response.status}`);
         }
         
-        const data = await response.json();
-        console.log('Veículos carregados:', data);
+        const responseData = await response.json();
+        console.log('Resposta da API de veículos:', responseData);
         
-        return data;
+        // Garantir que os dados estejam no formato esperado pela função renderVeiculos
+        const formattedData = {
+            veiculos: Array.isArray(responseData.items) ? responseData.items : [],
+            totalItems: responseData.totalItems || 0,
+            totalPages: responseData.totalPages || 0,
+            currentPage: responseData.currentPage || page
+        };
+        
+        console.log('Dados formatados para renderização:', formattedData);
+        
+        return formattedData;
     } catch (error) {
         console.error('Erro ao carregar veículos:', error);
         throw error;

@@ -15,10 +15,15 @@ import * as utils from './modules/utils.js';
 
 // Verificar autenticação
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM carregado, verificando autenticação...');
+    
     if (!utils.isAuthenticated()) {
+        console.error('Usuário não autenticado, redirecionando para login...');
         utils.redirectToLogin();
         return;
     }
+    
+    console.log('Usuário autenticado, inicializando aplicação...');
     
     // Inicializar aplicação
     init();
@@ -44,16 +49,67 @@ async function init() {
 
 // Configurar event listeners
 function setupEventListeners() {
+    console.log('Configurando event listeners...');
+    
     // Botão para abrir modal de novo veículo
     const newVeiculoBtn = document.getElementById('newVeiculo');
     if (newVeiculoBtn) {
-        newVeiculoBtn.addEventListener('click', () => {
-            forms.resetForm();
-            forms.loadMarcasNoForm();
+        console.log('Botão de novo veículo encontrado, adicionando event listener...');
+        
+        newVeiculoBtn.addEventListener('click', async () => {
+            console.log('Botão de novo veículo clicado, abrindo modal...');
             
-            // Abrir modal
-            const modal = new bootstrap.Modal(document.getElementById('veiculoModal'));
-            modal.show();
+            try {
+                // Mostrar spinner ou indicador de carregamento
+                ui.showLoading('Carregando formulário...');
+                
+                // Resetar formulário
+                forms.resetForm();
+                
+                // Abrir modal primeiro para mostrar o carregamento
+                const modalElement = document.getElementById('veiculoModal');
+                if (!modalElement) {
+                    throw new Error('Elemento modal não encontrado!');
+                }
+                
+                const modal = new bootstrap.Modal(modalElement);
+                modal.show();
+                
+                // Carregar marcas no formulário
+                console.log('Carregando marcas no formulário...');
+                await forms.loadMarcasNoForm();
+                
+                // Esconder loading
+                ui.hideLoading();
+                
+                console.log('Modal de novo veículo aberto com sucesso!');
+            } catch (error) {
+                console.error('Erro ao abrir modal de novo veículo:', error);
+                ui.showError('Erro ao carregar formulário: ' + (error.message || 'Erro desconhecido'));
+                ui.hideLoading();
+            }
+        });
+    } else {
+        console.error('Botão de novo veículo não encontrado!');
+    }
+    
+    // Adicionar event listener para o evento 'hidden.bs.modal' do modal
+    const modalElement = document.getElementById('veiculoModal');
+    if (modalElement) {
+        modalElement.addEventListener('hidden.bs.modal', function () {
+            console.log('Modal fechado, resetando formulário...');
+            forms.resetForm();
+            
+            // Garantir que o backdrop seja removido
+            const backdrop = document.querySelector('.modal-backdrop');
+            if (backdrop) {
+                backdrop.parentNode.removeChild(backdrop);
+            }
+            
+            // Garantir que o body esteja restaurado
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
         });
     }
     
@@ -61,12 +117,16 @@ function setupEventListeners() {
     const saveVeiculoBtn = document.getElementById('saveButton');
     if (saveVeiculoBtn) {
         saveVeiculoBtn.addEventListener('click', saveVeiculo);
+    } else {
+        console.error('Botão de salvar veículo não encontrado!');
     }
     
     // Botão para confirmar exclusão
-    const confirmDeleteBtn = document.getElementById('confirmDelete');
+    const confirmDeleteBtn = document.getElementById('confirmDeleteButton');
     if (confirmDeleteBtn) {
         confirmDeleteBtn.addEventListener('click', confirmDelete);
+    } else {
+        console.error('Botão de confirmar exclusão não encontrado!');
     }
     
     // Event listener para mudança de marca
@@ -74,10 +134,16 @@ function setupEventListeners() {
     if (marcaSelect) {
         marcaSelect.addEventListener('change', () => {
             const marcaId = marcaSelect.value;
+            console.log(`Marca alterada para ID: ${marcaId}`);
+            
             if (marcaId) {
-                forms.loadModelosNoForm(marcaId);
+                forms.loadModelosNoForm(marcaId).catch(error => {
+                    console.error('Erro ao carregar modelos:', error);
+                });
             }
         });
+    } else {
+        console.error('Select de marca não encontrado!');
     }
     
     // Event listener para mudança de modelo
@@ -85,21 +151,16 @@ function setupEventListeners() {
     if (modeloSelect) {
         modeloSelect.addEventListener('change', () => {
             const modeloId = modeloSelect.value;
+            console.log(`Modelo alterado para ID: ${modeloId}`);
+            
             if (modeloId) {
-                forms.loadVersoesNoForm(modeloId);
+                forms.loadVersoesNoForm(modeloId).catch(error => {
+                    console.error('Erro ao carregar versões:', error);
+                });
             }
         });
-    }
-    
-    // Event listener para formatação de preço
-    const precoInput = document.getElementById('preco');
-    if (precoInput) {
-        precoInput.addEventListener('input', (e) => {
-            const valor = e.target.value;
-            if (valor) {
-                e.target.value = utils.formatarValorMonetario(valor);
-            }
-        });
+    } else {
+        console.error('Select de modelo não encontrado!');
     }
 }
 
@@ -114,36 +175,67 @@ async function saveVeiculo() {
         // Obter dados do formulário
         const veiculoData = forms.obterDadosFormulario();
         
-        // Mostrar indicador de carregamento
+        // Mostrar spinner
         const saveButton = document.getElementById('saveButton');
-        if (saveButton) {
+        const saveSpinner = document.getElementById('saveSpinner');
+        
+        if (saveButton && saveSpinner) {
             saveButton.disabled = true;
-            saveButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Salvando...';
+            saveSpinner.classList.remove('d-none');
         }
         
         // Salvar veículo
         await api.saveVeiculo(veiculoData);
         
-        // Fechar modal
-        const modal = bootstrap.Modal.getInstance(document.getElementById('veiculoModal'));
-        if (modal) {
-            modal.hide();
+        // Resetar o formulário antes de fechar o modal
+        forms.resetForm();
+        
+        // Fechar modal usando o método nativo do Bootstrap
+        const modalElement = document.getElementById('veiculoModal');
+        if (modalElement) {
+            try {
+                const modalInstance = bootstrap.Modal.getInstance(modalElement);
+                if (modalInstance) {
+                    modalInstance.hide();
+                } else {
+                    console.warn('Não foi possível obter a instância do modal.');
+                    // Fechar manualmente
+                    modalElement.style.display = 'none';
+                    modalElement.classList.remove('show');
+                    modalElement.setAttribute('aria-hidden', 'true');
+                    
+                    // Remover backdrop manualmente
+                    const backdrop = document.querySelector('.modal-backdrop');
+                    if (backdrop) {
+                        backdrop.parentNode.removeChild(backdrop);
+                    }
+                    
+                    // Restaurar o body
+                    document.body.classList.remove('modal-open');
+                    document.body.style.overflow = '';
+                    document.body.style.paddingRight = '';
+                }
+            } catch (modalError) {
+                console.error('Erro ao fechar o modal:', modalError);
+            }
         }
         
-        // Atualizar tabela
-        await table.refreshTable();
+        // Recarregar tabela
+        await table.initTable();
         
         // Mostrar mensagem de sucesso
-        alert(veiculoData.id ? 'Veículo atualizado com sucesso!' : 'Veículo cadastrado com sucesso!');
+        ui.showSuccess('Veículo salvo com sucesso!');
     } catch (error) {
         console.error('Erro ao salvar veículo:', error);
-        ui.showError(`Erro ao salvar veículo: ${error.message}`);
+        ui.showError(error.message || 'Erro ao salvar veículo. Por favor, tente novamente mais tarde.');
     } finally {
-        // Restaurar botão
+        // Esconder spinner
         const saveButton = document.getElementById('saveButton');
-        if (saveButton) {
+        const saveSpinner = document.getElementById('saveSpinner');
+        
+        if (saveButton && saveSpinner) {
             saveButton.disabled = false;
-            saveButton.textContent = 'Salvar';
+            saveSpinner.classList.add('d-none');
         }
     }
 }
@@ -151,62 +243,93 @@ async function saveVeiculo() {
 // Função para editar veículo
 async function editVeiculo(id) {
     try {
-        console.log(`Editando veículo ID: ${id}`);
-        
         // Obter veículo
         const veiculo = await api.getVeiculo(id);
         
         // Preencher formulário
-        await forms.preencherFormularioVeiculo(veiculo);
+        forms.preencherFormularioVeiculo(veiculo);
         
         // Abrir modal
-        const modal = new bootstrap.Modal(document.getElementById('veiculoModal'));
-        modal.show();
+        const modalElement = document.getElementById('veiculoModal');
+        if (modalElement) {
+            const modal = new bootstrap.Modal(modalElement);
+            modal.show();
+        }
     } catch (error) {
         console.error('Erro ao editar veículo:', error);
-        ui.showError(`Erro ao editar veículo: ${error.message}`);
+        ui.showError(error.message || 'Erro ao carregar dados do veículo. Por favor, tente novamente mais tarde.');
     }
 }
 
 // Função para confirmar exclusão
 async function confirmDelete() {
     try {
-        // Obter ID do veículo
-        const confirmDeleteBtn = document.getElementById('confirmDelete');
-        const id = confirmDeleteBtn.getAttribute('data-id');
+        console.log('Função confirmDelete chamada');
         
-        if (!id) {
-            console.error('ID do veículo não encontrado');
+        // Obter ID do veículo a ser excluído
+        const veiculoId = document.getElementById('veiculoIdToDelete').value;
+        
+        console.log(`Tentando excluir veículo ID: ${veiculoId}`);
+        
+        if (!veiculoId) {
+            ui.showError('ID do veículo não encontrado.');
             return;
         }
         
-        // Mostrar indicador de carregamento
-        confirmDeleteBtn.disabled = true;
-        confirmDeleteBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Excluindo...';
+        // Mostrar spinner
+        const deleteButton = document.getElementById('confirmDeleteButton');
+        const deleteSpinner = document.getElementById('deleteSpinner');
         
-        // Excluir veículo
-        await api.deleteVeiculo(id);
-        
-        // Fechar modal
-        const modal = bootstrap.Modal.getInstance(document.getElementById('deleteModal'));
-        if (modal) {
-            modal.hide();
+        if (deleteButton && deleteSpinner) {
+            deleteButton.disabled = true;
+            deleteSpinner.classList.remove('d-none');
         }
         
-        // Atualizar tabela
-        await table.refreshTable();
+        // Excluir veículo
+        await api.deleteVeiculo(veiculoId);
+        
+        // Fechar modal
+        const modalElement = document.getElementById('deleteModal');
+        if (modalElement) {
+            const modal = bootstrap.Modal.getInstance(modalElement);
+            if (modal) {
+                modal.hide();
+            } else {
+                console.warn('Não foi possível obter a instância do modal de exclusão.');
+                // Fechar manualmente
+                modalElement.style.display = 'none';
+                modalElement.classList.remove('show');
+                modalElement.setAttribute('aria-hidden', 'true');
+                
+                // Remover backdrop manualmente
+                const backdrop = document.querySelector('.modal-backdrop');
+                if (backdrop) {
+                    backdrop.parentNode.removeChild(backdrop);
+                }
+                
+                // Restaurar o body
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = '';
+                document.body.style.paddingRight = '';
+            }
+        }
+        
+        // Recarregar tabela
+        await table.initTable();
         
         // Mostrar mensagem de sucesso
-        alert('Veículo excluído com sucesso!');
+        ui.showSuccess('Veículo excluído com sucesso!');
     } catch (error) {
         console.error('Erro ao excluir veículo:', error);
-        ui.showError(`Erro ao excluir veículo: ${error.message}`);
+        ui.showError(error.message || 'Erro ao excluir veículo. Por favor, tente novamente mais tarde.');
     } finally {
-        // Restaurar botão
-        const confirmDeleteBtn = document.getElementById('confirmDelete');
-        if (confirmDeleteBtn) {
-            confirmDeleteBtn.disabled = false;
-            confirmDeleteBtn.textContent = 'Excluir';
+        // Esconder spinner
+        const deleteButton = document.getElementById('confirmDeleteButton');
+        const deleteSpinner = document.getElementById('deleteSpinner');
+        
+        if (deleteButton && deleteSpinner) {
+            deleteButton.disabled = false;
+            deleteSpinner.classList.add('d-none');
         }
     }
 }

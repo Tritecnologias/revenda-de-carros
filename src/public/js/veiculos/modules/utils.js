@@ -25,7 +25,23 @@ function formatarPreco(preco) {
 // Função para converter valores formatados para números
 function converterParaNumero(valor) {
     if (!valor) return 0;
-    return parseFloat(valor.replace(/[^\d,.-]/g, '').replace(',', '.'));
+    
+    // Se for um objeto, retornar o valor diretamente
+    if (typeof valor === 'number') return valor;
+    
+    // Remover o símbolo de moeda (R$) e espaços
+    const valorLimpo = valor.toString().replace(/R\$\s?/g, '').trim();
+    
+    // Remover todos os pontos (separadores de milhar) e substituir vírgula por ponto
+    const valorNumerico = valorLimpo.replace(/\./g, '').replace(',', '.');
+    
+    // Converter para número
+    const numero = parseFloat(valorNumerico);
+    
+    console.log(`Convertendo valor formatado: "${valor}" para número: ${numero}`);
+    
+    // Verificar se é um número válido
+    return isNaN(numero) ? 0 : numero;
 }
 
 // Função para formatar valor monetário (sem precisar de um elemento DOM)
