@@ -4,7 +4,7 @@
  */
 
 // Log de inicialização
-console.log('Carregando veiculo-modular.js - versão modularizada');
+console.log('Carregando veiculo.js - versão modularizada');
 
 // Importar módulos
 import * as api from './modules/api.js';
@@ -58,7 +58,7 @@ function setupEventListeners() {
     }
     
     // Botão para salvar veículo
-    const saveVeiculoBtn = document.getElementById('saveVeiculo');
+    const saveVeiculoBtn = document.getElementById('saveButton');
     if (saveVeiculoBtn) {
         saveVeiculoBtn.addEventListener('click', saveVeiculo);
     }
@@ -70,7 +70,7 @@ function setupEventListeners() {
     }
     
     // Event listener para mudança de marca
-    const marcaSelect = document.getElementById('marca');
+    const marcaSelect = document.getElementById('marcaId');
     if (marcaSelect) {
         marcaSelect.addEventListener('change', () => {
             const marcaId = marcaSelect.value;
@@ -81,7 +81,7 @@ function setupEventListeners() {
     }
     
     // Event listener para mudança de modelo
-    const modeloSelect = document.getElementById('modelo');
+    const modeloSelect = document.getElementById('modeloId');
     if (modeloSelect) {
         modeloSelect.addEventListener('change', () => {
             const modeloId = modeloSelect.value;
@@ -115,7 +115,7 @@ async function saveVeiculo() {
         const veiculoData = forms.obterDadosFormulario();
         
         // Mostrar indicador de carregamento
-        const saveButton = document.getElementById('saveVeiculo');
+        const saveButton = document.getElementById('saveButton');
         if (saveButton) {
             saveButton.disabled = true;
             saveButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Salvando...';
@@ -140,7 +140,7 @@ async function saveVeiculo() {
         ui.showError(`Erro ao salvar veículo: ${error.message}`);
     } finally {
         // Restaurar botão
-        const saveButton = document.getElementById('saveVeiculo');
+        const saveButton = document.getElementById('saveButton');
         if (saveButton) {
             saveButton.disabled = false;
             saveButton.textContent = 'Salvar';

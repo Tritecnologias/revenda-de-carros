@@ -31,8 +31,8 @@ function resetForm() {
     }
     
     // Resetar selects
-    const modeloSelect = document.getElementById('modelo');
-    const versaoSelect = document.getElementById('versao');
+    const modeloSelect = document.getElementById('modeloId');
+    const versaoSelect = document.getElementById('versaoId');
     
     if (modeloSelect) {
         modeloSelect.innerHTML = '<option value="">Selecione um modelo</option>';
@@ -51,7 +51,7 @@ function resetForm() {
     }
     
     // Atualizar botão de salvar
-    const saveButton = document.getElementById('saveVeiculo');
+    const saveButton = document.getElementById('saveButton');
     if (saveButton) {
         saveButton.textContent = 'Salvar';
     }
@@ -70,7 +70,7 @@ async function preencherFormularioVeiculo(veiculo) {
         
         // Preencher campos
         const veiculoIdInput = document.getElementById('veiculoId');
-        const marcaSelect = document.getElementById('marca');
+        const marcaSelect = document.getElementById('marcaId');
         const anoInput = document.getElementById('ano');
         const placaInput = document.getElementById('placa');
         const corInput = document.getElementById('cor');
@@ -94,7 +94,7 @@ async function preencherFormularioVeiculo(veiculo) {
             await loadModelosNoForm(veiculo.marcaId);
             
             // Selecionar modelo
-            const modeloSelect = document.getElementById('modelo');
+            const modeloSelect = document.getElementById('modeloId');
             if (modeloSelect && veiculo.modeloId) {
                 modeloSelect.value = veiculo.modeloId;
                 
@@ -102,7 +102,7 @@ async function preencherFormularioVeiculo(veiculo) {
                 await loadVersoesNoForm(veiculo.modeloId);
                 
                 // Selecionar versão
-                const versaoSelect = document.getElementById('versao');
+                const versaoSelect = document.getElementById('versaoId');
                 if (versaoSelect && veiculo.versaoId) {
                     versaoSelect.value = veiculo.versaoId;
                 }
@@ -116,7 +116,7 @@ async function preencherFormularioVeiculo(veiculo) {
         }
         
         // Atualizar botão de salvar
-        const saveButton = document.getElementById('saveVeiculo');
+        const saveButton = document.getElementById('saveButton');
         if (saveButton) {
             saveButton.textContent = 'Atualizar';
         }
@@ -129,9 +129,9 @@ async function preencherFormularioVeiculo(veiculo) {
 // Função para carregar marcas no formulário
 async function loadMarcasNoForm() {
     try {
-        const marcaSelect = document.getElementById('marca');
+        const marcaSelect = document.getElementById('marcaId');
         if (!marcaSelect) {
-            console.error('Elemento marca não encontrado');
+            console.error('Elemento marcaId não encontrado');
             return;
         }
         
@@ -160,9 +160,9 @@ async function loadMarcasNoForm() {
 // Função para carregar modelos no formulário
 async function loadModelosNoForm(marcaId) {
     try {
-        const modeloSelect = document.getElementById('modelo');
+        const modeloSelect = document.getElementById('modeloId');
         if (!modeloSelect) {
-            console.error('Elemento modelo não encontrado');
+            console.error('Elemento modeloId não encontrado');
             return;
         }
         
@@ -174,7 +174,7 @@ async function loadModelosNoForm(marcaId) {
             modeloSelect.disabled = true;
             
             // Limpar select de versões
-            const versaoSelect = document.getElementById('versao');
+            const versaoSelect = document.getElementById('versaoId');
             if (versaoSelect) {
                 versaoSelect.innerHTML = '<option value="">Selecione uma versão</option>';
                 versaoSelect.disabled = true;
@@ -198,7 +198,7 @@ async function loadModelosNoForm(marcaId) {
         modeloSelect.disabled = false;
         
         // Limpar select de versões
-        const versaoSelect = document.getElementById('versao');
+        const versaoSelect = document.getElementById('versaoId');
         if (versaoSelect) {
             versaoSelect.innerHTML = '<option value="">Selecione uma versão</option>';
             versaoSelect.disabled = true;
@@ -212,9 +212,9 @@ async function loadModelosNoForm(marcaId) {
 // Função para carregar versões no formulário
 async function loadVersoesNoForm(modeloId) {
     try {
-        const versaoSelect = document.getElementById('versao');
+        const versaoSelect = document.getElementById('versaoId');
         if (!versaoSelect) {
-            console.error('Elemento versao não encontrado');
+            console.error('Elemento versaoId não encontrado');
             return;
         }
         
@@ -272,9 +272,9 @@ function validarFormulario() {
     }
     
     // Validar campos específicos
-    const marcaSelect = document.getElementById('marca');
-    const modeloSelect = document.getElementById('modelo');
-    const versaoSelect = document.getElementById('versao');
+    const marcaSelect = document.getElementById('marcaId');
+    const modeloSelect = document.getElementById('modeloId');
+    const versaoSelect = document.getElementById('versaoId');
     const anoInput = document.getElementById('ano');
     const precoInput = document.getElementById('preco');
     
@@ -330,9 +330,9 @@ function validarFormulario() {
 function obterDadosFormulario() {
     // Obter campos
     const veiculoIdInput = document.getElementById('veiculoId');
-    const marcaSelect = document.getElementById('marca');
-    const modeloSelect = document.getElementById('modelo');
-    const versaoSelect = document.getElementById('versao');
+    const marcaSelect = document.getElementById('marcaId');
+    const modeloSelect = document.getElementById('modeloId');
+    const versaoSelect = document.getElementById('versaoId');
     const anoInput = document.getElementById('ano');
     const placaInput = document.getElementById('placa');
     const corInput = document.getElementById('cor');

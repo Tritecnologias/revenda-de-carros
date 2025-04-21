@@ -7,10 +7,10 @@ import { getSituacaoBadgeClass, getSituacaoText, formatarPreco } from './utils.j
 
 // Função para exibir mensagens de erro
 function showError(message) {
-    const errorDiv = document.getElementById('error-message');
+    const errorDiv = document.getElementById('errorMessage');
     if (errorDiv) {
         errorDiv.textContent = message;
-        errorDiv.style.display = 'block';
+        errorDiv.classList.remove('d-none');
         
         // Rolar para o topo para garantir que a mensagem seja vista
         window.scrollTo(0, 0);
@@ -21,9 +21,9 @@ function showError(message) {
 
 // Função para esconder mensagem de erro
 function hideError() {
-    const errorDiv = document.getElementById('error-message');
+    const errorDiv = document.getElementById('errorMessage');
     if (errorDiv) {
-        errorDiv.style.display = 'none';
+        errorDiv.classList.add('d-none');
     }
 }
 
