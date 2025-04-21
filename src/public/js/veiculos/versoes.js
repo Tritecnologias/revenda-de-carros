@@ -341,17 +341,42 @@ async function carregarVersoes() {
         // Implementação direta em vez de depender de config.fetchWithFallback
         let versoes = [];
         let lastError = null;
+        let usouDadosEstaticos = false;
+        
+        // Determinar a URL base atual
+        const currentUrl = window.location.href;
+        const isLocalhost = currentUrl.includes('localhost');
+        const isExternalIP = currentUrl.includes('69.62.91.195');
+        
+        // Priorizar URLs baseadas no ambiente atual
+        let urlsPrioritarias = [];
+        if (isExternalIP) {
+            // Se estamos no IP externo, priorizar URLs absolutas com esse IP
+            urlsPrioritarias = [`http://69.62.91.195:3000`];
+        } else if (isLocalhost) {
+            // Se estamos no localhost, priorizar URLs absolutas com localhost
+            urlsPrioritarias = [`http://localhost:3000`];
+        } else {
+            // Caso contrário, usar URLs relativas
+            urlsPrioritarias = [``];
+        }
         
         if (modeloId) {
-            // URLs para modelo específico
-            const urls = [
-                `/api/versoes/modelo/${modeloId}/public${queryString}`,
-                `/api/versoes/modelo/${modeloId}${queryString}`,
-                `/api/veiculos/versoes/modelo/${modeloId}${queryString}`,
-                `/api/veiculos/versoes/by-modelo/${modeloId}${queryString}`,
-                `http://localhost:3000/api/versoes/modelo/${modeloId}/public${queryString}`,
-                `http://69.62.91.195:3000/api/versoes/modelo/${modeloId}/public${queryString}`
-            ];
+            // URLs para modelo específico, priorizando o ambiente atual
+            const urls = [];
+            
+            // Adicionar URLs prioritárias baseadas no ambiente
+            for (const baseUrl of urlsPrioritarias) {
+                urls.push(
+                    `${baseUrl}/api/versoes/modelo/${modeloId}/public${queryString}`,
+                    `${baseUrl}/api/versoes/modelo/${modeloId}${queryString}`,
+                    `${baseUrl}/api/veiculos/versoes/modelo/${modeloId}${queryString}`
+                );
+            }
+            
+            // Adicionar URLs de fallback para outros ambientes
+            if (!isExternalIP) urls.push(`http://69.62.91.195:3000/api/versoes/modelo/${modeloId}/public${queryString}`);
+            if (!isLocalhost) urls.push(`http://localhost:3000/api/versoes/modelo/${modeloId}/public${queryString}`);
             
             console.log('Tentando URLs para modelo específico:', urls);
             
@@ -403,15 +428,21 @@ async function carregarVersoes() {
                 }
             }
         } else {
-            // URLs para todas as versões
-            const urls = [
-                `/api/versoes/public${queryString}`,
-                `/api/versoes${queryString}`,
-                `/api/veiculos/versoes${queryString}`,
-                `/api/veiculos/versoes/all${queryString}`,
-                `http://localhost:3000/api/versoes/public${queryString}`,
-                `http://69.62.91.195:3000/api/versoes/public${queryString}`
-            ];
+            // URLs para todas as versões, priorizando o ambiente atual
+            const urls = [];
+            
+            // Adicionar URLs prioritárias baseadas no ambiente
+            for (const baseUrl of urlsPrioritarias) {
+                urls.push(
+                    `${baseUrl}/api/versoes/public${queryString}`,
+                    `${baseUrl}/api/versoes${queryString}`,
+                    `${baseUrl}/api/veiculos/versoes${queryString}`
+                );
+            }
+            
+            // Adicionar URLs de fallback para outros ambientes
+            if (!isExternalIP) urls.push(`http://69.62.91.195:3000/api/versoes/public${queryString}`);
+            if (!isLocalhost) urls.push(`http://localhost:3000/api/versoes/public${queryString}`);
             
             console.log('Tentando URLs para todas as versões:', urls);
             
@@ -468,13 +499,27 @@ async function carregarVersoes() {
         if (versoes.length === 0) {
             console.log('Nenhuma versão encontrada. Usando dados estáticos como fallback.');
             versoes = obterDadosEstaticosVersoes(modeloId);
+            usouDadosEstaticos = true;
+            
+            // Mostrar aviso na interface se estamos usando dados mockados
+            if (versoesTableBody) {
+                const alertaDiv = document.createElement('div');
+                alertaDiv.className = 'alert alert-warning mt-2';
+                alertaDiv.innerHTML = '<strong>Atenção:</strong> Exibindo dados mockados. Não foi possível conectar ao banco de dados.';
+                
+                // Inserir o alerta antes da tabela
+                const tabelaContainer = versoesTableBody.closest('.table-responsive');
+                if (tabelaContainer && tabelaContainer.parentNode) {
+                    tabelaContainer.parentNode.insertBefore(alertaDiv, tabelaContainer);
+                }
+            }
         }
         
         console.log('Versões carregadas com sucesso:', versoes);
         
         // Só renderizar se estivermos na página correta
         if (versoesTableBody) {
-            renderizarVersoes(versoes, versoesTableBody);
+            renderizarVersoes(versoes, versoesTableBody, usouDadosEstaticos);
         } else {
             console.warn('Elemento da tabela de versões não encontrado. Não é possível renderizar versões.');
         }
@@ -491,90 +536,70 @@ async function carregarVersoes() {
 }
 
 // Função para renderizar a tabela de versões
-function renderizarVersoes(data, tableBody) {
-    // Usar o tableBody passado como parâmetro ou tentar encontrar na página
-    const tbody = tableBody || document.getElementById('versoesTableBody') || document.getElementById('tabelaVersoes');
+function renderizarVersoes(data, tableBody, usouDadosEstaticos = false) {
+    // Limpar a tabela
+    tableBody.innerHTML = '';
     
-    // Verificar se o elemento tbody existe
-    if (!tbody) {
-        console.error('Elemento da tabela de versões não encontrado na página');
+    // Verificar se há dados para exibir
+    if (!data || data.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="6" class="text-center">Nenhuma versão encontrada.</td></tr>';
         return;
     }
     
-    tbody.innerHTML = '';
-    
-    // Se não houver dados ou se data for undefined, mostrar mensagem
-    if (!data || !Array.isArray(data) || data.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="6" class="text-center">
-                    <div class="alert alert-warning">
-                        Nenhuma versão encontrada. 
-                        <a href="versao-form.html" class="alert-link">Adicionar nova versão</a>
-                    </div>
-                </td>
-            </tr>
-        `;
-        return;
-    }
-    
+    // Renderizar cada versão
     data.forEach(versao => {
         const tr = document.createElement('tr');
         
-        // Coluna ID
-        const tdId = document.createElement('td');
-        tdId.textContent = versao.id;
-        tr.appendChild(tdId);
+        // Adicionar classe se estamos usando dados mockados
+        if (usouDadosEstaticos) {
+            tr.classList.add('table-warning');
+        }
         
-        // Coluna Nome
-        const tdNome = document.createElement('td');
-        tdNome.textContent = versao.nome_versao;
-        tr.appendChild(tdNome);
+        // Verificar se a versão tem um modelo associado
+        const modeloNome = versao.modelo?.nome || versao.modelo_nome || 'N/A';
+        const marcaNome = versao.modelo?.marca?.nome || versao.marca_nome || 'N/A';
         
-        // Coluna Modelo
-        const tdModelo = document.createElement('td');
-        tdModelo.textContent = versao.modelo ? versao.modelo.nome : '-';
-        tr.appendChild(tdModelo);
+        // Construir a linha da tabela
+        tr.innerHTML = `
+            <td>${versao.id}</td>
+            <td>${versao.nome}</td>
+            <td>${modeloNome}</td>
+            <td>${marcaNome}</td>
+            <td>${versao.status || 'ativo'}</td>
+            <td>
+                <button class="btn btn-sm btn-primary editar-versao" data-id="${versao.id}">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-sm btn-danger excluir-versao" data-id="${versao.id}" data-nome="${versao.nome}">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        `;
         
-        // Coluna Marca
-        const tdMarca = document.createElement('td');
-        tdMarca.textContent = versao.modelo && versao.modelo.marca ? versao.modelo.marca.nome : '-';
-        tr.appendChild(tdMarca);
-        
-        // Coluna Status
-        const tdStatus = document.createElement('td');
-        const statusBadge = document.createElement('span');
-        statusBadge.className = `badge ${versao.status === 'ativo' ? 'bg-success' : 'bg-danger'}`;
-        statusBadge.textContent = versao.status === 'ativo' ? 'Ativo' : 'Inativo';
-        tdStatus.appendChild(statusBadge);
-        tr.appendChild(tdStatus);
-        
-        // Coluna Ações
-        const tdAcoes = document.createElement('td');
-        
-        // Botão Editar
-        const btnEditar = document.createElement('button');
-        btnEditar.className = 'btn btn-sm btn-primary me-1';
-        btnEditar.innerHTML = '<i class="bi bi-pencil"></i>';
-        btnEditar.title = 'Editar';
-        btnEditar.addEventListener('click', () => carregarVersaoParaEdicao(versao.id));
-        tdAcoes.appendChild(btnEditar);
-        
-        // Botão Excluir
-        const btnExcluir = document.createElement('button');
-        btnExcluir.className = 'btn btn-sm btn-danger';
-        btnExcluir.innerHTML = '<i class="bi bi-trash"></i>';
-        btnExcluir.title = 'Excluir';
-        btnExcluir.addEventListener('click', () => {
-            if (confirm('Tem certeza que deseja excluir esta versão?')) {
-                excluirVersao(versao.id);
-            }
+        tableBody.appendChild(tr);
+    });
+    
+    // Adicionar event listeners para os botões de editar e excluir
+    document.querySelectorAll('.editar-versao').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const versaoId = this.getAttribute('data-id');
+            carregarVersaoParaEdicao(versaoId);
         });
-        tdAcoes.appendChild(btnExcluir);
-        
-        tr.appendChild(tdAcoes);
-        
-        tbody.appendChild(tr);
+    });
+    
+    document.querySelectorAll('.excluir-versao').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const versaoId = this.getAttribute('data-id');
+            const versaoNome = this.getAttribute('data-nome');
+            
+            // Configurar o modal de confirmação
+            document.getElementById('versaoIdExcluir').value = versaoId;
+            document.getElementById('versaoNomeExcluir').textContent = versaoNome;
+            
+            // Abrir o modal
+            const modalExcluir = new bootstrap.Modal(document.getElementById('modalExcluirVersao'));
+            modalExcluir.show();
+        });
     });
 }
 
@@ -845,9 +870,9 @@ async function excluirVersao() {
         console.log('Versão excluída com sucesso');
         
         // Fechar modal
-        const versaoModal = bootstrap.Modal.getInstance(document.getElementById('versaoModal'));
-        if (versaoModal) {
-            versaoModal.hide();
+        const modalExcluir = bootstrap.Modal.getInstance(document.getElementById('modalExcluirVersao'));
+        if (modalExcluir) {
+            modalExcluir.hide();
         }
         
         // Exibir mensagem de sucesso
