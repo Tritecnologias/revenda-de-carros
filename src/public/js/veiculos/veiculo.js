@@ -1390,3 +1390,270 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 });
+
+// Função para carregar modelos de uma marca
+async function loadModelos(marcaId) {
+    console.log('Carregando modelos da marca ID:', marcaId);
+    return new Promise((resolve, reject) => {
+        if (!marcaId) {
+            console.warn('ID da marca não fornecido para carregar modelos');
+            
+            // Limpar select de modelos
+            const modeloSelect = document.getElementById('modelo');
+            if (modeloSelect) {
+                // Limpar opções existentes
+                modeloSelect.innerHTML = '<option value="">Selecione um modelo</option>';
+            }
+            
+            // Limpar select de versões
+            const versaoSelect = document.getElementById('versao');
+            if (versaoSelect) {
+                // Limpar opções existentes
+                versaoSelect.innerHTML = '<option value="">Selecione uma versão</option>';
+            }
+            
+            resolve([]);
+            return;
+        }
+        
+        // Obter token diretamente do localStorage
+        const token = localStorage.getItem('token');
+        if (!token) {
+            console.error('Token de autenticação não encontrado');
+            reject(new Error('Falha na autenticação. Por favor, faça login novamente.'));
+            return;
+        }
+        
+        // IMPORTANTE: Usar a URL completa para evitar problemas com o url-fixer.js
+        const currentUrl = window.location.href;
+        const baseUrl = currentUrl.includes('69.62.91.195') ? 'http://69.62.91.195:3000' : '';
+        
+        // Lista de todas as possíveis URLs para tentar, em ordem de prioridade
+        const urlsParaTentar = [
+            `${baseUrl}/api/veiculos/modelos/by-marca/${marcaId}`,
+            `${baseUrl}/api/modelos/marca/${marcaId}`
+        ];
+        
+        console.log('Tentando URLs para carregar modelos:', urlsParaTentar);
+        
+        // Tentar cada URL em sequência até encontrar uma que funcione
+        let currentUrlIndex = 0;
+        
+        function tryNextUrl() {
+            if (currentUrlIndex >= urlsParaTentar.length) {
+                console.error('Todas as URLs falharam');
+                reject(new Error('Erro ao carregar modelos: Todas as URLs falharam'));
+                return;
+            }
+            
+            const url = urlsParaTentar[currentUrlIndex];
+            console.log(`Tentando carregar modelos de: ${url}`);
+            
+            fetch(url, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    console.error(`Falha ao carregar modelos de ${url}. Status:`, response.status, response.statusText);
+                    currentUrlIndex++;
+                    tryNextUrl();
+                    return null;
+                }
+                return response.json();
+            })
+            .then(modelos => {
+                if (!modelos) return; // Já passou para a próxima URL
+                
+                console.log('Modelos carregados com sucesso:', modelos);
+                
+                // Se a resposta for um objeto com propriedade items (paginação), usar items
+                if (modelos && modelos.items && Array.isArray(modelos.items)) {
+                    modelos = modelos.items;
+                }
+                
+                // Verificar se modelos é um array
+                if (!Array.isArray(modelos)) {
+                    console.error('Resposta não é um array:', modelos);
+                    currentUrlIndex++;
+                    tryNextUrl();
+                    return;
+                }
+                
+                // Verificar se temos modelos
+                if (modelos.length === 0) {
+                    console.warn('Array de modelos está vazio');
+                }
+                
+                // Preencher select de modelos
+                const modeloSelect = document.getElementById('modelo');
+                if (modeloSelect) {
+                    // Limpar opções existentes
+                    modeloSelect.innerHTML = '<option value="">Selecione um modelo</option>';
+                    
+                    // Adicionar novas opções
+                    modelos.forEach(modelo => {
+                        const option = document.createElement('option');
+                        option.value = modelo.id;
+                        option.textContent = modelo.nome;
+                        modeloSelect.appendChild(option);
+                    });
+                }
+                
+                // Limpar select de versões
+                const versaoSelect = document.getElementById('versao');
+                if (versaoSelect) {
+                    // Limpar opções existentes
+                    versaoSelect.innerHTML = '<option value="">Selecione uma versão</option>';
+                }
+                
+                resolve(modelos);
+            })
+            .catch(error => {
+                console.error(`Erro ao carregar modelos de ${url}:`, error);
+                currentUrlIndex++;
+                tryNextUrl();
+            });
+        }
+        
+        // Iniciar tentativas
+        tryNextUrl();
+    });
+}
+
+// Função para carregar versões de um modelo
+async function loadVersoes(modeloId) {
+    console.log('Carregando versões do modelo ID:', modeloId);
+    return new Promise((resolve, reject) => {
+        if (!modeloId) {
+            console.warn('ID do modelo não fornecido para carregar versões');
+            
+            // Limpar select de versões
+            const versaoSelect = document.getElementById('versao');
+            if (versaoSelect) {
+                // Limpar opções existentes
+                versaoSelect.innerHTML = '<option value="">Selecione uma versão</option>';
+            }
+            
+            resolve([]);
+            return;
+        }
+        
+        // Obter token diretamente do localStorage
+        const token = localStorage.getItem('token');
+        if (!token) {
+            console.error('Token de autenticação não encontrado');
+            reject(new Error('Falha na autenticação. Por favor, faça login novamente.'));
+            return;
+        }
+        
+        // IMPORTANTE: Usar a URL completa para evitar problemas com o url-fixer.js
+        const currentUrl = window.location.href;
+        const baseUrl = currentUrl.includes('69.62.91.195') ? 'http://69.62.91.195:3000' : '';
+        
+        // Lista de todas as possíveis URLs para tentar, em ordem de prioridade
+        const urlsParaTentar = [
+            `${baseUrl}/api/versoes/modelo/${modeloId}`,
+            `${baseUrl}/api/veiculos/versoes/modelo/${modeloId}`,
+            `${baseUrl}/api/versoes/modelo/${modeloId}/public`
+        ];
+        
+        console.log('Tentando URLs para carregar versões:', urlsParaTentar);
+        
+        // Tentar cada URL em sequência até encontrar uma que funcione
+        let currentUrlIndex = 0;
+        
+        function tryNextUrl() {
+            if (currentUrlIndex >= urlsParaTentar.length) {
+                console.error('Todas as URLs falharam');
+                reject(new Error('Erro ao carregar versões: Todas as URLs falharam'));
+                return;
+            }
+            
+            const url = urlsParaTentar[currentUrlIndex];
+            console.log(`Tentando carregar versões de: ${url}`);
+            
+            fetch(url, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    console.error(`Falha ao carregar versões de ${url}. Status:`, response.status, response.statusText);
+                    currentUrlIndex++;
+                    tryNextUrl();
+                    return null;
+                }
+                return response.json();
+            })
+            .then(versoes => {
+                if (!versoes) return; // Já passou para a próxima URL
+                
+                console.log('Versões carregadas com sucesso:', versoes);
+                
+                // Se a resposta for um objeto com propriedade items (paginação), usar items
+                if (versoes && versoes.items && Array.isArray(versoes.items)) {
+                    versoes = versoes.items;
+                }
+                
+                // Verificar se versoes é um array
+                if (!Array.isArray(versoes)) {
+                    console.error('Resposta não é um array:', versoes);
+                    currentUrlIndex++;
+                    tryNextUrl();
+                    return;
+                }
+                
+                // Verificar se temos versões
+                if (versoes.length === 0) {
+                    console.warn('Array de versões está vazio');
+                }
+                
+                // Preencher select de versões
+                const versaoSelect = document.getElementById('versao');
+                if (versaoSelect) {
+                    // Limpar opções existentes
+                    versaoSelect.innerHTML = '<option value="">Selecione uma versão</option>';
+                    
+                    // Adicionar novas opções
+                    versoes.forEach(versao => {
+                        const option = document.createElement('option');
+                        option.value = versao.id;
+                        
+                        // Usar nome_versao em vez de nome, conforme a entidade Versao
+                        if (versao.nome_versao !== undefined) {
+                            option.textContent = versao.nome_versao;
+                        } else if (versao.nome !== undefined) {
+                            option.textContent = versao.nome;
+                        } else if (versao.name !== undefined) {
+                            option.textContent = versao.name;
+                        } else if (versao.descricao !== undefined) {
+                            option.textContent = versao.descricao;
+                        } else if (versao.description !== undefined) {
+                            option.textContent = versao.description;
+                        } else {
+                            // Se não encontrar nenhuma propriedade adequada, usar o ID como texto
+                            option.textContent = `Versão ${versao.id}`;
+                        }
+                        
+                        versaoSelect.appendChild(option);
+                    });
+                }
+                
+                resolve(versoes);
+            })
+            .catch(error => {
+                console.error(`Erro ao carregar versões de ${url}:`, error);
+                currentUrlIndex++;
+                tryNextUrl();
+            });
+        }
+        
+        // Iniciar tentativas
+        tryNextUrl();
+    });
+}
