@@ -331,7 +331,11 @@ function changePage(page) {
 function editModelo(id) {
     const token = auth.getToken();
     
-    fetch(`${config.apiBaseUrl}/api/veiculos/modelos/${id}`, {
+    // Obter a URL base com base no ambiente atual
+    const currentUrl = window.location.href;
+    const baseUrl = currentUrl.includes('69.62.91.195') ? 'http://69.62.91.195:3000' : '';
+    
+    fetch(`${baseUrl}/api/veiculos/modelos/${id}`, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${token}`
@@ -373,91 +377,80 @@ function showDeleteModal(id) {
 
 // Função para salvar modelo
 async function saveModelo(event) {
+    // Prevenir comportamento padrão do formulário
     if (event) {
         event.preventDefault();
     }
     
-    console.log('Função saveModelo chamada');
+    // Obter dados do formulário
+    const form = document.getElementById('modeloForm');
+    const marcaIdSelect = document.getElementById('marcaId');
+    const nomeInput = document.getElementById('modeloNome');
+    const statusSelect = document.getElementById('modeloStatus');
+    const modeloIdInput = document.getElementById('modeloId');
+    
+    // Verificar se os elementos existem
+    if (!form || !marcaIdSelect || !nomeInput || !statusSelect) {
+        showError('Formulário incompleto. Recarregue a página e tente novamente.');
+        return;
+    }
+    
+    // Obter ID (se estiver editando)
+    const id = modeloIdInput ? modeloIdInput.value : null;
+    
+    // Validar formulário
+    if (!marcaIdSelect.value) {
+        showError('Selecione uma marca.');
+        marcaIdSelect.focus();
+        return;
+    }
+    
+    if (!nomeInput.value.trim()) {
+        showError('O nome do modelo é obrigatório.');
+        nomeInput.focus();
+        return;
+    }
+    
+    // Desabilitar botão de salvar e mostrar spinner
+    if (saveButton && saveSpinner) {
+        saveButton.disabled = true;
+        saveSpinner.classList.remove('d-none');
+    }
     
     try {
-        // Obter elementos do formulário com verificações de segurança
-        const modeloIdElement = document.getElementById('modeloId');
-        const nomeElement = document.getElementById('modeloNome');
-        const marcaIdElement = document.getElementById('marcaId');
-        const statusElement = document.getElementById('modeloStatus');
-        const saveButtonElement = document.getElementById('saveModeloButton');
-        const saveSpinnerElement = document.getElementById('saveSpinner');
-        
-        // Verificar se todos os elementos necessários existem
-        if (!nomeElement || !marcaIdElement || !statusElement) {
-            console.error('Elementos do formulário não encontrados:', {
-                nomeElement,
-                marcaIdElement,
-                statusElement
-            });
-            showError('Formulário incompleto. Recarregue a página e tente novamente.');
-            return;
-        }
-        
-        console.log('Elementos do formulário encontrados:', {
-            modeloId: modeloIdElement?.value,
-            nome: nomeElement?.value,
-            marcaId: marcaIdElement?.value,
-            status: statusElement?.value
-        });
-        
-        // Desabilitar botão de salvar e mostrar spinner
-        if (saveButtonElement) {
-            saveButtonElement.disabled = true;
-        }
-        
-        if (saveSpinnerElement) {
-            saveSpinnerElement.classList.remove('d-none');
-        }
-        
-        // Obter valores do formulário
-        const modeloId = modeloIdElement ? modeloIdElement.value : '';
-        const nome = nomeElement.value.trim();
-        const marcaId = marcaIdElement.value;
-        const status = statusElement.value;
-        
-        // Validar campos obrigatórios
-        if (!nome || !marcaId) {
-            showError('Por favor, preencha todos os campos obrigatórios.');
-            if (saveButtonElement) saveButtonElement.disabled = false;
-            if (saveSpinnerElement) saveSpinnerElement.classList.add('d-none');
-            return;
-        }
-        
-        // Preparar dados
-        const modeloData = {
-            nome,
-            marcaId: parseInt(marcaId),
-            status
-        };
-        
-        console.log('Enviando dados do modelo:', modeloData);
-        
         // Obter token de autenticação
         const token = auth.getToken();
         if (!token) {
             showError('Você precisa estar autenticado para realizar esta operação.');
-            if (saveButtonElement) saveButtonElement.disabled = false;
-            if (saveSpinnerElement) saveSpinnerElement.classList.add('d-none');
             return;
         }
-        
-        // Determinar método e URL
-        const method = modeloId ? 'PUT' : 'POST';
         
         // Obter a URL base com base no ambiente atual
         const currentUrl = window.location.href;
         const baseUrl = currentUrl.includes('69.62.91.195') ? 'http://69.62.91.195:3000' : '';
         
-        // Construir URL absoluta
-        const url = modeloId 
-            ? `${baseUrl}/api/veiculos/modelos/${modeloId}` 
-            : `${baseUrl}/api/veiculos/modelos`;
+        // Preparar dados
+        const modeloData = {
+            marcaId: parseInt(marcaIdSelect.value),
+            nome: nomeInput.value.trim(),
+            status: statusSelect.value
+        };
+        
+        console.log('Enviando dados do modelo:', modeloData);
+        
+        // Determinar método e URL
+        let method, url;
+        
+        if (id) {
+            // Se estamos editando um modelo existente
+            method = 'PUT';
+            url = `${baseUrl}/api/veiculos/modelos/${id}`;
+            modeloData.id = parseInt(id);
+        } else {
+            // Se estamos criando um novo modelo
+            method = 'POST';
+            url = `${baseUrl}/api/veiculos/modelos`;
+        }
         
         console.log('URL da requisição:', url);
         console.log('Método da requisição:', method);
@@ -474,25 +467,114 @@ async function saveModelo(event) {
         
         console.log('Status da resposta:', response.status);
         
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Resposta do servidor:', errorText);
-            throw new Error('Falha ao salvar modelo');
+        // Obter o texto da resposta para análise
+        const responseText = await response.text();
+        console.log('Resposta do servidor:', responseText);
+        
+        // Tentar parsear a resposta como JSON
+        let errorMessage = 'Falha ao salvar modelo';
+        let responseData;
+        
+        try {
+            if (responseText) {
+                responseData = JSON.parse(responseText);
+                
+                // Se houver uma mensagem específica na resposta, usá-la
+                if (responseData && responseData.message) {
+                    errorMessage = responseData.message;
+                }
+            }
+        } catch (parseError) {
+            console.error('Erro ao parsear resposta JSON:', parseError);
         }
         
-        const data = await response.json();
+        if (!response.ok) {
+            // Tratar diferentes códigos de erro
+            if (response.status === 409) {
+                throw new Error('Já existe um modelo com este nome para esta marca. Por favor, escolha outro nome.');
+            } else if (response.status === 401 || response.status === 403) {
+                throw new Error('Você não tem permissão para realizar esta operação.');
+            } else if (response.status === 404) {
+                throw new Error('Recurso não encontrado. Verifique se o modelo ainda existe.');
+            } else if (response.status >= 500) {
+                throw new Error('Erro no servidor. Por favor, tente novamente mais tarde.');
+            } else {
+                throw new Error(errorMessage);
+            }
+        }
+        
+        // Se chegou aqui, a resposta foi bem-sucedida
+        const data = responseData || { success: true };
         console.log('Modelo salvo com sucesso:', data);
         
         // Fechar modal e recarregar modelos
-        const modeloModalElement = document.getElementById('modeloModal');
-        if (modeloModalElement) {
-            const modalInstance = bootstrap.Modal.getInstance(modeloModalElement);
-            if (modalInstance) {
-                modalInstance.hide();
-            } else {
-                console.warn('Não foi possível obter a instância do modal');
-            }
+        modeloModal.hide();
+        await loadModelos();
+        
+        // Mostrar mensagem de sucesso
+        const successAlert = document.getElementById('successAlert');
+        if (successAlert) {
+            successAlert.textContent = id ? 'Modelo atualizado com sucesso!' : 'Modelo criado com sucesso!';
+            successAlert.classList.remove('d-none');
+            setTimeout(() => {
+                successAlert.classList.add('d-none');
+            }, 3000);
         }
+    } catch (error) {
+        console.error('Erro ao salvar modelo:', error);
+        showError(error.message || 'Ocorreu um erro ao salvar o modelo. Por favor, tente novamente.');
+    } finally {
+        // Reabilitar botão de salvar e esconder spinner
+        if (saveButton && saveSpinner) {
+            saveButton.disabled = false;
+            saveSpinner.classList.add('d-none');
+        }
+    }
+}
+
+// Função para excluir modelo
+async function deleteModelo() {
+    try {
+        const deleteId = document.getElementById('deleteId').value;
+        
+        if (!deleteId) {
+            showError('ID do modelo não encontrado.');
+            return;
+        }
+        
+        // Desabilitar botão de confirmação e mostrar spinner
+        if (confirmDeleteButton && deleteSpinner) {
+            confirmDeleteButton.disabled = true;
+            deleteSpinner.classList.remove('d-none');
+        }
+        
+        // Obter token de autenticação
+        const token = auth.getToken();
+        if (!token) {
+            showError('Você precisa estar autenticado para realizar esta operação.');
+            return;
+        }
+        
+        // Obter a URL base com base no ambiente atual
+        const currentUrl = window.location.href;
+        const baseUrl = currentUrl.includes('69.62.91.195') ? 'http://69.62.91.195:3000' : '';
+        
+        // Enviar requisição para excluir modelo
+        const response = await fetch(`${baseUrl}/api/veiculos/modelos/${deleteId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Erro ao excluir modelo:', errorText);
+            throw new Error('Não foi possível excluir o modelo.');
+        }
+        
+        // Fechar modal
+        deleteModal.hide();
         
         // Recarregar lista de modelos
         await loadModelos();
@@ -500,63 +582,22 @@ async function saveModelo(event) {
         // Mostrar mensagem de sucesso
         const successAlert = document.getElementById('successAlert');
         if (successAlert) {
-            successAlert.textContent = modeloId ? 'Modelo atualizado com sucesso!' : 'Modelo criado com sucesso!';
+            successAlert.textContent = 'Modelo excluído com sucesso!';
             successAlert.classList.remove('d-none');
             setTimeout(() => {
                 successAlert.classList.add('d-none');
             }, 3000);
-        } else {
-            console.log('Modelo salvo com sucesso, mas elemento successAlert não encontrado');
         }
     } catch (error) {
-        console.error('Erro ao salvar modelo:', error);
-        showError(error.message || 'Ocorreu um erro ao salvar o modelo. Por favor, tente novamente.');
+        console.error('Erro ao excluir modelo:', error);
+        showError(error.message || 'Ocorreu um erro ao excluir o modelo. Por favor, tente novamente.');
     } finally {
-        // Reabilitar botão de salvar e esconder spinner
-        const saveButtonElement = document.getElementById('saveModeloButton');
-        const saveSpinnerElement = document.getElementById('saveSpinner');
-        
-        if (saveButtonElement) {
-            saveButtonElement.disabled = false;
-        }
-        
-        if (saveSpinnerElement) {
-            saveSpinnerElement.classList.add('d-none');
+        // Reabilitar botão de confirmação e esconder spinner
+        if (confirmDeleteButton && deleteSpinner) {
+            confirmDeleteButton.disabled = false;
+            deleteSpinner.classList.add('d-none');
         }
     }
-}
-
-// Função para excluir modelo
-function deleteModelo() {
-    // Mostrar spinner
-    confirmDeleteButton.disabled = true;
-    deleteSpinner.classList.remove('d-none');
-    
-    // Obter ID do modelo a ser excluído
-    const id = document.getElementById('deleteId').value;
-    
-    const token = auth.getToken();
-    
-    // Usar a função delete do config.js para maior resiliência
-    config.delete(`/api/veiculos/modelos/${id}`, {
-        headers: {
-            'Authorization': `Bearer ${token}`
-        }
-    })
-    .then(() => {
-        // Fechar modal e recarregar modelos
-        deleteModal.hide();
-        loadModelos();
-    })
-    .catch(error => {
-        console.error('Erro ao excluir modelo:', error);
-        showError('Não foi possível excluir o modelo. Por favor, tente novamente mais tarde.');
-    })
-    .finally(() => {
-        // Esconder spinner
-        confirmDeleteButton.disabled = false;
-        deleteSpinner.classList.add('d-none');
-    });
 }
 
 // Função para mostrar mensagem de erro

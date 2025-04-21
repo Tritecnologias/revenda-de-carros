@@ -4,19 +4,27 @@ async function loadVeiculoDetails(veiculoId, dadosSelecionados) {
         console.log(`Carregando detalhes do veículo ID: ${veiculoId}`);
         console.log('Dados selecionados pelo usuário:', dadosSelecionados);
         
+        // Obter a URL base com base no ambiente atual
+        const currentUrl = window.location.href;
+        const baseUrl = currentUrl.includes('69.62.91.195') ? 'http://69.62.91.195:3000' : '';
+        
+        // Obter token de autenticação usando a classe Auth
+        const auth = new Auth();
+        const token = auth.getToken();
+        
+        if (!token) {
+            console.error('Token de autenticação não encontrado');
+            // Redirecionar para a página de login
+            auth.redirectToLogin();
+            throw new Error('Falha na autenticação. Por favor, faça login novamente.');
+        }
+        
         // URLs para tentar carregar detalhes do veículo
         const apiUrls = [
-            `/api/veiculos/${veiculoId}`,
+            `${baseUrl}/api/veiculos/${veiculoId}`,
             `http://localhost:3000/api/veiculos/${veiculoId}`,
             `http://69.62.91.195:3000/api/veiculos/${veiculoId}`
         ];
-        
-        // Obter token de autenticação
-        const token = localStorage.getItem('token');
-        if (!token) {
-            console.error('Token de autenticação não encontrado');
-            throw new Error('Falha na autenticação. Por favor, faça login novamente.');
-        }
         
         // Tentar cada URL em sequência
         let response = null;
@@ -36,11 +44,17 @@ async function loadVeiculoDetails(veiculoId, dadosSelecionados) {
                 
                 console.log('Resposta da API:', response.status, response.statusText);
                 
-                if (response.ok) {
-                    veiculo = await response.json();
-                    console.log(`URL bem-sucedida: ${url}`);
-                    break; // Sair do loop se a resposta for bem-sucedida
-                } else {
+                // Verificar se a resposta é 401 (Unauthorized)
+                if (response.status === 401) {
+                    console.error('Token expirado ou inválido');
+                    // Limpar token e redirecionar para login
+                    auth.logout();
+                    auth.redirectToLogin();
+                    throw new Error('Sua sessão expirou. Por favor, faça login novamente.');
+                }
+                
+                // Verificar outras respostas de erro
+                if (!response.ok) {
                     const errorText = await response.text();
                     console.error(`Falha na URL ${url}:`, errorText);
                     
@@ -57,6 +71,10 @@ async function loadVeiculoDetails(veiculoId, dadosSelecionados) {
                     } else {
                         lastError = `${response.status} ${response.statusText}`;
                     }
+                } else {
+                    veiculo = await response.json();
+                    console.log(`URL bem-sucedida: ${url}`);
+                    break; // Sair do loop se a resposta for bem-sucedida
                 }
             } catch (error) {
                 console.error(`Erro ao acessar ${url}:`, error.message);
@@ -239,10 +257,14 @@ async function fetchVeiculoPrecos(veiculoId) {
     try {
         console.log(`Buscando preços para o veículo ID: ${veiculoId}`);
         
-        // Obter token de autenticação
-        const token = localStorage.getItem('token');
+        // Obter token de autenticação usando a classe Auth
+        const auth = new Auth();
+        const token = auth.getToken();
+        
         if (!token) {
             console.error('Token de autenticação não encontrado');
+            // Redirecionar para a página de login
+            auth.redirectToLogin();
             throw new Error('Falha na autenticação. Por favor, faça login novamente.');
         }
         
@@ -269,14 +291,26 @@ async function fetchVeiculoPrecos(veiculoId) {
                     }
                 });
                 
-                if (response.ok) {
-                    veiculo = await response.json();
-                    console.log(`URL bem-sucedida: ${url}`);
-                    break; // Sair do loop se a resposta for bem-sucedida
-                } else {
+                console.log('Resposta da API:', response.status, response.statusText);
+                
+                // Verificar se a resposta é 401 (Unauthorized)
+                if (response.status === 401) {
+                    console.error('Token expirado ou inválido');
+                    // Limpar token e redirecionar para login
+                    auth.logout();
+                    auth.redirectToLogin();
+                    throw new Error('Sua sessão expirou. Por favor, faça login novamente.');
+                }
+                
+                // Verificar outras respostas de erro
+                if (!response.ok) {
                     const errorText = await response.text();
                     console.error(`Falha na URL ${url}:`, errorText);
                     lastError = `${response.status} ${response.statusText}`;
+                } else {
+                    veiculo = await response.json();
+                    console.log(`URL bem-sucedida: ${url}`);
+                    break; // Sair do loop se a resposta for bem-sucedida
                 }
             } catch (error) {
                 console.error(`Erro ao acessar ${url}:`, error.message);
