@@ -379,7 +379,10 @@ function loadModelos(marcaId) {
         
         // Adicionar token de autenticação se disponível
         if (typeof auth !== 'undefined' && auth.getToken) {
-            xhr.setRequestHeader('Authorization', 'Bearer ' + auth.getToken());
+            const token = auth.getToken();
+            if (token) {
+                xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+            }
         }
         
         xhr.onload = function() {

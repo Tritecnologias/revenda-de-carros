@@ -233,18 +233,51 @@ async function carregarModelos(marcaId) {
             return;
         }
         
-        // Lista de URLs a tentar, em ordem de prioridade
-        const urls = [
+        // URLs para tentar carregar modelos
+        const apiUrls = [
             `/api/veiculos/modelos/by-marca/${marcaId}`,
-            `/api/modelos/marca/${marcaId}`
+            `http://localhost:3000/api/veiculos/modelos/by-marca/${marcaId}`,
+            `http://69.62.91.195:3000/api/veiculos/modelos/by-marca/${marcaId}`,
+            `/api/modelos/marca/${marcaId}`,
+            `http://localhost:3000/api/modelos/marca/${marcaId}`,
+            `http://69.62.91.195:3000/api/modelos/marca/${marcaId}`
         ];
         
-        // Usar a função fetchWithFallback do config.js
-        const modelos = await config.fetchWithFallback(urls, {
-            headers: {
-                'Authorization': `Bearer ${token}`
+        // Tentar cada URL em sequência
+        let response = null;
+        let lastError = null;
+        let modelos = null;
+        
+        for (const url of apiUrls) {
+            try {
+                console.log(`Tentando carregar modelos de: ${url}`);
+                response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    modelos = await response.json();
+                    console.log(`URL bem-sucedida: ${url}`);
+                    break; // Sair do loop se a resposta for bem-sucedida
+                } else {
+                    const errorText = await response.text();
+                    console.error(`Falha na URL ${url}:`, errorText);
+                    lastError = `${response.status} ${response.statusText}`;
+                }
+            } catch (error) {
+                console.error(`Erro ao acessar ${url}:`, error.message);
+                lastError = error.message;
             }
-        });
+        }
+        
+        // Se todas as URLs falharam
+        if (!modelos) {
+            throw new Error(`Falha ao carregar modelos: ${lastError}`);
+        }
         
         console.log('Modelos carregados:', modelos);
         
