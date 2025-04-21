@@ -101,6 +101,8 @@ async function loadVersoes(modeloId) {
 
 // Função para tentar carregar versões diretamente via API
 async function carregarVersoesViaAPI(modeloId) {
+    console.log('Tentando carregar versões diretamente via API para o modelo ID:', modeloId);
+    
     // URLs para tentar carregar versões
     const apiUrls = [
         `/api/versoes/modelo/${modeloId}/public`,
@@ -119,13 +121,46 @@ async function carregarVersoesViaAPI(modeloId) {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json'
-                }
+                },
+                // Adicionar timeout para não ficar esperando muito tempo
+                signal: AbortSignal.timeout(5000) // 5 segundos de timeout
             });
             
             if (response.ok) {
-                const versoes = await response.json();
-                console.log(`URL bem-sucedida: ${url}`);
-                return versoes;
+                const data = await response.json();
+                console.log(`URL bem-sucedida: ${url}, dados recebidos:`, data);
+                
+                // Verificar se a resposta é um array
+                if (Array.isArray(data)) {
+                    // Se for um array não vazio, usá-lo diretamente
+                    if (data.length > 0) {
+                        // Normalizar os dados para garantir que cada item tenha id e nome
+                        const versoes = data.map(item => ({
+                            id: item.id || item.versao_id || item.versaoId,
+                            nome: item.nome || item.nome_versao || item.versaoNome || `Versão ${item.id}`,
+                            // Preservar outros campos que possam existir
+                            ...item
+                        }));
+                        return versoes;
+                    }
+                } 
+                // Verificar se a resposta é um objeto com uma propriedade items (paginação)
+                else if (data && data.items && Array.isArray(data.items)) {
+                    // Se for um array não vazio, usá-lo
+                    if (data.items.length > 0) {
+                        // Normalizar os dados para garantir que cada item tenha id e nome
+                        const versoes = data.items.map(item => ({
+                            id: item.id || item.versao_id || item.versaoId,
+                            nome: item.nome || item.nome_versao || item.versaoNome || `Versão ${item.id}`,
+                            // Preservar outros campos que possam existir
+                            ...item
+                        }));
+                        return versoes;
+                    }
+                }
+                
+                // Se chegou aqui, a resposta foi bem-sucedida mas não contém dados utilizáveis
+                console.warn(`A URL ${url} retornou uma resposta vazia ou em formato inesperado:`, data);
             } else {
                 const errorText = await response.text();
                 console.error(`Falha na URL ${url}:`, errorText);
@@ -135,6 +170,7 @@ async function carregarVersoesViaAPI(modeloId) {
         }
     }
     
+    console.log('Não foi possível carregar versões diretamente via API');
     return [];
 }
 
