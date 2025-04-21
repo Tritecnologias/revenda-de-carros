@@ -34,15 +34,18 @@
             console.log(`URL Fixer: Convertendo URL absoluta para relativa: ${url} -> ${fixedUrl}`);
         }
         
+        // IMPORTANTE: Não modificar URLs de versões para evitar loops de redirecionamento
+        if (typeof url === 'string' && (
+            url.includes('/api/versoes') || 
+            url.includes('/api/veiculos/versoes')
+        )) {
+            console.log(`URL Fixer: Ignorando correção para URL de versões: ${url}`);
+            return originalFetch(url, options);
+        }
+        
         // Corrigir rotas conhecidas incorretas usando a função do config.js
         if (typeof config.fixApiUrl === 'function') {
             fixedUrl = config.fixApiUrl(fixedUrl);
-        }
-        
-        // Correção adicional para rotas de versões que podem estar retornando 404
-        if (typeof fixedUrl === 'string' && fixedUrl.includes('/api/versoes/public')) {
-            console.log(`URL Fixer: Detectada rota problemática: ${fixedUrl}`);
-            // Não modificar a URL aqui, deixar o sistema de fallback lidar com isso
         }
         
         // Chamar o fetch original com a URL corrigida
