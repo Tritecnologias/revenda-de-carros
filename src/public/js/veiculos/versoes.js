@@ -342,12 +342,12 @@ async function carregarVersoes() {
         const currentUrl = window.location.href;
         const baseUrl = currentUrl.includes('69.62.91.195') ? 'http://69.62.91.195:3000' : '';
         
-        // Usar diretamente a URL completa baseada no controlador real
+        // Usar a rota correta do VersoesPublicController
         let url;
         if (modeloId) {
-            url = `${baseUrl}/api/versoes/modelo/${modeloId}/public${queryString}`;
+            url = `${baseUrl}/api/veiculos/versoes/modelo/${modeloId}${queryString}`;
         } else {
-            url = `${baseUrl}/api/versoes/public${queryString}`;
+            url = `${baseUrl}/api/veiculos/versoes${queryString}`;
         }
         
         console.log(`Tentando carregar versões de: ${url}`);
@@ -386,8 +386,8 @@ async function carregarVersoes() {
             // Tentar a rota alternativa
             console.log('Tentando rota alternativa...');
             const alternativeUrl = modeloId 
-                ? `${baseUrl}/api/versoes/modelo/${modeloId}${queryString}`
-                : `${baseUrl}/api/versoes${queryString}`;
+                ? `${baseUrl}/api/veiculos/versoes/all/modelo/${modeloId}${queryString}`
+                : `${baseUrl}/api/veiculos/versoes/all${queryString}`;
             
             console.log(`Tentando carregar versões de: ${alternativeUrl}`);
             
@@ -557,10 +557,10 @@ async function carregarVersaoParaEdicao(versaoId) {
         const currentUrl = window.location.href;
         const baseUrl = currentUrl.includes('69.62.91.195') ? 'http://69.62.91.195:3000' : '';
         
-        // Usar diretamente a URL completa baseada no controlador real
-        const url = `${baseUrl}/api/versoes/${versaoId}`;
+        // Usar a rota correta do VersoesPublicController
+        const url = `${baseUrl}/api/veiculos/versoes/${versaoId}`;
         
-        console.log(`Tentando carregar versão de: ${url}`);
+        console.log(`Buscando versão de: ${url}`);
         
         const response = await fetch(url, {
             method: 'GET',
@@ -738,10 +738,10 @@ async function excluirVersao() {
         const currentUrl = window.location.href;
         const baseUrl = currentUrl.includes('69.62.91.195') ? 'http://69.62.91.195:3000' : '';
         
-        // Usar diretamente a URL completa baseada no controlador real
-        const url = `${baseUrl}/api/versoes/${versaoId}`;
+        // Usar a rota correta do VersoesPublicController
+        const url = `${baseUrl}/api/veiculos/versoes/${versaoId}`;
         
-        console.log(`Tentando excluir versão: ${url}`);
+        console.log(`Excluindo versão: ${url}`);
         
         const response = await fetch(url, {
             method: 'DELETE',
@@ -770,12 +770,11 @@ async function excluirVersao() {
         // Exibir mensagem de sucesso
         exibirMensagem('Versão excluída com sucesso!', 'success');
         
-        // Recarregar lista de versões
-        await carregarVersoes();
-        
+        // Recarregar a lista de versões
+        carregarVersoes();
     } catch (error) {
         console.error('Erro ao excluir versão:', error);
-        exibirMensagem(`Erro ao excluir versão: ${error.message}`, 'danger');
+        exibirMensagem('Erro ao excluir versão. Por favor, tente novamente.', 'danger');
     }
 }
 
@@ -946,11 +945,11 @@ async function salvarVersao(event) {
         
         if (versaoId) {
             // Atualizar versão existente
-            url = `${baseUrl}/api/versoes/${versaoId}`;
+            url = `${baseUrl}/api/veiculos/versoes/${versaoId}`;
             method = 'PATCH';
         } else {
             // Criar nova versão
-            url = `${baseUrl}/api/versoes`;
+            url = `${baseUrl}/api/veiculos/versoes`;
             method = 'POST';
         }
         
@@ -984,7 +983,7 @@ async function salvarVersao(event) {
         exibirMensagem(versaoId ? 'Versão atualizada com sucesso!' : 'Versão criada com sucesso!', 'success');
         
         // Recarregar lista de versões
-        await carregarVersoes();
+        carregarVersoes();
         
     } catch (error) {
         console.error('Erro ao salvar versão:', error);
