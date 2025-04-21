@@ -476,11 +476,11 @@ function renderizarVersoes(data, tableBody) {
             <td>${marcaNome}</td>
             <td>${versao.status || 'ativo'}</td>
             <td>
-                <button class="btn btn-sm btn-primary editar-versao" data-id="${versao.id}">
-                    <i class="fas fa-edit"></i>
+                <button class="btn btn-sm btn-primary editar-versao" data-id="${versao.id}" title="Editar">
+                    <i class="fas fa-edit"></i> Editar
                 </button>
-                <button class="btn btn-sm btn-danger excluir-versao" data-id="${versao.id}" data-nome="${versaoNome}">
-                    <i class="fas fa-trash"></i>
+                <button class="btn btn-sm btn-danger excluir-versao" data-id="${versao.id}" data-nome="${versaoNome}" title="Excluir">
+                    <i class="fas fa-trash"></i> Excluir
                 </button>
             </td>
         `;
@@ -501,13 +501,32 @@ function renderizarVersoes(data, tableBody) {
             const versaoId = this.getAttribute('data-id');
             const versaoNome = this.getAttribute('data-nome');
             
+            // Verificar se o modal de exclusão existe e criá-lo se necessário
+            if (!document.getElementById('modalExcluirVersao')) {
+                verificarECriarModais();
+            }
+            
             // Configurar o modal de confirmação
             document.getElementById('versaoIdExcluir').value = versaoId;
             document.getElementById('versaoNomeExcluir').textContent = versaoNome;
             
             // Abrir o modal
-            const modalExcluir = new bootstrap.Modal(document.getElementById('modalExcluirVersao'));
-            modalExcluir.show();
+            const modalElement = document.getElementById('modalExcluirVersao');
+            if (modalElement) {
+                // Verificar se já existe uma instância do modal
+                let modalInstance = bootstrap.Modal.getInstance(modalElement);
+                
+                // Se não existir, criar uma nova instância
+                if (!modalInstance) {
+                    modalInstance = new bootstrap.Modal(modalElement);
+                }
+                
+                // Mostrar o modal
+                modalInstance.show();
+            } else {
+                console.error('Modal de exclusão não encontrado');
+                exibirMensagem('Erro ao abrir modal de exclusão', 'danger');
+            }
         });
     });
 }
@@ -551,6 +570,15 @@ async function carregarVersaoParaEdicao(versaoId) {
         
         const versao = await response.json();
         console.log('Versão carregada:', versao);
+        
+        // Verificar se o modal existe
+        const versaoModal = document.getElementById('versaoModal');
+        if (!versaoModal) {
+            console.error('Modal de versão não encontrado. Tentando criar um modal dinamicamente.');
+            
+            // Criar o modal dinamicamente se não existir
+            criarModalVersao();
+        }
         
         // Preencher o formulário com os dados da versão
         document.getElementById('versaoId').value = versao.id;
@@ -615,14 +643,268 @@ async function carregarVersaoParaEdicao(versaoId) {
             }
         }
         
-        // Abrir o modal de edição
-        const versaoModal = new bootstrap.Modal(document.getElementById('versaoModal'));
-        versaoModal.show();
+        // Abrir o modal de edição - verificar se o modal existe e usar a instância correta
+        const modalElement = document.getElementById('versaoModal');
+        if (modalElement) {
+            // Verificar se já existe uma instância do modal
+            let modalInstance = bootstrap.Modal.getInstance(modalElement);
+            
+            // Se não existir, criar uma nova instância
+            if (!modalInstance) {
+                modalInstance = new bootstrap.Modal(modalElement);
+            }
+            
+            // Mostrar o modal
+            modalInstance.show();
+        } else {
+            throw new Error('Modal de versão não encontrado na página');
+        }
         
     } catch (error) {
         console.error('Erro ao carregar versão para edição:', error);
         exibirMensagem(`Erro ao carregar versão: ${error.message}`, 'danger');
     }
+}
+
+// Função para criar o modal de versão dinamicamente se não existir
+function criarModalVersao() {
+    console.log('Criando modal de versão dinamicamente');
+    
+    // Verificar se o modal já existe
+    if (document.getElementById('versaoModal')) {
+        console.log('Modal já existe, não é necessário criar novamente');
+        return;
+    }
+    
+    // Criar o elemento do modal
+    const modalHTML = `
+    <div class="modal fade" id="versaoModal" tabindex="-1" aria-labelledby="versaoModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="versaoModalLabel">Versão</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="versaoForm">
+                        <input type="hidden" id="versaoId">
+                        <div class="mb-3">
+                            <label for="nome" class="form-label">Nome</label>
+                            <input type="text" class="form-control" id="nome" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="modeloSelect" class="form-label">Modelo</label>
+                            <select class="form-select" id="modeloSelect" required>
+                                <option value="">Selecione um modelo</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-select" id="status">
+                                <option value="ativo">Ativo</option>
+                                <option value="inativo">Inativo</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="btnSalvarVersao">Salvar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    `;
+    
+    // Adicionar o modal ao final do body
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Adicionar event listener para o botão de salvar
+    document.getElementById('btnSalvarVersao').addEventListener('click', salvarVersao);
+    
+    console.log('Modal criado com sucesso');
+}
+
+// Função para excluir uma versão
+async function excluirVersao() {
+    console.log('Excluindo versão...');
+    
+    // Obter o ID da versão a ser excluída
+    const versaoId = document.getElementById('versaoIdExcluir').value;
+    if (!versaoId) {
+        console.error('ID da versão não encontrado');
+        return;
+    }
+    
+    // Obter token de autenticação
+    const token = getToken();
+    if (!token) {
+        console.error('Token de autenticação não encontrado');
+        return;
+    }
+    
+    try {
+        // Determinar a URL base atual
+        const currentUrl = window.location.href;
+        const isExternalIP = currentUrl.includes('69.62.91.195');
+        
+        // Definir a URL base correta para o ambiente atual
+        let baseUrl = isExternalIP ? 'http://69.62.91.195:3000' : '';
+        
+        // URL para excluir versão
+        const url = `${baseUrl}/api/versoes/${versaoId}`;
+        
+        console.log(`Tentando excluir versão: ${url}`);
+        
+        const response = await fetch(url, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Erro ${response.status}: ${errorText}`);
+        }
+        
+        console.log('Versão excluída com sucesso');
+        
+        // Fechar modal - verificar se o modal existe
+        const modalElement = document.getElementById('modalExcluirVersao');
+        if (modalElement) {
+            // Verificar se já existe uma instância do modal
+            let modalInstance = bootstrap.Modal.getInstance(modalElement);
+            
+            // Se não existir, criar uma nova instância
+            if (!modalInstance) {
+                modalInstance = new bootstrap.Modal(modalElement);
+            }
+            
+            // Fechar o modal
+            modalInstance.hide();
+        }
+        
+        // Exibir mensagem de sucesso
+        exibirMensagem('Versão excluída com sucesso!', 'success');
+        
+        // Recarregar lista de versões
+        await carregarVersoes();
+        
+    } catch (error) {
+        console.error('Erro ao excluir versão:', error);
+        exibirMensagem(`Erro ao excluir versão: ${error.message}`, 'danger');
+    }
+}
+
+// Função para verificar se os modais existem e criá-los se necessário
+function verificarECriarModais() {
+    console.log('Verificando e criando modais se necessário');
+    
+    // Verificar se o modal de versão existe
+    if (!document.getElementById('versaoModal')) {
+        criarModalVersao();
+    }
+    
+    // Verificar se o modal de exclusão existe
+    if (!document.getElementById('modalExcluirVersao')) {
+        // Criar o modal de exclusão
+        const modalExcluirHTML = `
+        <div class="modal fade" id="modalExcluirVersao" tabindex="-1" aria-labelledby="modalExcluirVersaoLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalExcluirVersaoLabel">Confirmar Exclusão</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Tem certeza que deseja excluir a versão <span id="versaoNomeExcluir"></span>?</p>
+                        <input type="hidden" id="versaoIdExcluir">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-danger" id="btnConfirmarExclusao">Excluir</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        `;
+        
+        // Adicionar o modal ao final do body
+        document.body.insertAdjacentHTML('beforeend', modalExcluirHTML);
+        
+        // Adicionar event listener para o botão de confirmar exclusão
+        document.getElementById('btnConfirmarExclusao').addEventListener('click', excluirVersao);
+        
+        console.log('Modal de exclusão criado com sucesso');
+    }
+}
+
+// Função para inicializar a página de versões
+function inicializarPaginaVersoes() {
+    console.log('Inicializando página de versões...');
+    
+    // Verificar se estamos na página correta
+    const filtroMarca = document.getElementById('filtroMarca');
+    const filtroModelo = document.getElementById('filtroModelo');
+    const filtroStatus = document.getElementById('filtroStatus');
+    
+    if (!filtroMarca || !filtroModelo || !filtroStatus) {
+        console.log('Elementos de filtro não encontrados. Provavelmente estamos em uma página diferente.');
+        return;
+    }
+    
+    // Verificar e criar modais se necessário
+    verificarECriarModais();
+    
+    // Carregar marcas para o filtro
+    carregarMarcas();
+    
+    // Adicionar event listeners para os filtros
+    filtroMarca.addEventListener('change', function() {
+        if (this.value) {
+            carregarModelos(this.value);
+        } else {
+            // Se nenhuma marca for selecionada, limpar o select de modelos
+            filtroModelo.innerHTML = '<option value="">Todos os modelos</option>';
+            // Recarregar versões com os filtros atuais
+            carregarVersoes();
+        }
+    });
+    
+    filtroModelo.addEventListener('change', carregarVersoes);
+    filtroStatus.addEventListener('change', carregarVersoes);
+    
+    // Adicionar event listener para o botão de nova versão
+    const btnNovaVersao = document.querySelector('.btn-nova-versao');
+    if (btnNovaVersao) {
+        btnNovaVersao.addEventListener('click', function() {
+            // Limpar o formulário
+            document.getElementById('versaoForm').reset();
+            document.getElementById('versaoId').value = '';
+            
+            // Abrir o modal
+            const modalElement = document.getElementById('versaoModal');
+            if (modalElement) {
+                // Verificar se já existe uma instância do modal
+                let modalInstance = bootstrap.Modal.getInstance(modalElement);
+                
+                // Se não existir, criar uma nova instância
+                if (!modalInstance) {
+                    modalInstance = new bootstrap.Modal(modalElement);
+                }
+                
+                // Mostrar o modal
+                modalInstance.show();
+            } else {
+                console.error('Modal de versão não encontrado na página');
+            }
+        });
+    }
+    
+    // Carregar versões iniciais
+    carregarVersoes();
 }
 
 // Função para salvar uma versão (criar ou atualizar)
@@ -751,55 +1033,6 @@ async function salvarVersao(event) {
     } catch (error) {
         console.error('Erro ao salvar versão:', error);
         exibirMensagem(`Erro ao salvar versão: ${error.message}`, 'danger');
-    }
-}
-
-// Função para excluir uma versão
-async function excluirVersao() {
-    console.log('Excluindo versão...');
-    
-    try {
-        const versaoId = document.getElementById('versaoId').value;
-        if (!versaoId) {
-            exibirMensagem('ID da versão não encontrado.', 'danger');
-            return;
-        }
-        
-        const token = getToken();
-        if (!token) {
-            console.error('Token de autenticação não encontrado');
-            return;
-        }
-        
-        // Fazer requisição para API
-        const response = await fetch(`/api/versoes/${versaoId}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Erro ao excluir versão');
-        }
-        
-        console.log('Versão excluída com sucesso');
-        
-        // Fechar modal
-        const modalExcluir = bootstrap.Modal.getInstance(document.getElementById('modalExcluirVersao'));
-        if (modalExcluir) {
-            modalExcluir.hide();
-        }
-        
-        // Exibir mensagem de sucesso
-        exibirMensagem('Versão excluída com sucesso!', 'success');
-        
-        // Recarregar lista de versões
-        carregarVersoes();
-    } catch (error) {
-        console.error('Erro ao excluir versão:', error);
-        exibirMensagem('Erro ao excluir versão: ' + error.message, 'danger');
     }
 }
 
