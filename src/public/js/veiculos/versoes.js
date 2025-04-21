@@ -348,8 +348,10 @@ async function carregarVersoes() {
         // Definir as URLs específicas para o ambiente atual
         let url;
         if (modeloId) {
+            // Usar a rota correta para versões de um modelo específico
             url = `${baseUrl}/api/versoes/modelo/${modeloId}/public${queryString}`;
         } else {
+            // Usar a rota correta para todas as versões
             url = `${baseUrl}/api/versoes/public${queryString}`;
         }
         
@@ -384,8 +386,50 @@ async function carregarVersoes() {
         } else {
             const errorText = await response.text();
             console.error(`Falha ao carregar versões: ${response.status} ${response.statusText}`, errorText);
-            versoesTableBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Erro ${response.status}: Não foi possível carregar as versões do banco de dados.</td></tr>`;
-            exibirMensagem(`Erro ao carregar versões: ${response.status} ${response.statusText}`, 'danger');
+            
+            // Tentar a rota alternativa se a primeira falhar
+            console.log('Tentando rota alternativa...');
+            const alternativeUrl = modeloId 
+                ? `${baseUrl}/api/veiculos/versoes/modelo/${modeloId}${queryString}`
+                : `${baseUrl}/api/versoes/all${queryString}`;
+            
+            console.log(`Tentando carregar versões de: ${alternativeUrl}`);
+            
+            try {
+                const alternativeResponse = await fetch(alternativeUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (alternativeResponse.ok) {
+                    const alternativeData = await alternativeResponse.json();
+                    console.log(`Dados carregados com sucesso da rota alternativa:`, alternativeData);
+                    
+                    // Verificar se a resposta é um array
+                    if (Array.isArray(alternativeData)) {
+                        // Renderizar os dados
+                        renderizarVersoes(alternativeData, versoesTableBody);
+                        return;
+                    } 
+                    // Verificar se a resposta é um objeto com uma propriedade items (paginação)
+                    else if (alternativeData && alternativeData.items && Array.isArray(alternativeData.items)) {
+                        // Renderizar os items
+                        renderizarVersoes(alternativeData.items, versoesTableBody);
+                        return;
+                    }
+                }
+                
+                // Se chegou aqui, a rota alternativa também falhou
+                versoesTableBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Erro ${response.status}: Não foi possível carregar as versões do banco de dados.</td></tr>`;
+                exibirMensagem(`Erro ao carregar versões: ${response.status} ${response.statusText}`, 'danger');
+            } catch (alternativeError) {
+                console.error('Erro ao acessar rota alternativa:', alternativeError);
+                versoesTableBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Erro ${response.status}: Não foi possível carregar as versões do banco de dados.</td></tr>`;
+                exibirMensagem(`Erro ao carregar versões: ${response.status} ${response.statusText}`, 'danger');
+            }
         }
     } catch (error) {
         console.error('Erro ao carregar versões:', error);
