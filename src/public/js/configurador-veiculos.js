@@ -1,7 +1,15 @@
-// Funções específicas para o carregamento de versões no configurador da página inicial
-// Este arquivo substitui o versoes.js original para evitar conflitos com veiculos/versoes.js
+/**
+ * CONFIGURADOR DE VEÍCULOS
+ * 
+ * Este arquivo implementa as funções necessárias para o configurador da página inicial,
+ * buscando dados EXCLUSIVAMENTE da tabela de veículos do banco de dados.
+ * 
+ * NÃO HÁ DADOS MOCKADOS OU FALLBACKS NESTE ARQUIVO.
+ */
 
-// Carregar versões por modelo
+console.log('Carregando configurador-veiculos.js - Versão sem dados mockados');
+
+// Função para carregar versões por modelo - busca APENAS da tabela de veículos
 async function loadVersoes(modeloId) {
     if (!modeloId) {
         const versaoSelect = document.getElementById('configuradorVersao');
@@ -11,6 +19,7 @@ async function loadVersoes(modeloId) {
         }
         return [];
     }
+    
     try {
         console.log('Carregando versões para o modelo ID:', modeloId);
         const versaoSelect = document.getElementById('configuradorVersao');
@@ -20,18 +29,7 @@ async function loadVersoes(modeloId) {
         }
         
         // Buscar versões exclusivamente dos veículos cadastrados
-        let versoes = [];
-        
-        try {
-            versoes = await extrairVersoesDosVeiculos(modeloId);
-            if (versoes && versoes.length > 0) {
-                console.log('Versões extraídas dos veículos cadastrados:', versoes);
-            } else {
-                console.log('Nenhuma versão encontrada na tabela de veículos para este modelo');
-            }
-        } catch (error) {
-            console.error('Erro ao extrair versões dos veículos:', error);
-        }
+        const versoes = await buscarVersoesDaTabela(modeloId);
         
         // Preencher o select de versões
         if (versaoSelect) {
@@ -45,7 +43,7 @@ async function loadVersoes(modeloId) {
             versaoSelect.appendChild(defaultOption);
             
             // Adicionar versões
-            if (versoes.length > 0) {
+            if (versoes && versoes.length > 0) {
                 versoes.forEach(versao => {
                     const option = document.createElement('option');
                     option.value = versao.id;
@@ -88,11 +86,11 @@ async function loadVersoes(modeloId) {
     }
 }
 
-// Função para extrair versões dos veículos
-async function extrairVersoesDosVeiculos(modeloId) {
-    console.log('Buscando versões da tabela de veículos para o modelo ID:', modeloId);
+// Função para buscar versões diretamente da tabela de veículos
+async function buscarVersoesDaTabela(modeloId) {
+    console.log('Buscando versões diretamente da tabela de veículos para o modelo ID:', modeloId);
     
-    // URLs para tentar carregar veículos - apenas endpoints reais, sem fallbacks
+    // URLs para buscar veículos - apenas endpoints da tabela de veículos
     const veiculosUrls = [
         `/api/veiculos`,
         `http://localhost:3000/api/veiculos`,
@@ -102,9 +100,9 @@ async function extrairVersoesDosVeiculos(modeloId) {
     // Tentar cada URL em sequência
     for (const url of veiculosUrls) {
         try {
-            console.log(`Tentando carregar veículos de: ${url}`);
+            console.log(`Tentando buscar veículos de: ${url}`);
             
-            // Obter token de autenticação usando a classe Auth
+            // Obter token de autenticação
             let headers = {
                 'Content-Type': 'application/json'
             };
@@ -123,15 +121,14 @@ async function extrairVersoesDosVeiculos(modeloId) {
             const response = await fetch(url, {
                 method: 'GET',
                 headers: headers,
-                // Adicionar timeout para não ficar esperando muito tempo
                 signal: AbortSignal.timeout(5000) // 5 segundos de timeout
             });
             
             if (response.ok) {
                 const veiculos = await response.json();
-                console.log(`URL bem-sucedida para veículos: ${url}, total de veículos:`, Array.isArray(veiculos) ? veiculos.length : 'não é array');
+                console.log(`Resposta recebida de ${url}, total de veículos:`, Array.isArray(veiculos) ? veiculos.length : 'não é array');
                 
-                // Verificar se a resposta é um array ou um objeto paginado
+                // Verificar formato da resposta
                 let veiculosArray = [];
                 
                 if (Array.isArray(veiculos)) {
@@ -150,7 +147,7 @@ async function extrairVersoesDosVeiculos(modeloId) {
                     (v.modelo && v.modelo.id == modeloId)
                 );
                 
-                console.log('Veículos filtrados por modelo:', veiculosFiltrados.length);
+                console.log('Veículos encontrados para o modelo:', veiculosFiltrados.length);
                 
                 // Se não encontrou veículos para este modelo, continuar para a próxima URL
                 if (veiculosFiltrados.length === 0) {
@@ -158,16 +155,15 @@ async function extrairVersoesDosVeiculos(modeloId) {
                     continue;
                 }
                 
-                // Criar um Map para armazenar versões únicas
+                // Extrair versões únicas dos veículos
                 const versoesMap = new Map();
                 
-                // Extrair versões únicas dos veículos
                 veiculosFiltrados.forEach(veiculo => {
-                    // Tentar extrair o ID da versão de diferentes formatos possíveis
+                    // Extrair ID da versão
                     const versaoId = veiculo.versao_id || veiculo.versaoId || 
                                     (veiculo.versao && veiculo.versao.id);
                     
-                    // Tentar extrair o nome da versão de diferentes formatos possíveis
+                    // Extrair nome da versão
                     const versaoNome = (veiculo.versao && veiculo.versao.nome) || 
                                       veiculo.versao_nome || 
                                       veiculo.versaoNome || 
@@ -178,7 +174,6 @@ async function extrairVersoesDosVeiculos(modeloId) {
                             id: versaoId,
                             nome: versaoNome,
                             veiculoId: veiculo.id,
-                            // Adicionar outros dados úteis
                             preco: veiculo.preco,
                             status: veiculo.status
                         });
@@ -206,26 +201,34 @@ async function extrairVersoesDosVeiculos(modeloId) {
     return [];
 }
 
-// Função para carregar modelos por marca no configurador
-async function carregarModelos(marcaId) {
-    if (!marcaId) {
-        return [];
+// Função para carregar marcas - busca diretamente da API
+async function loadMarcas() {
+    console.log('Carregando marcas para o configurador...');
+    
+    const marcaSelect = document.getElementById('configuradorMarca');
+    if (!marcaSelect) {
+        console.error('Elemento select de marca não encontrado');
+        return;
     }
     
+    // Mostrar loading
+    marcaSelect.innerHTML = '<option value="">Carregando marcas...</option>';
+    marcaSelect.disabled = true;
+    
+    // URLs para buscar marcas
+    const apiUrls = [
+        '/api/veiculos/marcas',
+        'http://localhost:3000/api/veiculos/marcas',
+        'http://69.62.91.195:3000/api/veiculos/marcas'
+    ];
+    
     try {
-        console.log('Carregando modelos para a marca ID:', marcaId);
-        
-        // URLs para tentar carregar modelos
-        const apiUrls = [
-            `/api/veiculos/modelos/by-marca/${marcaId}`,
-            `http://localhost:3000/api/veiculos/modelos/by-marca/${marcaId}`,
-            `http://69.62.91.195:3000/api/veiculos/modelos/by-marca/${marcaId}`
-        ];
+        let marcas = null;
         
         // Tentar cada URL em sequência
         for (const url of apiUrls) {
             try {
-                console.log(`Tentando carregar modelos de: ${url}`);
+                console.log(`Tentando buscar marcas de: ${url}`);
                 
                 // Obter token de autenticação
                 let headers = {
@@ -245,20 +248,19 @@ async function carregarModelos(marcaId) {
                 const response = await fetch(url, {
                     method: 'GET',
                     headers: headers,
-                    signal: AbortSignal.timeout(5000) // 5 segundos de timeout
+                    signal: AbortSignal.timeout(5000)
                 });
                 
                 if (response.ok) {
                     const data = await response.json();
-                    console.log(`URL bem-sucedida: ${url}, dados recebidos:`, data);
+                    console.log(`Marcas recebidas de ${url}:`, data);
                     
-                    // Verificar se a resposta é um array
-                    if (Array.isArray(data)) {
-                        return data;
-                    } 
-                    // Verificar se a resposta é um objeto com uma propriedade items (paginação)
-                    else if (data && data.items && Array.isArray(data.items)) {
-                        return data.items;
+                    if (Array.isArray(data) && data.length > 0) {
+                        marcas = data;
+                        break;
+                    } else if (data && data.items && Array.isArray(data.items) && data.items.length > 0) {
+                        marcas = data.items;
+                        break;
                     }
                 }
             } catch (error) {
@@ -266,15 +268,126 @@ async function carregarModelos(marcaId) {
             }
         }
         
-        // Se chegou aqui, não conseguiu carregar modelos de nenhuma URL
-        console.error('Não foi possível carregar modelos de nenhuma URL');
-        return [];
+        // Limpar e preencher o select
+        marcaSelect.innerHTML = '<option value="">Selecione uma marca</option>';
+        
+        if (marcas && marcas.length > 0) {
+            marcas.forEach(marca => {
+                const option = document.createElement('option');
+                option.value = marca.id;
+                option.textContent = marca.nome;
+                marcaSelect.appendChild(option);
+            });
+            marcaSelect.disabled = false;
+        } else {
+            marcaSelect.innerHTML = '<option value="">Nenhuma marca disponível</option>';
+            marcaSelect.disabled = true;
+        }
+    } catch (error) {
+        console.error('Erro ao carregar marcas:', error);
+        marcaSelect.innerHTML = '<option value="">Erro ao carregar marcas</option>';
+        marcaSelect.disabled = true;
+    }
+}
+
+// Função para carregar modelos por marca
+async function loadModelos(marcaId) {
+    console.log('Carregando modelos para a marca ID:', marcaId);
+    
+    const modeloSelect = document.getElementById('configuradorModelo');
+    if (!modeloSelect) {
+        console.error('Elemento select de modelo não encontrado');
+        return;
+    }
+    
+    // Mostrar loading
+    modeloSelect.innerHTML = '<option value="">Carregando modelos...</option>';
+    modeloSelect.disabled = true;
+    
+    if (!marcaId) {
+        modeloSelect.innerHTML = '<option value="">Selecione uma marca primeiro</option>';
+        modeloSelect.disabled = true;
+        return;
+    }
+    
+    // URLs para buscar modelos
+    const apiUrls = [
+        `/api/veiculos/modelos/by-marca/${marcaId}`,
+        `http://localhost:3000/api/veiculos/modelos/by-marca/${marcaId}`,
+        `http://69.62.91.195:3000/api/veiculos/modelos/by-marca/${marcaId}`
+    ];
+    
+    try {
+        let modelos = null;
+        
+        // Tentar cada URL em sequência
+        for (const url of apiUrls) {
+            try {
+                console.log(`Tentando buscar modelos de: ${url}`);
+                
+                // Obter token de autenticação
+                let headers = {
+                    'Content-Type': 'application/json'
+                };
+                
+                try {
+                    const auth = new Auth();
+                    const token = auth.getToken();
+                    if (token) {
+                        headers['Authorization'] = `Bearer ${token}`;
+                    }
+                } catch (authError) {
+                    console.warn('Erro ao obter token:', authError);
+                }
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: headers,
+                    signal: AbortSignal.timeout(5000)
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log(`Modelos recebidos de ${url}:`, data);
+                    
+                    if (Array.isArray(data) && data.length > 0) {
+                        modelos = data;
+                        break;
+                    } else if (data && data.items && Array.isArray(data.items) && data.items.length > 0) {
+                        modelos = data.items;
+                        break;
+                    }
+                }
+            } catch (error) {
+                console.error(`Erro ao acessar ${url}:`, error.message);
+            }
+        }
+        
+        // Limpar e preencher o select
+        modeloSelect.innerHTML = '<option value="">Selecione um modelo</option>';
+        
+        if (modelos && modelos.length > 0) {
+            modelos.forEach(modelo => {
+                const option = document.createElement('option');
+                option.value = modelo.id;
+                option.textContent = modelo.nome;
+                modeloSelect.appendChild(option);
+            });
+            modeloSelect.disabled = false;
+        } else {
+            modeloSelect.innerHTML = '<option value="">Nenhum modelo disponível</option>';
+            modeloSelect.disabled = true;
+        }
     } catch (error) {
         console.error('Erro ao carregar modelos:', error);
-        return [];
+        modeloSelect.innerHTML = '<option value="">Erro ao carregar modelos</option>';
+        modeloSelect.disabled = true;
     }
 }
 
 // Exporta globalmente para uso em index.js
 window.loadVersoes = loadVersoes;
-window.carregarModelos = carregarModelos;
+window.loadMarcas = loadMarcas;
+window.loadModelos = loadModelos;
+
+console.log('Funções do configurador de veículos exportadas globalmente');

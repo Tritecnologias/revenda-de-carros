@@ -19,74 +19,72 @@ async function loadVeiculoDetails(veiculoId, dadosSelecionados) {
             throw new Error('Falha na autenticação. Por favor, faça login novamente.');
         }
         
-        // URLs para tentar carregar detalhes do veículo
-        const apiUrls = [
-            `${baseUrl}/api/veiculos/${veiculoId}`,
-            `http://localhost:3000/api/veiculos/${veiculoId}`,
-            `http://69.62.91.195:3000/api/veiculos/${veiculoId}`
-        ];
+        // URL para carregar detalhes do veículo
+        const url = `${baseUrl}/api/veiculos/${veiculoId}`;
+        console.log(`Tentando carregar veículo de: ${url}`);
         
-        // Tentar cada URL em sequência
-        let response = null;
-        let lastError = null;
-        let veiculo = null;
-        
-        for (const url of apiUrls) {
-            try {
-                console.log(`Tentando carregar veículo de: ${url}`);
-                response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                
-                console.log('Resposta da API:', response.status, response.statusText);
-                
-                // Verificar se a resposta é 401 (Unauthorized)
-                if (response.status === 401) {
-                    console.error('Token expirado ou inválido');
-                    // Limpar token e redirecionar para login
-                    auth.logout();
-                    auth.redirectToLogin();
-                    throw new Error('Sua sessão expirou. Por favor, faça login novamente.');
-                }
-                
-                // Verificar outras respostas de erro
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error(`Falha na URL ${url}:`, errorText);
-                    
-                    // Verificar se é um erro 404 (Not Found)
-                    if (response.status === 404) {
-                        // Tentar extrair a mensagem de erro do JSON retornado
-                        try {
-                            const errorJson = JSON.parse(errorText);
-                            lastError = `Veículo não encontrado: ${errorJson.message || 'O veículo solicitado não existe ou foi excluído'}`;
-                        } catch (jsonError) {
-                            // Se não conseguir parsear o JSON, usar a mensagem genérica
-                            lastError = `Veículo com ID ${veiculoId} não encontrado`;
-                        }
-                    } else {
-                        lastError = `${response.status} ${response.statusText}`;
-                    }
-                } else {
-                    veiculo = await response.json();
-                    console.log(`URL bem-sucedida: ${url}`);
-                    break; // Sair do loop se a resposta for bem-sucedida
-                }
-            } catch (error) {
-                console.error(`Erro ao acessar ${url}:`, error.message);
-                lastError = error.message;
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
             }
+        });
+        
+        console.log('Resposta da API:', response.status, response.statusText);
+        
+        // Verificar se a resposta é 401 (Unauthorized)
+        if (response.status === 401) {
+            console.error('Token expirado ou inválido');
+            // Limpar token e redirecionar para login
+            auth.logout();
+            auth.redirectToLogin();
+            throw new Error('Sua sessão expirou. Por favor, faça login novamente.');
         }
         
-        // Se todas as URLs falharam
-        if (!veiculo) {
-            throw new Error(`Falha ao carregar detalhes do veículo: ${lastError}`);
+        // Verificar se o veículo não foi encontrado (404)
+        if (response.status === 404) {
+            console.log(`Veículo ID ${veiculoId} não encontrado no sistema`);
+            
+            // Limpar os detalhes do veículo na interface
+            if (typeof window.limparDetalhesVeiculo === 'function') {
+                window.limparDetalhesVeiculo();
+            }
+            
+            // Mostrar mensagem amigável ao usuário
+            const mensagemElement = document.getElementById('mensagemVeiculo');
+            if (mensagemElement) {
+                mensagemElement.textContent = `Este veículo não está mais disponível. Por favor, selecione outro.`;
+                mensagemElement.classList.remove('d-none');
+                mensagemElement.classList.add('alert', 'alert-warning');
+                
+                // Esconder a mensagem após 5 segundos
+                setTimeout(() => {
+                    mensagemElement.classList.add('d-none');
+                }, 5000);
+            }
+            
+            return null; // Retornar null em vez de lançar erro
         }
         
+        // Verificar outras respostas de erro
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`Falha na URL ${url}:`, errorText);
+            throw new Error(`Erro ao carregar veículo: ${response.status} ${response.statusText}`);
+        }
+        
+        // Se chegou aqui, a resposta foi bem-sucedida
+        const veiculo = await response.json();
+        console.log('Veículo carregado com sucesso:', veiculo);
+        
+        // Esconder qualquer mensagem de erro anterior
+        const mensagemElement = document.getElementById('mensagemVeiculo');
+        if (mensagemElement) {
+            mensagemElement.classList.add('d-none');
+        }
+        
+        // Continuar com o processamento do veículo
         console.log('Detalhes do veículo carregados:', veiculo);
         // Corrigir: garantir que os campos de preço sejam tratados como número
         veiculo.preco = Number(veiculo.preco);

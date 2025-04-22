@@ -27,9 +27,9 @@ async function loadMarcas() {
     
     // Lista de todas as possíveis URLs para tentar, em ordem de prioridade
     const urlsParaTentar = [
-        `${baseUrl}/api/marcas`,
         `${baseUrl}/api/veiculos/marcas/all`,
-        `${baseUrl}/api/veiculos/marcas`
+        `${baseUrl}/api/veiculos/marcas`,
+        `${baseUrl}/api/marcas`
     ];
     
     console.log('Tentando URLs para carregar marcas:', urlsParaTentar);
@@ -110,9 +110,9 @@ async function loadModelos(marcaId) {
     
     // Lista de todas as possíveis URLs para tentar, em ordem de prioridade
     const urlsParaTentar = [
-        `${baseUrl}/api/modelos/marca/${marcaId}`,
         `${baseUrl}/api/veiculos/modelos/all?marcaId=${marcaId}`,
-        `${baseUrl}/api/veiculos/modelos/by-marca/${marcaId}`
+        `${baseUrl}/api/veiculos/modelos/by-marca/${marcaId}`,
+        `${baseUrl}/api/modelos/marca/${marcaId}`
     ];
     
     console.log('Tentando URLs para carregar modelos:', urlsParaTentar);
@@ -193,9 +193,9 @@ async function loadVersoes(modeloId) {
     
     // Lista de todas as possíveis URLs para tentar, em ordem de prioridade
     const urlsParaTentar = [
-        `${baseUrl}/api/versoes/modelo/${modeloId}`,
         `${baseUrl}/api/veiculos/versoes/all?modeloId=${modeloId}`,
-        `${baseUrl}/api/versoes/public?modeloId=${modeloId}`
+        `${baseUrl}/api/versoes/public?modeloId=${modeloId}`,
+        `${baseUrl}/api/versoes/modelo/${modeloId}`
     ];
     
     console.log('Tentando URLs para carregar versões:', urlsParaTentar);
