@@ -190,11 +190,18 @@ async function loadVersoes(modeloId) {
             console.warn('Erro ao obter token:', error);
         }
         
+        // Determinar a URL base com base no ambiente atual
+        const currentUrl = window.location.href;
+        const baseUrl = currentUrl.includes('69.62.91.195') ? 'http://69.62.91.195:3000' : 'http://localhost:3000';
+        console.log('URL base determinada:', baseUrl);
+        
         // IMPORTANTE: Buscar diretamente da tabela de veículos para mostrar apenas versões com veículos cadastrados
         console.log('Buscando versões a partir dos veículos cadastrados...');
         
         // Buscar todos os veículos
-        const veiculosUrl = 'http://localhost:3000/api/veiculos';
+        const veiculosUrl = `${baseUrl}/api/veiculos`;
+        console.log('Buscando veículos de:', veiculosUrl);
+        
         const veiculosResponse = await fetch(veiculosUrl, {
             method: 'GET',
             headers: headers
@@ -356,11 +363,15 @@ async function loadVendasDiretas() {
             console.warn('Erro ao obter token:', error);
         }
         
+        // Determinar a URL base com base no ambiente atual
+        const currentUrl = window.location.href;
+        const baseUrl = currentUrl.includes('69.62.91.195') ? 'http://69.62.91.195:3000' : 'http://localhost:3000';
+        console.log('URL base determinada para vendas diretas:', baseUrl);
+        
         // URLs para tentar carregar vendas diretas (baseado no arquivo vendas-diretas.js)
         const apiUrls = [
-            '/api/venda-direta/public',
-            'http://localhost:3000/api/venda-direta/public',
-            'http://69.62.91.195:3000/api/venda-direta/public'
+            `${baseUrl}/api/venda-direta/public`,
+            '/api/venda-direta/public'
         ];
         
         console.log('Tentando URLs para carregar vendas diretas:', apiUrls);
